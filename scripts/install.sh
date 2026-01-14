@@ -2,11 +2,19 @@
 set -e
 
 TOOL_NAME="$1"
-REPO_BASE="https://raw.githubusercontent.com/CoreWorxLab/caal-tools/main"
+REPO_BASE="https://raw.githubusercontent.com/CoreWorxLab/caal-tools/refs/heads/main"
 
 if [ -z "$TOOL_NAME" ]; then
   echo "Usage: install.sh <tool-name>"
-  echo "Example: install.sh jellyseerr-search"
+  echo "Example: install.sh truenas-get-status"
+  echo ""
+  echo "Environment variables:"
+  echo "  N8N_URL      n8n instance URL (default: http://localhost:5678)"
+  echo "  N8N_API_KEY  n8n API key for auto-import (optional, prompts manual import if not set)"
+  echo "  CAAL_URL     CAAL webhook URL (default: http://localhost:8889)"
+  echo ""
+  echo "Example with env vars:"
+  echo "  N8N_API_KEY=xxx CAAL_URL=http://192.168.1.50:8889 bash install.sh truenas-get-status"
   exit 1
 fi
 

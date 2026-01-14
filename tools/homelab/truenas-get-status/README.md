@@ -27,7 +27,7 @@ Queries your TrueNAS instance and returns:
 ### Quick Install
 
 ```bash
-curl -s https://raw.githubusercontent.com/CoreWorxLab/caal-tools/main/scripts/install.sh | bash -s truenas-get-status
+curl -s https://raw.githubusercontent.com/CoreWorxLab/caal-tools/refs/heads/main/scripts/install.sh | bash -s truenas-get-status
 ```
 
 ### Manual

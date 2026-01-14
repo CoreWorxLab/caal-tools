@@ -269,7 +269,7 @@ ${webhookDescription || 'TODO: Add description'}
 ### Quick Install
 
 \`\`\`bash
-curl -s https://raw.githubusercontent.com/CoreWorxLab/caal-tools/main/scripts/install.sh | bash -s ${manifest.name}
+curl -s https://raw.githubusercontent.com/CoreWorxLab/caal-tools/refs/heads/main/scripts/install.sh | bash -s ${manifest.name}
 \`\`\`
 
 ### Manual

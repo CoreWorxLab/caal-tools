@@ -30,12 +30,12 @@ Or explore by category:
 ### Quick Install
 
 ```bash
-curl -s https://raw.githubusercontent.com/CoreWorxLab/caal-tools/main/scripts/install.sh | bash -s <tool-name>
+curl -s https://raw.githubusercontent.com/CoreWorxLab/caal-tools/refs/heads/main/scripts/install.sh | bash -s <tool-name>
 ```
 
 Example:
 ```bash
-curl -s https://raw.githubusercontent.com/CoreWorxLab/caal-tools/main/scripts/install.sh | bash -s jellyseerr-search
+curl -s https://raw.githubusercontent.com/CoreWorxLab/caal-tools/refs/heads/main/scripts/install.sh | bash -s truenas-get-status
 ```
 
 ### Manual Install

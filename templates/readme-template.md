@@ -21,7 +21,7 @@ Detailed explanation of the tool's functionality and what information it returns
 ### Self-Hosted
 
 ```bash
-curl -s https://raw.githubusercontent.com/CoreWorxLab/caal-tools/main/scripts/install.sh | bash -s tool-name
+curl -s https://raw.githubusercontent.com/CoreWorxLab/caal-tools/refs/heads/main/scripts/install.sh | bash -s tool-name
 ```
 
 ### Manual
