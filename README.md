@@ -24,6 +24,8 @@ Or explore by category:
 | [Homelab](tools/homelab) | TrueNAS, Docker, Proxmox, Unraid, PiHole |
 | [Productivity](tools/productivity) | Calendar, tasks, email, notes |
 | [Utilities](tools/utilities) | Weather, timers, reminders |
+| [Social](tools/social) | Discord, Slack, Reddit, Telegram |
+| [Other](tools/other) | Everything else |
 
 ## Install a Tool
 

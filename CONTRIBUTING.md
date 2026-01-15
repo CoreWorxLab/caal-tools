@@ -122,6 +122,8 @@ New submissions start as Experimental and get promoted based on reviews and usag
 | `homelab` | TrueNAS, Docker, Proxmox, Unraid, PiHole, server monitoring |
 | `productivity` | Calendar, tasks, email, notes |
 | `utilities` | Weather, timers, reminders, general purpose |
+| `social` | Discord, Slack, Reddit, Telegram, messaging |
+| `other` | Everything else |
 
 ## Voice-First Design Principles
 

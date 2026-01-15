@@ -49,7 +49,7 @@ async function main() {
   }
 
   const [workflowPath, category, customName] = args;
-  const validCategories = ['smart-home', 'media', 'homelab', 'productivity', 'utilities'];
+  const validCategories = ['smart-home', 'media', 'homelab', 'productivity', 'utilities', 'social', 'other'];
 
   if (!validCategories.includes(category)) {
     console.error(`\nInvalid category: ${category}`);
