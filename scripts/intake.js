@@ -3,7 +3,7 @@
 /**
  * Intake script for sanitizing and importing n8n workflows into the registry.
  *
- * Usage: node scripts/intake.js <workflow.json> <category> [tool-name]
+ * Usage: node scripts/intake.js <workflow.json> [category] [tool-name]
  *
  * This script will:
  * 1. Check for hardcoded secrets
@@ -38,23 +38,48 @@ const SECRET_PATTERNS = [
 const URL_PATTERN = /https?:\/\/[\d.]+(?::\d+)?/g;
 const LOCALHOST_PATTERN = /https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?/g;
 
+const CATEGORIES = [
+  { key: 'smart-home', label: 'Smart Home', desc: 'Home Assistant, lights, climate, security' },
+  { key: 'media', label: 'Media', desc: 'Plex, Jellyfin, Jellyseerr, Sonarr, Radarr' },
+  { key: 'homelab', label: 'Homelab', desc: 'TrueNAS, Docker, Proxmox, server monitoring' },
+  { key: 'productivity', label: 'Productivity', desc: 'Calendar, tasks, email, notes' },
+  { key: 'utilities', label: 'Utilities', desc: 'Weather, timers, reminders, general purpose' },
+  { key: 'social', label: 'Social', desc: 'Discord, Slack, Reddit, Telegram' },
+  { key: 'other', label: 'Other', desc: 'Everything else' },
+];
+
 async function main() {
   const args = process.argv.slice(2);
 
-  if (args.length < 2) {
-    console.error('\nUsage: node scripts/intake.js <workflow.json> <category> [tool-name]\n');
-    console.error('Categories: smart-home, media, homelab, productivity, utilities\n');
-    console.error('Example: node scripts/intake.js ~/workflows/truenas_get_status.json homelab\n');
+  if (args.length < 1) {
+    console.error('\nUsage: node scripts/intake.js <workflow.json> [category] [tool-name]\n');
+    console.error('Example: node scripts/intake.js ~/workflows/truenas_get_status.json\n');
     process.exit(1);
   }
 
-  const [workflowPath, category, customName] = args;
-  const validCategories = ['smart-home', 'media', 'homelab', 'productivity', 'utilities', 'social', 'other'];
+  const [workflowPath, categoryArg, customName] = args;
+  const validCategories = CATEGORIES.map(c => c.key);
 
-  if (!validCategories.includes(category)) {
-    console.error(`\nInvalid category: ${category}`);
-    console.error(`Must be one of: ${validCategories.join(', ')}\n`);
-    process.exit(1);
+  let category = categoryArg;
+
+  // If category not provided or invalid, prompt for it
+  if (!category || !validCategories.includes(category)) {
+    console.log('\n  Select a category:\n');
+    CATEGORIES.forEach((cat, i) => {
+      console.log(`    ${i + 1}) ${cat.label.padEnd(14)} - ${cat.desc}`);
+    });
+    console.log('');
+
+    const choice = await question('  Category (1-7): ');
+    const idx = parseInt(choice, 10) - 1;
+
+    if (idx < 0 || idx >= CATEGORIES.length) {
+      console.error('\n  Invalid selection.\n');
+      rl.close();
+      process.exit(1);
+    }
+
+    category = CATEGORIES[idx].key;
   }
 
   // Read workflow

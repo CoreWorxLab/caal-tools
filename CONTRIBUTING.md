@@ -16,9 +16,10 @@ cd caal-tools
 # 2. Export your workflow from n8n (File > Download)
 
 # 3. Run the intake script
-node scripts/intake.js ~/Downloads/my-workflow.json homelab
+node scripts/intake.js ~/Downloads/my-workflow.json
 
 # 4. Answer the prompts:
+#    - Category (select from menu)
 #    - Variable names for any hardcoded URLs
 #    - Voice trigger examples
 #    - Service name
