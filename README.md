@@ -13,9 +13,9 @@ This registry contains **voice-first n8n workflows** that extend CAAL's capabili
 
 ## Browse Tools
 
-Visit [coreworxlab.github.io/caal-tools](https://coreworxlab.github.io/caal-tools) to search and browse available tools.
+**Have CAAL installed?** Browse and install tools directly in your CAAL web interface.
 
-Or explore by category:
+**Exploring before installing CAAL?** Browse by category below:
 
 | Category | Tools |
 |----------|-------|
@@ -70,7 +70,7 @@ CAAL can query this registry directly:
 ```python
 import httpx
 
-REGISTRY_INDEX = "https://coreworxlab.github.io/caal-tools/index.json"
+REGISTRY_INDEX = "https://registry.caal.io/index.json"
 
 async def search_registry(query: str) -> list[dict]:
     async with httpx.AsyncClient() as client:
