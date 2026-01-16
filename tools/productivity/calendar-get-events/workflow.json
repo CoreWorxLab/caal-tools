@@ -1,0 +1,131 @@
+{
+  "name": "calendar_get_events",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "calendar_get_events",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        -112
+      ],
+      "name": "Webhook",
+      "webhookId": "calendar_get_events",
+      "notes": "Get calendar events. Parameters: start_date and end_date in YYYY-MM-DD format. Note: end_date is EXCLUSIVE, so to get events for a single day, set end_date to the NEXT day. Example: for January 16th events, use start_date=2026-01-16, end_date=2026-01-17."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle both JSON string and object formats\nlet data;\n\nif (typeof items[0].json.body === 'string') {\n  data = JSON.parse(items[0].json.body);\n} else if (typeof items[0].json === 'object' && items[0].json.start_date) {\n  data = items[0].json;\n} else if (typeof items[0].json.body === 'object') {\n  data = items[0].json.body;\n} else {\n  data = items[0].json;\n}\n\nreturn [\n  {\n    json: {\n      start_date: data.start_date,\n      end_date: data.end_date\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -192,
+        -112
+      ],
+      "name": "Parse Input"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "mode": "id",
+          "value": "${CALENDAR}"
+        },
+        "timeMin": "={{ $json.start_date }}",
+        "timeMax": "={{ $json.end_date }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        16,
+        -112
+      ],
+      "name": "Get Events",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": null,
+          "name": "google_calendar"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Transform Google Calendar events to voice-friendly format\n// Returns { message: \"...\", events: [...] } for CAAL\n\nfunction utcToLocal(utcString, timeZone) {\n  if (!utcString) return '';\n  const date = new Date(utcString);\n  const options = {\n    timeZone: timeZone,\n    hour: 'numeric',\n    minute: '2-digit',\n    hour12: true\n  };\n  return new Intl.DateTimeFormat('en-US', options).format(date);\n}\n\nfunction formatDate(dateStr) {\n  const date = new Date(dateStr);\n  const options = { weekday: 'long', month: 'long', day: 'numeric' };\n  return new Intl.DateTimeFormat('en-US', options).format(date);\n}\n\nconst events = items.map(item => {\n  const startObj = item.json.start;\n  const endObj = item.json.end;\n  const tz = startObj?.timeZone || 'America/Vancouver';\n  \n  let startTime = '';\n  let endTime = '';\n  let isAllDay = false;\n  \n  if (startObj?.dateTime) {\n    startTime = utcToLocal(startObj.dateTime, tz);\n    endTime = utcToLocal(endObj?.dateTime, tz);\n  } else if (startObj?.date) {\n    isAllDay = true;\n    startTime = 'all day';\n  }\n  \n  return {\n    title: item.json.summary || 'Untitled Event',\n    time: startTime,\n    endTime: endTime,\n    isAllDay: isAllDay,\n    location: item.json.location || '',\n    description: item.json.description || ''\n  };\n});\n\n// Build voice message\nlet message = '';\nif (events.length === 0) {\n  message = 'You have no events scheduled.';\n} else if (events.length === 1) {\n  const e = events[0];\n  if (e.isAllDay) {\n    message = `You have one event: ${e.title}, all day.`;\n  } else {\n    message = `You have one event: ${e.title} at ${e.time}.`;\n  }\n} else {\n  message = `You have ${events.length} events. `;\n  const topEvents = events.slice(0, 5);\n  const summaries = topEvents.map(e => {\n    if (e.isAllDay) {\n      return `${e.title}, all day`;\n    }\n    return `${e.title} at ${e.time}`;\n  });\n  message += summaries.join('. ') + '.';\n  if (events.length > 5) {\n    message += ` Plus ${events.length - 5} more.`;\n  }\n}\n\nreturn [{ json: { message, events } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        -112
+      ],
+      "name": "Format Response"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        432,
+        -112
+      ],
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Input": {
+      "main": [
+        [
+          {
+            "node": "Get Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Events": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "availableInMCP": true
+  }
+}

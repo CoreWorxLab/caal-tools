@@ -92,9 +92,6 @@ try {
   errors.push(`Invalid JSON in workflow.json: ${e.message}`);
 }
 
-// Known credential types
-const predefinedTypes = ['githubApi', 'slackApi', 'notionApi', 'googleApi', 'discordApi', 'spotifyApi', 'twilioApi', 'telegramApi', 'homeAssistantApi'];
-const genericTypes = ['httpHeaderAuth', 'httpBasicAuth', 'httpDigestAuth', 'oAuth2Api', 'sshPassword', 'sshPrivateKey'];
 
 if (workflow) {
   // Check for webhook trigger
@@ -110,6 +107,18 @@ if (workflow) {
     if (!webhookNode.notes || webhookNode.notes.trim().length < 20) {
       errors.push('Webhook node must have a meaningful description in the notes field');
     }
+    // Check webhook httpMethod is POST (CAAL only supports POST)
+    if (webhookNode.parameters?.httpMethod && webhookNode.parameters.httpMethod !== 'POST') {
+      errors.push(`Webhook httpMethod must be POST, found: ${webhookNode.parameters.httpMethod}`);
+    }
+    // Check webhook has responseMode: responseNode
+    if (webhookNode.parameters?.responseMode !== 'responseNode') {
+      warnings.push('Webhook should have responseMode: "responseNode" for proper response handling');
+    }
+    // Check webhook has webhookId matching path
+    if (!webhookNode.webhookId) {
+      warnings.push('Webhook should have a webhookId for consistent URL paths');
+    }
   }
 
   // Check for Respond to Webhook node
@@ -119,6 +128,41 @@ if (workflow) {
 
   if (!respondNode) {
     warnings.push('Consider adding a "Respond to Webhook" node for proper voice responses');
+  }
+
+  // Check for Code node and proper output format
+  const codeNodes = workflow.nodes?.filter(n =>
+    n.type === 'n8n-nodes-base.code'
+  ) || [];
+
+  if (codeNodes.length === 0) {
+    warnings.push('Consider adding a Code node to format voice-friendly responses');
+  } else {
+    // Check if ANY code node returns a message field
+    const hasMessageOutput = codeNodes.some(node => {
+      const jsCode = node.parameters?.jsCode || '';
+      return jsCode.includes('message');
+    });
+    if (!hasMessageOutput) {
+      warnings.push('Code node should return an object with a "message" field for voice responses');
+    }
+    // Check for old v1 syntax in ANY code node
+    const hasV1Syntax = codeNodes.some(node => {
+      const jsCode = node.parameters?.jsCode || '';
+      return jsCode.includes('$input.first()') || jsCode.includes('$input.last()');
+    });
+    if (hasV1Syntax) {
+      warnings.push('Code node uses v1 syntax ($input.first()). Use $input.item.json for v2');
+    }
+  }
+
+  // Check for extra settings beyond availableInMCP
+  if (workflow.settings) {
+    const allowedSettings = ['availableInMCP'];
+    const extraSettings = Object.keys(workflow.settings).filter(k => !allowedSettings.includes(k));
+    if (extraSettings.length > 0) {
+      warnings.push(`Workflow has extra settings that may cause issues: ${extraSettings.join(', ')}`);
+    }
   }
 
   // Check for availableInMCP setting
@@ -143,23 +187,12 @@ if (workflow) {
   }
 }
 
-// Validate manifest credentials match workflow
+// Validate manifest credentials
 if (manifest && manifest.required_credentials) {
   for (const cred of manifest.required_credentials) {
-    // Check auth_type is specified
-    if (!cred.auth_type || !['predefined', 'generic'].includes(cred.auth_type)) {
-      errors.push(`Credential "${cred.name}" must have auth_type: "predefined" or "generic"`);
-    }
     // Check credential_type is specified
     if (!cred.credential_type) {
       errors.push(`Credential "${cred.name}" must have credential_type specified`);
-    }
-    // Validate auth_type matches credential_type
-    if (cred.auth_type === 'predefined' && !predefinedTypes.includes(cred.credential_type)) {
-      warnings.push(`Credential "${cred.name}" has auth_type "predefined" but credential_type "${cred.credential_type}" is not a known predefined type`);
-    }
-    if (cred.auth_type === 'generic' && !genericTypes.includes(cred.credential_type)) {
-      warnings.push(`Credential "${cred.name}" has auth_type "generic" but credential_type "${cred.credential_type}" is not a known generic type`);
     }
   }
 }

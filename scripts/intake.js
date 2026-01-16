@@ -313,59 +313,21 @@ async function main() {
   // Build required_credentials from detected credential types
   const requiredCredentials = [];
 
-  // Known predefined credential types (n8n built-in)
-  const predefinedTypes = {
-    githubApi: 'GitHub API',
-    slackApi: 'Slack API',
-    notionApi: 'Notion API',
-    googleApi: 'Google API',
-    discordApi: 'Discord API',
-    spotifyApi: 'Spotify API',
-    twilioApi: 'Twilio API',
-    telegramApi: 'Telegram API',
-    homeAssistantApi: 'Home Assistant API',
-  };
-
-  // Generic credential type display names
-  const genericTypeNames = {
-    httpHeaderAuth: 'Header Auth',
-    httpBasicAuth: 'Basic Auth',
-    httpDigestAuth: 'Digest Auth',
-    oAuth2Api: 'OAuth2',
-    sshPassword: 'SSH Password',
-    sshPrivateKey: 'SSH Private Key',
-  };
-
   for (const credType of credentialTypes) {
-    const servicePart = toolName.split(/[_-]/)[0].toUpperCase();
-    const isPredefined = predefinedTypes.hasOwnProperty(credType);
-    const isSSH = credType.toLowerCase().includes('ssh');
-
-    if (isPredefined) {
-      // Predefined n8n credential type
-      requiredCredentials.push({
-        auth_type: 'predefined',
-        credential_type: credType,
-        name: `${servicePart.toLowerCase()}_account`,
-        description: predefinedTypes[credType],
-        node: 'Various'
-      });
-    } else {
-      // Generic credential type
-      const typePart = genericTypeNames[credType] || credType;
-      const credName = isSSH ? `${servicePart} SSH` : `${servicePart} API Key`;
-      const credDesc = isSSH
-        ? `${servicePart} - ${typePart} Credential`
-        : `${servicePart} API - ${typePart} Credential`;
-      requiredCredentials.push({
-        auth_type: 'generic',
-        credential_type: credType,
-        name: credName,
-        description: credDesc,
-        node: isSSH ? 'SSH' : 'HTTP Request',
-        header_name: isSSH ? undefined : 'Authorization'
-      });
+    // Find the credential name from the workflow
+    let credName = null;
+    for (const node of sanitized.nodes) {
+      if (node.credentials?.[credType]?.name) {
+        credName = node.credentials[credType].name;
+        break;
+      }
     }
+
+    requiredCredentials.push({
+      credential_type: credType,
+      name: credName || credType,
+      description: `n8n credential type: ${credType}`
+    });
   }
 
   // Prompt for voice triggers
