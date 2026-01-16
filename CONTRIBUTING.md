@@ -176,11 +176,10 @@ Your tool must:
 
 | Tier | Badge | Meaning |
 |------|-------|---------|
-| Verified | Gold | Passed auto + manual review, proven usage |
-| Community | Silver | Passed automated review |
-| Experimental | Warning | Submitted, awaiting review |
+| CoreWorxLab | Green | Official tools maintained by CoreWorxLab |
+| Community | Blue | Community-contributed tools |
 
-New submissions start as Experimental and get promoted based on reviews and usage.
+Community contributions are welcome! Your tools will be marked as "Community" tier.
 
 ## Categories
 

@@ -341,7 +341,7 @@ async function main() {
 
   // Prompt for GitHub username
   const githubUsername = await question(`\n  GitHub username: `);
-  const tier = githubUsername === "cmac86" ? "CoreWorxLab" : "community";
+  const tier = githubUsername === "cmac86" ? "coreworxlab" : "community";
 
   const manifest = {
     name: toolName.replace(/_/g, '-'),

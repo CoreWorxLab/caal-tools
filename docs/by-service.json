@@ -12,7 +12,7 @@
       "required_services": [
         "truenas"
       ],
-      "tier": "community",
+      "tier": "coreworxlab",
       "author": "cmac86",
       "tags": [
         "homelab",
@@ -33,7 +33,7 @@
       "required_services": [
         "truenas"
       ],
-      "tier": "community",
+      "tier": "coreworxlab",
       "author": "cmac86",
       "tags": [
         "homelab",
@@ -58,7 +58,7 @@
       "required_services": [
         "google calendar"
       ],
-      "tier": "community",
+      "tier": "coreworxlab",
       "author": "cmac86",
       "tags": [
         "productivity",
