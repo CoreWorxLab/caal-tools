@@ -96,7 +96,7 @@ Read the seed file, then immediately execute the review steps. Do not ask for co
         "--model", "sonnet",
         "--print",
         "--output-format", "json",
-        "--allowedTools", "Read,Edit,Write,Bash(git *),Bash(node *),Bash(gh *),Bash(cat *)",
+        "--allowedTools", "Read,Edit,Write,Bash(git *),Bash(node *),Bash(gh *),Bash(cat *),git commit",
         "-p", prompt,
     ]
 
@@ -108,6 +108,11 @@ Read the seed file, then immediately execute the review steps. Do not ask for co
         text=True,
         timeout=300,  # 5 minute timeout
     )
+
+    # Force cleanup to pristine state after review
+    print("Cleaning up repository state...")
+    subprocess.run(['git', 'checkout', '-f', 'main'], cwd=REPO_PATH, check=True)
+    subprocess.run(['git', 'clean', '-fd'], cwd=REPO_PATH, check=True)
 
     # Log raw output for debugging
     os.makedirs(LOG_DIR, exist_ok=True)
