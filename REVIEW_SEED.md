@@ -114,13 +114,19 @@ Read and review:
 4. **Voice Triggers** - Are there at least 2 voice trigger examples in the manifest?
 5. **Category Valid** - Is the category one of: smart-home, media, homelab, productivity, utilities, social, other?
 6. **Available in MCP** - Does `settings.availableInMCP` exist and equal `true`?
+7. **Webhook Method POST** - Is the webhook `httpMethod` set to `POST`? (CAAL only supports POST)
 
 ### Quality (Non-blocking)
 
-7. **Voice-Friendly Description** - Does the webhook description explain what the tool does in plain English?
-8. **Error Handling** - Does the workflow handle errors gracefully with user-friendly messages?
-9. **Response Format** - Is the output brief and conversational (not raw JSON)?
-10. **Latency** - Will this likely complete in under 5 seconds?
+8. **Voice-Friendly Description** - Does the webhook description explain what the tool does in plain English?
+9. **Error Handling** - Does the workflow handle errors gracefully with user-friendly messages?
+10. **Response Format** - Is the output brief and conversational (not raw JSON)?
+11. **Latency** - Will this likely complete in under 5 seconds?
+12. **Code Node Present** - Is there a Code node to format voice-friendly responses?
+13. **Output Schema** - Does the Code node return an object with a `message` field for voice responses?
+14. **Code Syntax v2** - Does the Code node use v2 syntax (`$input.item.json` not `$input.first()`)?
+15. **Webhook Config** - Does webhook have `responseMode: "responseNode"` and a `webhookId`?
+16. **Clean Settings** - Are there only expected settings (just `availableInMCP: true`)?
 
 ## Output Format
 
