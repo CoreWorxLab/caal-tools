@@ -96,7 +96,7 @@ Read the seed file, then immediately execute the review steps. Do not ask for co
         "--model", "sonnet",
         "--print",
         "--output-format", "json",
-        "--allowedTools", "Read,Bash(git:*,node:*,cat:*)",
+        "--allowedTools", "Read,Edit,Write,Bash(git:*,node:*,cat:*)",
         "-p", prompt,
     ]
 
