@@ -11,12 +11,9 @@
   "required_services": ["truenas"],
   "required_credentials": [
     {
-      "auth_type": "generic",
       "credential_type": "httpHeaderAuth",
-      "name": "TrueNAS API Key",
-      "description": "TrueNAS API - Header Auth",
-      "node": "HTTP Request",
-      "header_name": "Authorization"
+      "name": "truenas_api",
+      "description": "TrueNAS API key (Header Auth)"
     }
   ],
   "required_variables": [

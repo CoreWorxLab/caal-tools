@@ -1,0 +1,39 @@
+{
+  "name": "calendar-get-events",
+  "version": "1.0.0",
+  "description": "Get calendar events. Parameters: start_date and end_date in YYYY-MM-DD format. Note: end_date is EXCLUSIVE, so to get events for a single day, set end_date to the NEXT day. Example: for January 16th events, use start_date=2026-01-16, end_date=2026-01-17.",
+  "category": "productivity",
+  "voice_triggers": [
+    "what's on the calendar today",
+    "check the calendar for tomorrow"
+  ],
+  "required_services": [
+    "google calendar"
+  ],
+  "required_credentials": [
+    {
+      "credential_type": "googleCalendarOAuth2Api",
+      "name": "google_calendar",
+      "description": "n8n credential type: googleCalendarOAuth2Api"
+    }
+  ],
+  "required_variables": [
+    {
+      "name": "CALENDAR",
+      "description": "calendar - Cor and Ash's Calendar",
+      "example": "8hgqtcsiej7sucgg50ub3v1uss@group.calendar.google.com"
+    }
+  ],
+  "author": {
+    "github": "cmac",
+    "name": "Chris Mac"
+  },
+  "tier": "experimental",
+  "tags": [
+    "productivity",
+    "google calendar"
+  ],
+  "dependencies": [],
+  "created": "2026-01-16",
+  "updated": "2026-01-16"
+}
