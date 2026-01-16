@@ -75,6 +75,9 @@ def parse_webhook_payload(payload: dict) -> dict | None:
     }
 
 
+LOG_DIR = "/var/log/caal-tools"
+
+
 def run_claude_review(pr_info: dict) -> str:
     """Run Claude CLI to review the PR."""
     prompt = f"""Read {REVIEW_SEED_PATH}
@@ -95,6 +98,7 @@ Author: {pr_info['user']}
         "-p", prompt,
     ]
 
+    print(f"Running Claude CLI for PR #{pr_info['number']}...")
     result = subprocess.run(
         cmd,
         cwd=REPO_PATH,
@@ -102,6 +106,31 @@ Author: {pr_info['user']}
         text=True,
         timeout=300,  # 5 minute timeout
     )
+
+    # Log raw output for debugging
+    os.makedirs(LOG_DIR, exist_ok=True)
+    log_path = f"{LOG_DIR}/review_{pr_info['number']}_{pr_info['head_sha'][:7]}.log"
+
+    # Try to extract session ID from JSON output
+    session_id = None
+    try:
+        output_json = json.loads(result.stdout)
+        session_id = output_json.get("session_id") or output_json.get("sessionId")
+    except json.JSONDecodeError:
+        pass
+
+    with open(log_path, "w") as f:
+        f.write(f"PR: #{pr_info['number']} - {pr_info['title']}\n")
+        f.write(f"SHA: {pr_info['head_sha']}\n")
+        f.write(f"Return code: {result.returncode}\n")
+        if session_id:
+            f.write(f"Session ID: {session_id}\n")
+            f.write(f"Resume: claude --resume {session_id}\n")
+        f.write(f"\n=== STDOUT ===\n{result.stdout}\n\n")
+        f.write(f"=== STDERR ===\n{result.stderr}\n")
+    print(f"Claude output logged to {log_path}")
+    if session_id:
+        print(f"Session ID: {session_id}")
 
     if result.returncode != 0:
         print(f"Claude CLI failed: {result.stderr}")
