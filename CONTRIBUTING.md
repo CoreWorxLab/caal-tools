@@ -113,30 +113,22 @@ Each credential in `required_credentials` must specify:
 
 ```json
 {
-  "auth_type": "predefined",      // or "generic"
-  "credential_type": "githubApi", // n8n type name
-  "name": "github_account",       // credential name in n8n
-  "description": "GitHub API"     // human-readable
+  "credential_type": "githubApi",
+  "name": "github_account",
+  "description": "GitHub API"
 }
 ```
 
-**Predefined types** (n8n built-in):
-- `githubApi`, `slackApi`, `notionApi`, `googleApi`, `discordApi`
-- `spotifyApi`, `twilioApi`, `telegramApi`, `homeAssistantApi`
+Common credential types:
+- `githubApi`, `slackApi`, `notionApi`, `googleApi`, `discordApi`, `homeAssistantApi`
+- `httpHeaderAuth`, `httpBasicAuth`, `oAuth2Api`, `sshPassword`
 
-**Generic types** (manual setup):
-- `httpHeaderAuth`, `httpBasicAuth`, `httpDigestAuth`
-- `oAuth2Api`, `sshPassword`, `sshPrivateKey`
-
-Example for generic header auth:
+Example for header auth:
 ```json
 {
-  "auth_type": "generic",
   "credential_type": "httpHeaderAuth",
-  "name": "TrueNAS API Key",
-  "description": "TrueNAS API - Header Auth",
-  "node": "HTTP Request",
-  "header_name": "Authorization"
+  "name": "truenas_api",
+  "description": "TrueNAS API key (Header Auth)"
 }
 ```
 
