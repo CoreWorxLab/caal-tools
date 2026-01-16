@@ -1,18 +1,29 @@
 #!/usr/bin/env node
 
 const fs = require('fs');
+const path = require('path');
 
-const file = process.argv[2];
+let file = process.argv[2];
 
 if (!file) {
-  console.error('Usage: check-secrets.js <file>');
-  console.error('Example: check-secrets.js tools/media/jellyseerr-search/workflow.json');
+  console.error('Usage: check-secrets.js <file-or-directory>');
+  console.error('Example: check-secrets.js tools/media/jellyseerr-search');
+  console.error('         check-secrets.js tools/media/jellyseerr-search/workflow.json');
   process.exit(1);
 }
 
 if (!fs.existsSync(file)) {
   console.error(`File not found: ${file}`);
   process.exit(1);
+}
+
+// If directory, look for workflow.json inside
+if (fs.statSync(file).isDirectory()) {
+  file = path.join(file, 'workflow.json');
+  if (!fs.existsSync(file)) {
+    console.error(`workflow.json not found in directory`);
+    process.exit(1);
+  }
 }
 
 const content = fs.readFileSync(file, 'utf8');

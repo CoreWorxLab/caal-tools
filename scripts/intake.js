@@ -273,7 +273,7 @@ async function main() {
   };
 
   // Step 5: Write files
-  console.log(`\n[5/5] Writing files...`);
+  console.log(`\n[5/6] Writing files...`);
 
   const toolDir = path.join(process.cwd(), 'tools', category, toolName.replace(/_/g, '-'));
   fs.mkdirSync(toolDir, { recursive: true });
@@ -340,14 +340,42 @@ ${requiredVariables.map(v => `| \`${v.name}\` | ${v.description} | \`${v.example
   fs.writeFileSync(path.join(toolDir, 'README.md'), readme);
   console.log(`  Created: ${toolDir}/README.md`);
 
+  // Step 6: Run validation automatically
+  console.log(`\n[6/6] Running validation...\n`);
+
+  const { execSync } = require('child_process');
+  const scriptsDir = path.dirname(__filename);
+
+  let validationPassed = true;
+
+  // Run validate.js
+  try {
+    execSync(`node "${path.join(scriptsDir, 'validate.js')}" "${toolDir}"`, { stdio: 'inherit' });
+  } catch (e) {
+    validationPassed = false;
+  }
+
+  // Run check-secrets.js
+  try {
+    execSync(`node "${path.join(scriptsDir, 'check-secrets.js')}" "${toolDir}"`, { stdio: 'inherit' });
+  } catch (e) {
+    validationPassed = false;
+  }
+
   console.log(`\n========================================`);
   console.log(`  Intake complete!`);
   console.log(`========================================\n`);
   console.log(`Tool created at: ${toolDir}\n`);
-  console.log(`Next steps:`);
-  console.log(`  1. Review and edit the generated files`);
-  console.log(`  2. Run: node scripts/validate.js ${toolDir}`);
-  console.log(`  3. Update docs index: node scripts/generate-index.js\n`);
+
+  if (validationPassed) {
+    console.log(`Validation passed! Next steps:`);
+    console.log(`  1. Review the generated files`);
+    console.log(`  2. Create PR: git checkout -b add-${manifest.name} && git add . && git commit -m "feat: add ${manifest.name}" && git push\n`);
+  } else {
+    console.log(`Validation failed. Please fix the issues above and re-run:`);
+    console.log(`  node scripts/validate.js ${toolDir}`);
+    console.log(`  node scripts/check-secrets.js ${toolDir}\n`);
+  }
 
   rl.close();
 }
