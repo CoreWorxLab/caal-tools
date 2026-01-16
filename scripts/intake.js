@@ -220,7 +220,7 @@ async function main() {
         variable: `\${${finalVar}}`,
         varName: finalVar,
         originalValue: rl.value,
-        description: `${fieldName} - ${rl.cachedName || 'ID'}`
+        description: `Your ${fieldName} identifier`
       };
       console.log(`  -> Will replace with \${${finalVar}}\n`);
     }

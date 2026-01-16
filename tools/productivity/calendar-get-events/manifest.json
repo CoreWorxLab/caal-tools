@@ -20,7 +20,7 @@
   "required_variables": [
     {
       "name": "CALENDAR",
-      "description": "calendar - Cor and Ash's Calendar",
+      "description": "Your Google Calendar ID",
       "example": "your-calendar-id@group.calendar.google.com"
     }
   ],
