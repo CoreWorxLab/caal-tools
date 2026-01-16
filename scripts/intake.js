@@ -339,6 +339,9 @@ async function main() {
   const servicesInput = await question(`\n  Required services (comma-separated, e.g., truenas, jellyfin): `);
   const services = servicesInput ? servicesInput.split(',').map(s => s.trim().toLowerCase()).filter(s => s) : [];
 
+  // Prompt for GitHub username
+  const githubUsername = await question(`\n  GitHub username: `);
+
   const manifest = {
     name: toolName.replace(/_/g, '-'),
     version: "1.0.0",
@@ -349,10 +352,9 @@ async function main() {
     required_credentials: requiredCredentials,
     required_variables: requiredVariables,
     author: {
-      github: "cmac",
-      name: "Chris Mac"
+      github: githubUsername || "unknown"
     },
-    tier: "experimental",
+    tier: "community",
     tags: [category, ...services].filter(Boolean),
     dependencies: [],
     created: new Date().toISOString().split('T')[0],

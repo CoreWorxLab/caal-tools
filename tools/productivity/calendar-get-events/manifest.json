@@ -25,10 +25,9 @@
     }
   ],
   "author": {
-    "github": "cmac",
-    "name": "Chris Mac"
+    "github": "cmac86"
   },
-  "tier": "experimental",
+  "tier": "community",
   "tags": [
     "productivity",
     "google calendar"
