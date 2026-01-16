@@ -225,3 +225,32 @@ CONTRIBUTING.md for the required structure.
 - Be specific about line numbers when reporting issues
 - If the PR doesn't modify any `tools/` directories, output APPROVED with feedback noting it's not a tool submission
 - Clean up after review: `git checkout main`
+
+---
+
+## CRITICAL: Output Format
+
+Your response MUST end with these four code fences in this exact format. This is required for automated parsing:
+
+```verdict
+APPROVED
+```
+or
+```verdict
+NEEDS_CHANGES
+```
+
+```fixes
+- List any auto-fixes you applied (or "None")
+```
+
+```issues
+- List any blocking issues (or "None")
+- Prefix warnings with "Warning:"
+```
+
+```feedback
+2-3 sentences of actionable feedback for the PR author.
+```
+
+Do not deviate from this format. The automated system parses these exact code fences.
