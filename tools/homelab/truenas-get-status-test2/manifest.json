@@ -1,0 +1,38 @@
+{
+  "name": "truenas-get-status-test2",
+  "version": "1.0.0",
+  "description": "Get TrueNAS system status including CPU, memory, storage pools, and running apps. No parameters required.",
+  "category": "homelab",
+  "voice_triggers": [
+    "what's my TrueNAS status",
+    "how's my NAS doing"
+  ],
+  "required_services": [
+    "truenas"
+  ],
+  "required_credentials": [
+    {
+      "credential_type": "httpHeaderAuth",
+      "name": "truenas_api",
+      "description": "n8n credential type: httpHeaderAuth"
+    }
+  ],
+  "required_variables": [
+    {
+      "name": "SERVICE_URL",
+      "description": "Your service URL",
+      "example": "http://192.168.86.245"
+    }
+  ],
+  "author": {
+    "github": "cmac86"
+  },
+  "tier": "coreworxlab",
+  "tags": [
+    "homelab",
+    "truenas"
+  ],
+  "dependencies": [],
+  "created": "2026-01-17",
+  "updated": "2026-01-17"
+}
