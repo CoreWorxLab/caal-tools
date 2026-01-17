@@ -1,0 +1,15 @@
+{
+  "name": "truenas_get_status",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "truenas_get_status"
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "notes": "Get TrueNAS system status including CPU, memory, storage pools, and running apps."
+    }
+  ]
+}
