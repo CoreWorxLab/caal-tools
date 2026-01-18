@@ -1,0 +1,32 @@
+{
+  "name": "github-get-caal-repo-activity2",
+  "version": "1.0.0",
+  "description": "Gets open pull requests, issues, and unread notifications for a GitHub repository.",
+  "category": "productivity",
+  "voice_triggers": [
+    "What's happening on the CAAL repo?",
+    "Check my GitHub activity"
+  ],
+  "required_services": [
+    "GitHub"
+  ],
+  "required_credentials": [
+    {
+      "credential_type": "githubApi",
+      "name": "GITHUBAPI_CREDENTIAL",
+      "description": "n8n credential type: githubApi"
+    }
+  ],
+  "required_variables": [],
+  "author": {
+    "github": "cmac86"
+  },
+  "tier": "coreworxlab",
+  "tags": [
+    "productivity",
+    "GitHub"
+  ],
+  "dependencies": [],
+  "created": "2026-01-18",
+  "updated": "2026-01-18"
+}

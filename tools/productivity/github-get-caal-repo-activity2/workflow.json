@@ -1,0 +1,241 @@
+{
+  "name": "github_get_caal_repo_activity2",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "github_get_caal_repo_activity2",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        304
+      ],
+      "webhookId": "github_get_repo_activity",
+      "notes": "Check CoreWorxLab/CAAL for actionable items: open PRs, open issues, and unread notifications."
+    },
+    {
+      "parameters": {
+        "url": "https://api.github.com/repos/CoreWorxLab/CAAL/pulls?state=open&per_page=20",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-prs",
+      "name": "Get Open PRs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        464,
+        200
+      ],
+      "credentials": {
+        "githubApi": {
+          "id": null,
+          "name": "${GITHUBAPI_CREDENTIAL}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.github.com/repos/CoreWorxLab/CAAL/issues?state=open&per_page=20",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-issues",
+      "name": "Get Open Issues",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        464,
+        400
+      ],
+      "credentials": {
+        "githubApi": {
+          "id": null,
+          "name": "${GITHUBAPI_CREDENTIAL}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.github.com/notifications?all=false&per_page=50",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-notifications",
+      "name": "Get Unread Notifications",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        464,
+        600
+      ],
+      "credentials": {
+        "githubApi": {
+          "id": null,
+          "name": "${GITHUBAPI_CREDENTIAL}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "append",
+        "numberInputs": 3,
+        "options": {}
+      },
+      "id": "merge-node",
+      "name": "Merge Data",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        700,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all inputs - each item is a direct object from the API\nconst items = $input.all();\n\n// Parse data from merged inputs\nlet prs = [];\nlet issues = [];\nlet notifications = [];\n\nfor (const item of items) {\n  const data = item.json;\n  \n  // Skip webhook data items\n  if (data.headers !== undefined && data.query !== undefined) continue;\n  \n  // Detect type by unique fields\n  if (data.commits_url && data.diff_url) {\n    // This is a PR (from pulls endpoint)\n    prs.push(data);\n  } else if (data.unread !== undefined && data.subject) {\n    // This is a notification (has unread flag and subject)\n    // Filter for CoreWorxLab/CAAL repo only\n    if (data.repository && data.repository.full_name === 'CoreWorxLab/CAAL') {\n      notifications.push(data);\n    }\n  } else if (data.number && !data.pull_request && !data.commits_url) {\n    // This is an issue (has number but no pull_request key)\n    issues.push(data);\n  }\n}\n\n// Build structured data\nconst activity = {\n  openPRs: prs.map(pr => ({\n    number: pr.number,\n    title: pr.title,\n    author: pr.user.login,\n    createdAt: pr.created_at,\n    updatedAt: pr.updated_at,\n    draft: pr.draft\n  })),\n  openIssues: issues.map(issue => ({\n    number: issue.number,\n    title: issue.title,\n    author: issue.user.login,\n    comments: issue.comments,\n    createdAt: issue.created_at,\n    updatedAt: issue.updated_at\n  })),\n  unreadNotifications: notifications.map(n => {\n    // Extract issue/PR number from subject URL\n    const urlMatch = n.subject.url ? n.subject.url.match(/\\/(issues|pulls)\\/(\\d+)/) : null;\n    const number = urlMatch ? parseInt(urlMatch[2]) : null;\n    return {\n      type: n.subject.type,\n      title: n.subject.title,\n      number: number,\n      reason: n.reason,\n      updatedAt: n.updated_at\n    };\n  })\n};\n\n// Build voice message\nlet messageParts = [];\n\n// PRs\nif (activity.openPRs.length === 0) {\n  // No PRs to mention\n} else if (activity.openPRs.length === 1) {\n  const pr = activity.openPRs[0];\n  const draftNote = pr.draft ? 'draft ' : '';\n  messageParts.push(`There's 1 open ${draftNote}PR from ${pr.author}: ${pr.title}`);\n} else {\n  const prSummary = activity.openPRs.slice(0, 3).map(pr => {\n    const draftNote = pr.draft ? 'draft ' : '';\n    return `${draftNote}PR from ${pr.author}`;\n  }).join(', ');\n  messageParts.push(`${activity.openPRs.length} open PRs including ${prSummary}`);\n}\n\n// Issues\nif (activity.openIssues.length > 0) {\n  if (activity.openIssues.length === 1) {\n    const issue = activity.openIssues[0];\n    messageParts.push(`1 open issue: number ${issue.number}, ${issue.title}`);\n  } else {\n    const issueTitles = activity.openIssues.slice(0, 2).map(i => i.title).join(' and ');\n    messageParts.push(`${activity.openIssues.length} open issues including ${issueTitles}`);\n  }\n}\n\n// Unread notifications\nif (activity.unreadNotifications.length > 0) {\n  const notifsByType = {};\n  for (const n of activity.unreadNotifications) {\n    const key = n.type;\n    if (!notifsByType[key]) notifsByType[key] = [];\n    notifsByType[key].push(n);\n  }\n  \n  const notifParts = [];\n  for (const [type, notifs] of Object.entries(notifsByType)) {\n    if (notifs.length === 1) {\n      const n = notifs[0];\n      const numStr = n.number ? `number ${n.number}` : '';\n      notifParts.push(`1 unread ${type} ${numStr}`.trim());\n    } else {\n      notifParts.push(`${notifs.length} unread ${type}s`);\n    }\n  }\n  messageParts.push(`Unread: ${notifParts.join(', ')}`);\n}\n\nlet message;\nif (messageParts.length === 0) {\n  message = 'Nothing to action on the repo. No open PRs, issues, or unread notifications.';\n} else {\n  message = messageParts.join('. ') + '.';\n}\n\nreturn {\n  message: message,\n  activity: activity\n};"
+      },
+      "id": "code-node",
+      "name": "Format for Voice",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        920,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1140,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get Open PRs",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Open Issues",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Unread Notifications",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Open PRs": {
+      "main": [
+        [
+          {
+            "node": "Merge Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Open Issues": {
+      "main": [
+        [
+          {
+            "node": "Merge Data",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Get Unread Notifications": {
+      "main": [
+        [
+          {
+            "node": "Merge Data",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Merge Data": {
+      "main": [
+        [
+          {
+            "node": "Format for Voice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format for Voice": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
