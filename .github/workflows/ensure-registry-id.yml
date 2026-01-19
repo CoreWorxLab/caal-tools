@@ -1,0 +1,37 @@
+name: Ensure Registry ID
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tools/**'
+
+jobs:
+  ensure-id:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check and add registry IDs
+        run: node scripts/ensure-registry-id.js
+
+      - name: Commit if changed
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add tools/
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: add missing registry IDs"
+            git push
+          fi

@@ -44,7 +44,9 @@ for (const category of categories) {
     }
 
     const entry = {
+      id: manifest.id || null,  // Registry ID for tracking
       name: manifest.name,
+      version: manifest.version || '1.0.0',
       description: manifest.description,
       category: category,
       path: `tools/${category}/${tool}`,
