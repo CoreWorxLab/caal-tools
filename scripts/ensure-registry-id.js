@@ -10,7 +10,7 @@
  * For any tool missing an id in manifest.json:
  * 1. Generates a new registry ID
  * 2. Adds it to manifest.json
- * 3. Adds caal_registry_id and caal_registry_version to workflow.json settings
+ * 3. Adds CAAL registry tracking sticky note to workflow.json
  */
 
 const fs = require('fs');
@@ -22,6 +22,36 @@ const toolsDir = './tools';
 function generateRegistryId() {
   // Generate URL-safe base64 ID (~22 chars, similar to nanoid)
   return crypto.randomBytes(16).toString('base64url');
+}
+
+function generateUUID() {
+  return crypto.randomUUID();
+}
+
+function createRegistryStickyNote(registryId, version, toolName, description, category) {
+  const link = `https://github.com/CoreWorxLab/caal-tools/tree/main/tools/${category}/${toolName}`;
+
+  const content = `## CAAL Registry Tracking
+**Tool Name:** ${toolName}
+**Description:** ${description}
+**version:** v${version}
+**id:** ${registryId}
+**link:** [Registry](${link})
+
+### (Do not delete this sticky)`;
+
+  return {
+    parameters: {
+      content,
+      height: 260,
+      width: 360,
+    },
+    type: 'n8n-nodes-base.stickyNote',
+    position: [-200, 100],
+    typeVersion: 1,
+    id: generateUUID(),
+    name: 'Sticky Note',
+  };
 }
 
 function processToolDirectory(toolPath) {
@@ -51,7 +81,12 @@ function processToolDirectory(toolPath) {
   const newId = generateRegistryId();
   const version = manifest.version || '1.0.0';
 
-  console.log(`  ${manifest.name} - adding ID: ${newId}`);
+  // Extract category from path (e.g., "tools/homelab/my-tool" -> "homelab")
+  const pathParts = toolPath.split(path.sep);
+  const category = pathParts[pathParts.indexOf('tools') + 1] || 'other';
+  const toolName = manifest.name || pathParts[pathParts.length - 1];
+
+  console.log(`  ${toolName} - adding ID: ${newId}`);
 
   // Update manifest
   manifest.id = newId;
@@ -60,19 +95,33 @@ function processToolDirectory(toolPath) {
   }
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
 
-  // Update workflow if it exists
+  // Update workflow if it exists - add sticky note for registry tracking
   if (fs.existsSync(workflowPath)) {
     try {
       const workflow = JSON.parse(fs.readFileSync(workflowPath, 'utf8'));
 
-      if (!workflow.settings) {
-        workflow.settings = {};
-      }
-      workflow.settings.caal_registry_id = newId;
-      workflow.settings.caal_registry_version = version;
+      // Check if sticky note already exists
+      const hasSticky = workflow.nodes?.some(
+        (n) => n.type === 'n8n-nodes-base.stickyNote' && n.parameters?.content?.includes('CAAL Registry Tracking')
+      );
 
-      fs.writeFileSync(workflowPath, JSON.stringify(workflow, null, 2) + '\n');
-      console.log(`    Updated workflow.json settings`);
+      if (!hasSticky) {
+        const stickyNote = createRegistryStickyNote(
+          newId,
+          version,
+          toolName,
+          manifest.description || '',
+          category
+        );
+
+        if (!workflow.nodes) {
+          workflow.nodes = [];
+        }
+        workflow.nodes.push(stickyNote);
+
+        fs.writeFileSync(workflowPath, JSON.stringify(workflow, null, 2) + '\n');
+        console.log(`    Added registry tracking sticky note to workflow.json`);
+      }
     } catch (e) {
       console.warn(`    Could not update workflow.json: ${e.message}`);
     }
