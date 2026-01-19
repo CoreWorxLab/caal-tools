@@ -3,7 +3,11 @@
 /**
  * Ensure Registry ID - Auto-adds registry IDs to tools submitted via manual PRs
  *
- * Checks all tools in tools/ directory. For any tool missing an id in manifest.json:
+ * Usage:
+ *   node ensure-registry-id.js                    # Scan all tools (for backfill)
+ *   node ensure-registry-id.js --changed "file1 file2"  # Only check specific changed files
+ *
+ * For any tool missing an id in manifest.json:
  * 1. Generates a new registry ID
  * 2. Adds it to manifest.json
  * 3. Adds caal_registry_id and caal_registry_version to workflow.json settings
@@ -77,23 +81,55 @@ function processToolDirectory(toolPath) {
   return true;
 }
 
-// Main
+// Parse arguments
+const args = process.argv.slice(2);
+const changedIndex = args.indexOf('--changed');
+const changedFiles = changedIndex !== -1 ? args[changedIndex + 1] : null;
+
 console.log('Checking for missing registry IDs...\n');
 
 let updated = 0;
 
-const categories = fs.readdirSync(toolsDir);
-for (const category of categories) {
-  const categoryPath = path.join(toolsDir, category);
-  if (!fs.statSync(categoryPath).isDirectory()) continue;
+if (changedFiles) {
+  // Only process specific changed files (efficient for PRs)
+  const files = changedFiles.split(/\s+/).filter(f => f.trim());
 
-  const tools = fs.readdirSync(categoryPath);
-  for (const tool of tools) {
-    const toolPath = path.join(categoryPath, tool);
-    if (!fs.statSync(toolPath).isDirectory()) continue;
+  if (files.length === 0) {
+    console.log('No tool files changed in this PR.');
+  } else {
+    // Extract unique tool directories from changed file paths
+    const toolDirs = new Set();
+    for (const file of files) {
+      // e.g., "tools/homelab/my-tool/manifest.json" -> "tools/homelab/my-tool"
+      const match = file.match(/^(tools\/[^/]+\/[^/]+)\//);
+      if (match) {
+        toolDirs.add(match[1]);
+      }
+    }
 
-    if (processToolDirectory(toolPath)) {
-      updated++;
+    for (const toolPath of toolDirs) {
+      if (fs.existsSync(toolPath) && fs.statSync(toolPath).isDirectory()) {
+        if (processToolDirectory(toolPath)) {
+          updated++;
+        }
+      }
+    }
+  }
+} else {
+  // Full scan (for backfill or manual runs)
+  const categories = fs.readdirSync(toolsDir);
+  for (const category of categories) {
+    const categoryPath = path.join(toolsDir, category);
+    if (!fs.statSync(categoryPath).isDirectory()) continue;
+
+    const tools = fs.readdirSync(categoryPath);
+    for (const tool of tools) {
+      const toolPath = path.join(categoryPath, tool);
+      if (!fs.statSync(toolPath).isDirectory()) continue;
+
+      if (processToolDirectory(toolPath)) {
+        updated++;
+      }
     }
   }
 }

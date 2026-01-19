@@ -12,7 +12,10 @@
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [240, 400],
+      "position": [
+        240,
+        400
+      ],
       "webhookId": "truenas_get_status",
       "notes": "Get TrueNAS system status including CPU, memory, storage pools, and running apps. No parameters required."
     },
@@ -28,7 +31,10 @@
       "name": "Get System Info",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [460, 200],
+      "position": [
+        460,
+        200
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": null,
@@ -48,7 +54,10 @@
       "name": "Get Pools",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [460, 400],
+      "position": [
+        460,
+        400
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": null,
@@ -68,7 +77,10 @@
       "name": "Get Apps",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [460, 600],
+      "position": [
+        460,
+        600
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": null,
@@ -97,7 +109,10 @@
       "name": "Get Memory",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [460, 800],
+      "position": [
+        460,
+        800
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": null,
@@ -115,7 +130,10 @@
       "name": "Merge Data",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
-      "position": [700, 400]
+      "position": [
+        700,
+        400
+      ]
     },
     {
       "parameters": {
@@ -125,7 +143,10 @@
       "name": "Format Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [920, 400]
+      "position": [
+        920,
+        400
+      ]
     },
     {
       "parameters": {
@@ -137,40 +158,109 @@
       "name": "Respond to Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1140, 400]
+      "position": [
+        1140,
+        400
+      ]
     }
   ],
   "connections": {
     "Webhook": {
       "main": [
         [
-          {"node": "Get System Info", "type": "main", "index": 0},
-          {"node": "Get Pools", "type": "main", "index": 0},
-          {"node": "Get Apps", "type": "main", "index": 0},
-          {"node": "Get Memory", "type": "main", "index": 0}
+          {
+            "node": "Get System Info",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Pools",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Apps",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Memory",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Get System Info": {
-      "main": [[{"node": "Merge Data", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Merge Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Get Pools": {
-      "main": [[{"node": "Merge Data", "type": "main", "index": 1}]]
+      "main": [
+        [
+          {
+            "node": "Merge Data",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
     },
     "Get Apps": {
-      "main": [[{"node": "Merge Data", "type": "main", "index": 2}]]
+      "main": [
+        [
+          {
+            "node": "Merge Data",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
     },
     "Get Memory": {
-      "main": [[{"node": "Merge Data", "type": "main", "index": 3}]]
+      "main": [
+        [
+          {
+            "node": "Merge Data",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
     },
     "Merge Data": {
-      "main": [[{"node": "Format Response", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Format Response": {
-      "main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
-    "availableInMCP": true
+    "availableInMCP": true,
+    "caal_registry_id": "SuHzwLYC2HfETYcBv7iIkw",
+    "caal_registry_version": "1.0.0"
   }
 }

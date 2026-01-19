@@ -1,10 +1,10 @@
 {
-  "name": "github_get_caal_repo_activity",
+  "name": "github_get_repo_activity",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "github_get_caal_repo_activity",
+        "path": "github_get_repo_activity",
         "responseMode": "responseNode",
         "options": {}
       },
@@ -46,7 +46,7 @@
       "credentials": {
         "githubApi": {
           "id": null,
-          "name": "${GITHUBAPI_CREDENTIAL}"
+          "name": "github_account"
         }
       }
     },
@@ -77,7 +77,7 @@
       "credentials": {
         "githubApi": {
           "id": null,
-          "name": "${GITHUBAPI_CREDENTIAL}"
+          "name": "github_account"
         }
       }
     },
@@ -108,7 +108,7 @@
       "credentials": {
         "githubApi": {
           "id": null,
-          "name": "${GITHUBAPI_CREDENTIAL}"
+          "name": "github_account"
         }
       }
     },
@@ -236,8 +236,7 @@
   },
   "settings": {
     "availableInMCP": true,
-    "callerPolicy": "workflowsFromSameOwner",
-    "caal_registry_id": "bJeR9HfQYSP-bua848cWgA",
+    "caal_registry_id": "rFmECgnhvAbYHMwzIv93Cg",
     "caal_registry_version": "1.0.0"
   }
 }

@@ -8,7 +8,9 @@
     "how's my NAS doing",
     "check TrueNAS"
   ],
-  "required_services": ["truenas"],
+  "required_services": [
+    "truenas"
+  ],
   "required_credentials": [
     {
       "credential_type": "httpHeaderAuth",
@@ -27,8 +29,15 @@
     "github": "cmac86"
   },
   "tier": "coreworxlab",
-  "tags": ["homelab", "truenas", "nas", "server", "monitoring"],
+  "tags": [
+    "homelab",
+    "truenas",
+    "nas",
+    "server",
+    "monitoring"
+  ],
   "dependencies": [],
   "created": "2026-01-14",
-  "updated": "2026-01-14"
+  "updated": "2026-01-14",
+  "id": "SuHzwLYC2HfETYcBv7iIkw"
 }

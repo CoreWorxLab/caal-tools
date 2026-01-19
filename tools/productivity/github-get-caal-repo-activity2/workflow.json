@@ -236,6 +236,8 @@
   },
   "settings": {
     "availableInMCP": true,
-    "callerPolicy": "workflowsFromSameOwner"
+    "callerPolicy": "workflowsFromSameOwner",
+    "caal_registry_id": "_Uxf6qlNmYJljQyhdUzLhQ",
+    "caal_registry_version": "1.0.0"
   }
 }

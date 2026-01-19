@@ -23,8 +23,16 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Get changed files
+        id: changed
+        run: |
+          changed=$(git diff --name-only origin/main...HEAD -- 'tools/')
+          echo "files<<EOF" >> $GITHUB_OUTPUT
+          echo "$changed" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Check and add registry IDs
-        run: node scripts/ensure-registry-id.js
+        run: node scripts/ensure-registry-id.js --changed "${{ steps.changed.outputs.files }}"
 
       - name: Commit if changed
         run: |

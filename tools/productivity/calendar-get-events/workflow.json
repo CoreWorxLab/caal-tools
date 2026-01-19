@@ -126,6 +126,8 @@
     }
   },
   "settings": {
-    "availableInMCP": true
+    "availableInMCP": true,
+    "caal_registry_id": "_lCdu_lZ6ULta-vKiXnilg",
+    "caal_registry_version": "1.0.0"
   }
 }

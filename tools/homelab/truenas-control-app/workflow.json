@@ -908,6 +908,8 @@
     }
   },
   "settings": {
-    "availableInMCP": true
+    "availableInMCP": true,
+    "caal_registry_id": "HyuWDNcAv_zNNTpgsZa7gQ",
+    "caal_registry_version": "1.0.0"
   }
 }
