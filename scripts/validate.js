@@ -53,7 +53,7 @@ if (manifest) {
     warnings.push('Consider adding more voice trigger examples (at least 2 recommended)');
   }
 
-  const validCategories = ['smart-home', 'media', 'homelab', 'productivity', 'utilities', 'social', 'other'];
+  const validCategories = ['smart-home', 'media', 'homelab', 'productivity', 'developer', 'utilities', 'sports', 'social', 'other'];
   if (manifest.category && !validCategories.includes(manifest.category)) {
     errors.push(`Invalid category: ${manifest.category}. Must be one of: ${validCategories.join(', ')}`);
   }

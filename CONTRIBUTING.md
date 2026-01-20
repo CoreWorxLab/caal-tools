@@ -99,7 +99,7 @@ Update `manifest.json` with:
 |-------|-------------|
 | `name` | kebab-case identifier (e.g., `jellyseerr-search`) |
 | `description` | Voice-friendly description of what it does |
-| `category` | One of: `smart-home`, `media`, `homelab`, `productivity`, `utilities`, `social`, `other` |
+| `category` | One of: `smart-home`, `media`, `homelab`, `productivity`, `developer`, `utilities`, `sports`, `social`, `other` |
 | `voice_triggers` | Array of example phrases (at least 2) |
 | `required_services` | External services needed (e.g., `["jellyseerr"]`) |
 | `required_credentials` | Credentials to create in n8n (see schema below) |
@@ -189,7 +189,9 @@ Community contributions are welcome! Your tools will be marked as "Community" ti
 | `media` | Plex, Jellyfin, Jellyseerr, Sonarr, Radarr |
 | `homelab` | TrueNAS, Docker, Proxmox, Unraid, PiHole, server monitoring |
 | `productivity` | Calendar, tasks, email, notes |
+| `developer` | GitHub, GitLab, CI/CD, code tools |
 | `utilities` | Weather, timers, reminders, general purpose |
+| `sports` | ESPN, fantasy sports, scores, standings |
 | `social` | Discord, Slack, Reddit, Telegram, messaging |
 | `other` | Everything else |
 

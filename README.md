@@ -30,7 +30,9 @@ This registry contains **voice-first n8n workflows** that extend CAAL's capabili
 | [Media](tools/media) | Plex, Jellyfin, Jellyseerr, Sonarr, Radarr |
 | [Homelab](tools/homelab) | TrueNAS, Docker, Proxmox, Unraid, PiHole |
 | [Productivity](tools/productivity) | Calendar, tasks, email, notes |
+| [Developer](tools/developer) | GitHub, GitLab, CI/CD, code tools |
 | [Utilities](tools/utilities) | Weather, timers, reminders |
+| [Sports](tools/sports) | ESPN, fantasy sports, scores, standings |
 | [Social](tools/social) | Discord, Slack, Reddit, Telegram |
 | [Other](tools/other) | Everything else |
 

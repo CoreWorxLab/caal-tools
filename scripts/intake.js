@@ -101,7 +101,9 @@ const CATEGORIES = [
   { key: 'media', label: 'Media', desc: 'Plex, Jellyfin, Jellyseerr, Sonarr, Radarr' },
   { key: 'homelab', label: 'Homelab', desc: 'TrueNAS, Docker, Proxmox, server monitoring' },
   { key: 'productivity', label: 'Productivity', desc: 'Calendar, tasks, email, notes' },
+  { key: 'developer', label: 'Developer', desc: 'GitHub, GitLab, CI/CD, code tools' },
   { key: 'utilities', label: 'Utilities', desc: 'Weather, timers, reminders, general purpose' },
+  { key: 'sports', label: 'Sports', desc: 'ESPN, fantasy sports, scores, standings' },
   { key: 'social', label: 'Social', desc: 'Discord, Slack, Reddit, Telegram' },
   { key: 'other', label: 'Other', desc: 'Everything else' },
 ];
