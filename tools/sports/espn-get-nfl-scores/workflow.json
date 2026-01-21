@@ -1,0 +1,147 @@
+{
+  "name": "espn_get_nfl_scores",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "espn_get_nfl_scores",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        0
+      ],
+      "webhookId": "espn_get_nfl_scores",
+      "notes": "Get live NFL scores. Optional parameter: team (e.g., 'Packers', 'Bears') to filter results. Examples: 'NFL scores', 'how are the Packers doing', 'did the Chiefs win'.",
+      "id": "1e2f6fd3-8e29-4d93-953f-c8a074fe701d"
+    },
+    {
+      "parameters": {
+        "url": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "name": "Get NFL Scores",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -192,
+        0
+      ],
+      "id": "a5420f18-4408-4d71-ba3c-ec4dbef034b1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const espnData = $input.first().json;\nconst webhookData = $('Webhook').first().json.body || {};\nconst teamFilter = webhookData.team ? webhookData.team.toLowerCase() : null;\n\nconst events = espnData.events || [];\nconst games = [];\n\nfor (const event of events) {\n  const competition = event.competitions[0];\n  const homeTeam = competition.competitors.find(c => c.homeAway === 'home');\n  const awayTeam = competition.competitors.find(c => c.homeAway === 'away');\n  \n  games.push({\n    away: awayTeam.team.abbreviation,\n    awayName: awayTeam.team.displayName,\n    awayScore: parseInt(awayTeam.score) || 0,\n    home: homeTeam.team.abbreviation,\n    homeName: homeTeam.team.displayName,\n    homeScore: parseInt(homeTeam.score) || 0,\n    status: event.status.type.description,\n    statusDetail: event.status.type.shortDetail\n  });\n}\n\n// Filter by team if specified\nlet filteredGames = games;\nif (teamFilter) {\n  filteredGames = games.filter(g => \n    g.homeName.toLowerCase().includes(teamFilter) ||\n    g.awayName.toLowerCase().includes(teamFilter) ||\n    g.home.toLowerCase() === teamFilter ||\n    g.away.toLowerCase() === teamFilter\n  );\n}\n\n// Build voice response\nlet message = '';\n\nif (filteredGames.length === 0 && teamFilter) {\n  message = `No games found for ${teamFilter}.`;\n} else if (filteredGames.length === 0) {\n  message = 'No NFL games scheduled right now.';\n} else {\n  const voiceGames = filteredGames.slice(0, 5);\n  const voiceParts = [];\n  \n  for (const game of voiceGames) {\n    const awayShort = game.awayName.split(' ').pop();\n    const homeShort = game.homeName.split(' ').pop();\n    \n    if (game.status === 'Scheduled' || game.status === 'Pre-Game') {\n      voiceParts.push(`${awayShort} at ${homeShort}`);\n    } else if (game.status === 'Final') {\n      if (game.awayScore > game.homeScore) {\n        voiceParts.push(`${awayShort} ${game.awayScore}, ${homeShort} ${game.homeScore}. Final.`);\n      } else {\n        voiceParts.push(`${homeShort} ${game.homeScore}, ${awayShort} ${game.awayScore}. Final.`);\n      }\n    } else {\n      const period = game.statusDetail.split(' - ')[1] || 'live';\n      voiceParts.push(`${awayShort} ${game.awayScore}, ${homeShort} ${game.homeScore}. ${period}.`);\n    }\n  }\n  \n  message = voiceParts.join(' ');\n  if (filteredGames.length > 5) {\n    message += ` Plus ${filteredGames.length - 5} more games.`;\n  }\n}\n\nreturn { message, games: filteredGames };"
+      },
+      "name": "Format Success",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16,
+        -100
+      ],
+      "id": "f80959f8-4369-4112-b00e-154bc1931e6a"
+    },
+    {
+      "parameters": {
+        "jsCode": "const errorData = items[0].json;\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\n\nif (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ETIMEDOUT')) {\n  errorMsg = 'Cannot connect to ESPN. Try again later.';\n}\n\nreturn { message: `Error getting NFL scores: ${errorMsg}`, error: true };"
+      },
+      "name": "Format Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16,
+        100
+      ],
+      "id": "7b952fc5-3081-4578-bde6-37fec37efd88"
+    },
+    {
+      "parameters": {},
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "9bc36d31-889b-4aef-aca5-6d7d272078fe"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** espn-get-nfl-scores\n**Description:** Gets live NFL game scores with optional team filtering, including game status and current score information.\n**version:** v1.0.0\n**id:** TRwvVxEmIj5qyuu9i2vrPA\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/sports/espn-get-nfl-scores)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -200,
+        100
+      ],
+      "typeVersion": 1,
+      "id": "2b27bf9b-a3dd-413e-a242-d2c3ea48924f",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get NFL Scores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get NFL Scores": {
+      "main": [
+        [
+          {
+            "node": "Format Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Success": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
