@@ -1,0 +1,822 @@
+{
+  "name": "notion_tasks",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "notion_tasks",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -600,
+        0
+      ],
+      "webhookId": "notion_tasks",
+      "notes": "Notion Tasks suite - manage tasks in Notion database. Parameters: action (required) - 'get', 'add', 'complete', or 'delete'; task (required for add/complete/delete) - task name; filter (optional for get) - 'all', 'today', 'tomorrow', 'week', 'overdue'; due (optional for add) - due date like 'today', 'tomorrow', 'friday', or 'YYYY-MM-DD'; notes (optional for add); show_completed (optional for get, default false). Examples: 'what's on my notion task list', 'add notion task buy groceries due friday', 'complete buy groceries in notion', 'delete old task from notion'.",
+      "id": "477e4411-257c-442f-b8a1-649ff818d006"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body || $input.item.json;\nlet data = typeof body === 'string' ? JSON.parse(body) : body;\n\nconst action = (data.action || 'get').toLowerCase().trim();\nconst task = data.task || data.title || data.name || '';\nconst notes = data.notes || '';\nconst filter = (data.filter || 'all').toLowerCase().trim();\nconst showCompleted = data.show_completed === true || data.show_completed === 'true';\nlet due = data.due || '';\n\n// Parse due date for add action\nlet dueDate = null;\nif (due && action === 'add') {\n  const input = due.toLowerCase().trim();\n  const today = new Date();\n  \n  if (input === 'today') {\n    dueDate = today.toISOString().split('T')[0];\n  } else if (input === 'tomorrow') {\n    const tomorrow = new Date(today);\n    tomorrow.setDate(tomorrow.getDate() + 1);\n    dueDate = tomorrow.toISOString().split('T')[0];\n  } else if (['monday','tuesday','wednesday','thursday','friday','saturday','sunday'].includes(input)) {\n    const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];\n    const targetDay = days.indexOf(input);\n    const currentDay = today.getDay();\n    let daysUntil = targetDay - currentDay;\n    if (daysUntil <= 0) daysUntil += 7;\n    const target = new Date(today);\n    target.setDate(target.getDate() + daysUntil);\n    dueDate = target.toISOString().split('T')[0];\n  } else if (input.match(/^\\d{4}-\\d{2}-\\d{2}$/)) {\n    dueDate = input;\n  } else if (input.match(/^\\d{1,2}\\/\\d{1,2}$/)) {\n    const parts = input.split('/');\n    const month = parts[0].padStart(2, '0');\n    const day = parts[1].padStart(2, '0');\n    dueDate = today.getFullYear() + '-' + month + '-' + day;\n  }\n}\n\n// Build date filter for get action\nlet dateFilter = null;\nif (action === 'get' && filter !== 'all') {\n  const today = new Date();\n  today.setHours(0, 0, 0, 0);\n  const todayStr = today.toISOString().split('T')[0];\n  \n  if (filter === 'today') {\n    dateFilter = { property: 'Due date', date: { equals: todayStr } };\n  } else if (filter === 'tomorrow') {\n    const tomorrow = new Date(today);\n    tomorrow.setDate(tomorrow.getDate() + 1);\n    dateFilter = { property: 'Due date', date: { equals: tomorrow.toISOString().split('T')[0] } };\n  } else if (filter === 'week') {\n    const endOfWeek = new Date(today);\n    endOfWeek.setDate(endOfWeek.getDate() + 7);\n    dateFilter = {\n      and: [\n        { property: 'Due date', date: { on_or_after: todayStr } },\n        { property: 'Due date', date: { on_or_before: endOfWeek.toISOString().split('T')[0] } }\n      ]\n    };\n  } else if (filter === 'overdue') {\n    dateFilter = { property: 'Due date', date: { before: todayStr } };\n  }\n}\n\nreturn [{\n  json: {\n    action,\n    task,\n    notes,\n    filter,\n    dueDate,\n    dateFilter: dateFilter ? JSON.stringify(dateFilter) : null,\n    showCompleted\n  }\n}];"
+      },
+      "name": "Parse Parameters",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        0
+      ],
+      "id": "27d20e00-321a-424d-86cb-1334c0e97dbb"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "get",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "get"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "add",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "add"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "complete",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "complete"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "delete",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "delete"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "name": "Switch Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -200,
+        0
+      ],
+      "id": "4342119d-f30b-4801-86da-61358bc60a1e"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "${NOTION_DATABASE_ID}",
+          "mode": "id"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "name": "Get Tasks",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        50,
+        -300
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": null,
+          "name": "${NOTIONAPI_CREDENTIAL}"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "id": "0327a9b1-42d0-4565-825c-051f3c3e039f"
+    },
+    {
+      "parameters": {
+        "jsCode": "const tasks = $input.all();\nconst params = $('Parse Parameters').item.json;\nconst filter = params.filter;\nconst showCompleted = params.showCompleted;\n\nif (tasks.length === 0 || (tasks.length === 1 && !tasks[0].json.id)) {\n  return { message: filter === 'all' ? 'Your task list is empty.' : `No tasks ${filter === 'overdue' ? 'overdue' : 'due ' + filter}.`, tasks: [], count: 0 };\n}\n\n// Build date boundaries for filtering\nconst today = new Date();\ntoday.setHours(0, 0, 0, 0);\nconst todayStr = today.toISOString().split('T')[0];\nconst tomorrow = new Date(today);\ntomorrow.setDate(tomorrow.getDate() + 1);\nconst tomorrowStr = tomorrow.toISOString().split('T')[0];\nconst weekEnd = new Date(today);\nweekEnd.setDate(weekEnd.getDate() + 7);\nconst weekEndStr = weekEnd.toISOString().split('T')[0];\n\nconst taskList = [];\nfor (const item of tasks) {\n  const t = item.json;\n  if (!t.id) continue;\n  \n  const name = t.properties?.['Task name']?.title?.[0]?.plain_text || t.property_task_name || 'Untitled';\n  const statusProp = t.properties?.['Status']?.status?.name || t.property_status || '';\n  const isCompleted = statusProp.toLowerCase() === 'done' || statusProp.toLowerCase() === 'complete' || statusProp.toLowerCase() === 'completed';\n  \n  // Skip completed unless showCompleted\n  if (isCompleted && !showCompleted) continue;\n  \n  let dueDate = '';\n  let dueRaw = null;\n  const dueProp = t.properties?.['Due date']?.date || t.property_due_date;\n  if (dueProp && dueProp.start) {\n    dueRaw = dueProp.start.split('T')[0];\n    const due = new Date(dueRaw + 'T12:00:00');\n    \n    if (due.toDateString() === today.toDateString()) dueDate = 'today';\n    else if (due.toDateString() === tomorrow.toDateString()) dueDate = 'tomorrow';\n    else dueDate = due.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });\n  }\n  \n  // Apply date filter (client-side filtering)\n  if (filter !== 'all') {\n    if (!dueRaw) continue; // Skip tasks without due date when filtering\n    \n    if (filter === 'today' && dueRaw !== todayStr) continue;\n    if (filter === 'tomorrow' && dueRaw !== tomorrowStr) continue;\n    if (filter === 'week' && (dueRaw < todayStr || dueRaw > weekEndStr)) continue;\n    if (filter === 'overdue' && dueRaw >= todayStr) continue;\n  }\n  \n  taskList.push({ id: t.id, name, status: statusProp, due: dueDate, dueRaw, completed: isCompleted });\n}\n\n// Sort by due date\ntaskList.sort((a, b) => {\n  if (!a.dueRaw && !b.dueRaw) return 0;\n  if (!a.dueRaw) return 1;\n  if (!b.dueRaw) return -1;\n  return new Date(a.dueRaw) - new Date(b.dueRaw);\n});\n\nlet message = '';\nconst periodLabel = filter === 'all' ? '' : (filter === 'overdue' ? ' overdue' : (filter === 'week' ? ' due this week' : ' due ' + filter));\n\nif (taskList.length === 0) {\n  message = filter === 'all' ? 'Your task list is empty.' : `No tasks${periodLabel}.`;\n} else if (taskList.length === 1) {\n  const t = taskList[0];\n  message = `You have 1 task${periodLabel}: ${t.name}${t.due && filter === 'all' ? ', due ' + t.due : ''}.`;\n} else {\n  message = `You have ${taskList.length} tasks${periodLabel}. `;\n  const summaries = taskList.slice(0, 5).map(t => t.name + (t.due && filter === 'all' ? ' due ' + t.due : ''));\n  message += summaries.join('. ') + '.';\n  if (taskList.length > 5) message += ` Plus ${taskList.length - 5} more.`;\n}\n\nreturn { message, action: 'get', filter, tasks: taskList, count: taskList.length };"
+      },
+      "name": "Format Get",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        300,
+        -300
+      ],
+      "id": "8c52aac7-c8f0-4d69-9423-e0e262196906"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.dueDate }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Has Due Date?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        50,
+        -100
+      ],
+      "id": "92a9ea72-77d9-4a0b-9b2a-5e578cb3377d"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "create",
+        "databaseId": {
+          "__rl": true,
+          "value": "${NOTION_DATABASE_ID}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Task name|title",
+              "title": "={{ $('Parse Parameters').item.json.task }}"
+            },
+            {
+              "key": "Due date|date",
+              "date": "={{ $('Parse Parameters').item.json.dueDate }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Create Task With Due",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        250,
+        -150
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": null,
+          "name": "${NOTIONAPI_CREDENTIAL}"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "id": "297a40e5-d673-4ad2-a75c-867d74baf994"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "create",
+        "databaseId": {
+          "__rl": true,
+          "value": "${NOTION_DATABASE_ID}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Task name|title",
+              "title": "={{ $('Parse Parameters').item.json.task }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Create Task No Due",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        250,
+        -50
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": null,
+          "name": "${NOTIONAPI_CREDENTIAL}"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "id": "011f370f-2688-4e60-8196-a461b21e2c76"
+    },
+    {
+      "parameters": {
+        "jsCode": "const params = $('Parse Parameters').item.json;\nconst taskName = params.task;\nconst dueDate = params.dueDate;\n\nlet message = 'Added task: ' + taskName;\nif (dueDate) {\n  const d = new Date(dueDate + 'T12:00:00');\n  const formatted = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });\n  message += ', due ' + formatted;\n}\nmessage += '.';\n\nreturn { message, action: 'add', task: taskName, dueDate };"
+      },
+      "name": "Format Add",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        450,
+        -100
+      ],
+      "id": "a11ddf30-1601-4951-a128-96965bf1a660"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "${NOTION_DATABASE_ID}",
+          "mode": "id"
+        },
+        "returnAll": true,
+        "filterType": "string",
+        "filterJson": "={{ JSON.stringify({ property: 'Task name', rich_text: { contains: $json.task } }) }}",
+        "options": {}
+      },
+      "name": "Search Task for Complete",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        50,
+        100
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": null,
+          "name": "${NOTIONAPI_CREDENTIAL}"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "id": "c1ee1a0a-120a-474c-8550-60275522ed42"
+    },
+    {
+      "parameters": {
+        "jsCode": "const tasks = $input.all();\nconst searchTerm = $('Parse Parameters').item.json.task.toLowerCase();\n\nif (tasks.length === 0 || (tasks.length === 1 && !tasks[0].json.id)) {\n  throw new Error(`No task found matching \"${$('Parse Parameters').item.json.task}\"`);\n}\n\n// Find best match (exact match preferred, then contains)\nlet bestMatch = null;\nfor (const item of tasks) {\n  const t = item.json;\n  if (!t.id) continue;\n  \n  const name = t.properties?.['Task name']?.title?.[0]?.plain_text || t.property_task_name || '';\n  const nameLower = name.toLowerCase();\n  \n  // Skip already completed tasks\n  const statusProp = t.properties?.['Status']?.status?.name || t.property_status || '';\n  if (statusProp.toLowerCase() === 'done' || statusProp.toLowerCase() === 'complete' || statusProp.toLowerCase() === 'completed') {\n    continue;\n  }\n  \n  if (nameLower === searchTerm) {\n    bestMatch = { id: t.id, name };\n    break;\n  } else if (nameLower.includes(searchTerm) && !bestMatch) {\n    bestMatch = { id: t.id, name };\n  }\n}\n\nif (!bestMatch) {\n  throw new Error(`No incomplete task found matching \"${$('Parse Parameters').item.json.task}\"`);\n}\n\nreturn [{ json: bestMatch }];"
+      },
+      "name": "Find Best Match Complete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        250,
+        100
+      ],
+      "id": "332c2266-2ed9-42d3-86bc-5e0b3fd199b0"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Status|status",
+              "statusValue": "Done"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Update Task Status",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        450,
+        100
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": null,
+          "name": "${NOTIONAPI_CREDENTIAL}"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "id": "e43d6735-b933-43d1-9291-8f8d4e4366a3"
+    },
+    {
+      "parameters": {
+        "jsCode": "const taskName = $('Find Best Match Complete').item.json.name;\nreturn { message: `Done. Marked \"${taskName}\" as complete.`, action: 'complete', task: taskName };"
+      },
+      "name": "Format Complete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        650,
+        100
+      ],
+      "id": "78f1f98e-17d8-4550-b1e7-fba6e07add9f"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "${NOTION_DATABASE_ID}",
+          "mode": "id"
+        },
+        "returnAll": true,
+        "filterType": "string",
+        "filterJson": "={{ JSON.stringify({ property: 'Task name', rich_text: { contains: $json.task } }) }}",
+        "options": {}
+      },
+      "name": "Search Task for Delete",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        50,
+        300
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": null,
+          "name": "${NOTIONAPI_CREDENTIAL}"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "id": "b563d639-0b71-4625-a143-549ad68dc248"
+    },
+    {
+      "parameters": {
+        "jsCode": "const tasks = $input.all();\nconst searchTerm = $('Parse Parameters').item.json.task.toLowerCase();\n\nif (tasks.length === 0 || (tasks.length === 1 && !tasks[0].json.id)) {\n  throw new Error(`No task found matching \"${$('Parse Parameters').item.json.task}\"`);\n}\n\n// Find best match\nlet bestMatch = null;\nfor (const item of tasks) {\n  const t = item.json;\n  if (!t.id) continue;\n  \n  const name = t.properties?.['Task name']?.title?.[0]?.plain_text || t.property_task_name || '';\n  const nameLower = name.toLowerCase();\n  \n  if (nameLower === searchTerm) {\n    bestMatch = { id: t.id, name };\n    break;\n  } else if (nameLower.includes(searchTerm) && !bestMatch) {\n    bestMatch = { id: t.id, name };\n  }\n}\n\nif (!bestMatch) {\n  throw new Error(`No task found matching \"${$('Parse Parameters').item.json.task}\"`);\n}\n\nreturn [{ json: bestMatch }];"
+      },
+      "name": "Find Best Match Delete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        250,
+        300
+      ],
+      "id": "84f21f32-7393-4d68-be8b-19f99d3a8965"
+    },
+    {
+      "parameters": {
+        "resource": "page",
+        "operation": "archive",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        }
+      },
+      "name": "Archive Task",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        450,
+        300
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": null,
+          "name": "${NOTIONAPI_CREDENTIAL}"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "id": "5a7f04de-5634-4bc9-a242-26e4dbdf0389"
+    },
+    {
+      "parameters": {
+        "jsCode": "const taskName = $('Find Best Match Delete').item.json.name;\nreturn { message: `Done. Deleted \"${taskName}\".`, action: 'delete', task: taskName };"
+      },
+      "name": "Format Delete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        650,
+        300
+      ],
+      "id": "0ad4917f-1c76-403a-920b-e522714f5bba"
+    },
+    {
+      "parameters": {
+        "jsCode": "const errorData = items[0].json;\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\n\nif (errorMsg.includes('Could not find') || errorMsg.includes('not found')) {\n  errorMsg = 'Task not found. Try a different search term.';\n} else if (errorMsg.includes('Unauthorized') || errorMsg.includes('invalid_grant')) {\n  errorMsg = 'Notion authentication failed. Please reconnect in n8n.';\n} else if (errorMsg.includes('Credential')) {\n  errorMsg = 'Notion credentials not found in n8n.';\n}\n\nreturn { message: 'Error: ' + errorMsg, error: true };"
+      },
+      "name": "Format Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        650,
+        500
+      ],
+      "id": "de05b818-1ce6-46fc-b110-2545d8907d9c"
+    },
+    {
+      "parameters": {
+        "jsCode": "return { message: \"Unknown action. Use 'get', 'add', 'complete', or 'delete'.\", error: true };"
+      },
+      "name": "Unknown Action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        300,
+        500
+      ],
+      "id": "939bc533-67c6-42a8-85ab-168e2e1a9fe3"
+    },
+    {
+      "parameters": {},
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        900,
+        0
+      ],
+      "id": "367e7819-6ecd-4ae7-a2ae-cdc53cbe0689"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** notion-tasks\n**Description:** Manage tasks in Notion - get, add, complete, and delete tasks with due date support.\n**version:** v1.0.0\n**id:** kMsYnL6bDGW_-6BfpTgHaA\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/productivity/notion-tasks)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -784,
+        -288
+      ],
+      "typeVersion": 1,
+      "id": "4241bed5-2f90-4f45-870b-3e823cb14807",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Parameters": {
+      "main": [
+        [
+          {
+            "node": "Switch Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Action": {
+      "main": [
+        [
+          {
+            "node": "Get Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Has Due Date?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Search Task for Complete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Search Task for Delete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unknown Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Tasks": {
+      "main": [
+        [
+          {
+            "node": "Format Get",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Get": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Due Date?": {
+      "main": [
+        [
+          {
+            "node": "Create Task With Due",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Task No Due",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Task With Due": {
+      "main": [
+        [
+          {
+            "node": "Format Add",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Task No Due": {
+      "main": [
+        [
+          {
+            "node": "Format Add",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Add": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Task for Complete": {
+      "main": [
+        [
+          {
+            "node": "Find Best Match Complete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Best Match Complete": {
+      "main": [
+        [
+          {
+            "node": "Update Task Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Task Status": {
+      "main": [
+        [
+          {
+            "node": "Format Complete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Complete": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Task for Delete": {
+      "main": [
+        [
+          {
+            "node": "Find Best Match Delete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Best Match Delete": {
+      "main": [
+        [
+          {
+            "node": "Archive Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Archive Task": {
+      "main": [
+        [
+          {
+            "node": "Format Delete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Delete": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unknown Action": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
