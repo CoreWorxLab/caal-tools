@@ -1,0 +1,24 @@
+{
+  "id": "v36P138KsH_UNqxQ1D_BBQ",
+  "name": "espn-get-nfl-schedule",
+  "version": "1.0.0",
+  "description": "Gets upcoming NFL games for a specified team with dates and opponents.",
+  "category": "sports",
+  "voice_triggers": [
+    "When do the Seahawks play next?",
+    "What's the Chiefs schedule?"
+  ],
+  "required_services": [],
+  "required_credentials": [],
+  "required_variables": [],
+  "author": {
+    "github": "cmac86"
+  },
+  "tier": "coreworxlab",
+  "tags": [
+    "sports"
+  ],
+  "dependencies": [],
+  "created": "2026-01-25",
+  "updated": "2026-01-25"
+}

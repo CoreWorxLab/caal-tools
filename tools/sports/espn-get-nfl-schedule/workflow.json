@@ -1,0 +1,171 @@
+{
+  "name": "espn_get_nfl_schedule",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "espn_get_nfl_schedule",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        0
+      ],
+      "webhookId": "espn_get_nfl_schedule",
+      "notes": "Get upcoming games for an NFL team. Required parameter: team (e.g., 'Seahawks', 'Patriots', 'SEA'). Examples: 'when do the Seahawks play next', 'Chiefs schedule', 'next Cowboys game'.",
+      "id": "ff37533d-354e-40bd-89a8-d6e5a845b50d"
+    },
+    {
+      "parameters": {
+        "jsCode": "const webhookData = $input.item.json.body || {};\nconst teamQuery = webhookData.team ? webhookData.team.toLowerCase() : null;\n\nif (!teamQuery) {\n  throw new Error('team parameter is required');\n}\n\n// NFL team abbreviations lookup\nconst teams = {\n  'cardinals': 'ari', 'arizona': 'ari',\n  'falcons': 'atl', 'atlanta': 'atl',\n  'ravens': 'bal', 'baltimore': 'bal',\n  'bills': 'buf', 'buffalo': 'buf',\n  'panthers': 'car', 'carolina': 'car',\n  'bears': 'chi', 'chicago': 'chi',\n  'bengals': 'cin', 'cincinnati': 'cin',\n  'browns': 'cle', 'cleveland': 'cle',\n  'cowboys': 'dal', 'dallas': 'dal',\n  'broncos': 'den', 'denver': 'den',\n  'lions': 'det', 'detroit': 'det',\n  'packers': 'gb', 'green bay': 'gb',\n  'texans': 'hou', 'houston': 'hou',\n  'colts': 'ind', 'indianapolis': 'ind',\n  'jaguars': 'jax', 'jacksonville': 'jax',\n  'chiefs': 'kc', 'kansas city': 'kc',\n  'raiders': 'lv', 'las vegas': 'lv',\n  'chargers': 'lac', 'los angeles chargers': 'lac',\n  'rams': 'lar', 'los angeles rams': 'lar',\n  'dolphins': 'mia', 'miami': 'mia',\n  'vikings': 'min', 'minnesota': 'min',\n  'patriots': 'ne', 'new england': 'ne',\n  'saints': 'no', 'new orleans': 'no',\n  'giants': 'nyg', 'new york giants': 'nyg',\n  'jets': 'nyj', 'new york jets': 'nyj',\n  'eagles': 'phi', 'philadelphia': 'phi',\n  'steelers': 'pit', 'pittsburgh': 'pit',\n  '49ers': 'sf', 'niners': 'sf', 'san francisco': 'sf',\n  'seahawks': 'sea', 'seattle': 'sea',\n  'buccaneers': 'tb', 'bucs': 'tb', 'tampa': 'tb', 'tampa bay': 'tb',\n  'titans': 'ten', 'tennessee': 'ten',\n  'commanders': 'wsh', 'washington': 'wsh',\n};\n\nlet abbr = teams[teamQuery] || teamQuery;\nif (abbr.length > 3) abbr = null;\n\nif (!abbr) {\n  throw new Error('Could not find team: ' + teamQuery);\n}\n\nreturn [{ json: { abbr: abbr, teamQuery: teamQuery } }];"
+      },
+      "name": "Parse Team",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -192,
+        0
+      ],
+      "id": "bf027268-2960-4731-8701-a23087ef0781"
+    },
+    {
+      "parameters": {
+        "url": "=https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{{ $json.abbr }}/schedule",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "name": "Get Schedule",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        16,
+        0
+      ],
+      "id": "fede0578-2c03-4f73-a966-ec7f183fe874"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst teamInfo = $('Parse Team').item.json;\nconst events = data.events || [];\nconst team = data.team || {};\nconst teamName = team.shortDisplayName || team.displayName || teamInfo.teamQuery;\n\nconst abbrevToName = { 'ARI': 'Cardinals', 'ATL': 'Falcons', 'BAL': 'Ravens', 'BUF': 'Bills', 'CAR': 'Panthers', 'CHI': 'Bears', 'CIN': 'Bengals', 'CLE': 'Browns', 'DAL': 'Cowboys', 'DEN': 'Broncos', 'DET': 'Lions', 'GB': 'Packers', 'HOU': 'Texans', 'IND': 'Colts', 'JAX': 'Jaguars', 'KC': 'Chiefs', 'LV': 'Raiders', 'LAC': 'Chargers', 'LAR': 'Rams', 'MIA': 'Dolphins', 'MIN': 'Vikings', 'NE': 'Patriots', 'NO': 'Saints', 'NYG': 'Giants', 'NYJ': 'Jets', 'PHI': 'Eagles', 'PIT': 'Steelers', 'SF': '49ers', 'SEA': 'Seahawks', 'TB': 'Buccaneers', 'TEN': 'Titans', 'WSH': 'Commanders' };\n\nconst now = new Date();\nconst upcoming = [];\nfor (let i = 0; i < events.length; i++) {\n  const ev = events[i];\n  const gameDate = new Date(ev.date);\n  if (gameDate > now) {\n    upcoming.push({\n      opponent: ev.shortName || ev.name,\n      date: ev.date,\n      gameDate: gameDate\n    });\n  }\n  if (upcoming.length >= 3) break;\n}\n\nif (upcoming.length === 0) {\n  return { message: 'No upcoming games found for the ' + teamName + '. Season may be over.', games: [] };\n}\n\nconst formatGame = function(game) {\n  const d = game.gameDate;\n  const today = new Date();\n  const tomorrow = new Date(today);\n  tomorrow.setDate(tomorrow.getDate() + 1);\n  \n  let dayStr = '';\n  if (d.toDateString() === today.toDateString()) {\n    dayStr = 'today';\n  } else if (d.toDateString() === tomorrow.toDateString()) {\n    dayStr = 'tomorrow';\n  } else {\n    dayStr = 'on ' + d.toLocaleDateString('en-US', { weekday: 'long' });\n  }\n  \n  const parts = game.opponent.split(' @ ');\n  let opponentAbbr = parts[0];\n  let homeAway = 'vs';\n  if (parts.length === 2) {\n    const abbr = teamInfo.abbr.toUpperCase();\n    if (parts[0] === abbr) {\n      opponentAbbr = parts[1];\n      homeAway = 'at the';\n    } else {\n      opponentAbbr = parts[0];\n      homeAway = 'the';\n    }\n  }\n  const opponent = abbrevToName[opponentAbbr] || opponentAbbr;\n  \n  return { opponent: opponent, homeAway: homeAway, dayStr: dayStr };\n};\n\nconst next = formatGame(upcoming[0]);\nlet message = 'The ' + teamName + ' play ' + next.homeAway + ' ' + next.opponent + ' ' + next.dayStr + '.';\n\nif (upcoming.length > 1) {\n  const after = formatGame(upcoming[1]);\n  message += ' After that, ' + after.homeAway + ' ' + after.opponent + ' ' + after.dayStr + '.';\n}\n\nreturn { message: message, team: teamName, games: upcoming };"
+      },
+      "name": "Format Success",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        -100
+      ],
+      "id": "7276cae9-210f-4b55-b375-0882eb1db2d8"
+    },
+    {
+      "parameters": {
+        "jsCode": "const errorData = items[0].json;\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\n\nif (errorMsg.indexOf('ECONNREFUSED') !== -1 || errorMsg.indexOf('ETIMEDOUT') !== -1) {\n  errorMsg = 'Cannot connect to ESPN. Try again later.';\n}\n\nreturn { message: 'Error getting schedule: ' + errorMsg, error: true };"
+      },
+      "name": "Format Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        100
+      ],
+      "id": "d4e36942-305a-4708-ade2-078040460895"
+    },
+    {
+      "parameters": {},
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        432,
+        0
+      ],
+      "id": "bf4e7481-20a1-4416-90bb-37d6cbc6df01"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** espn-get-nfl-schedule\n**Description:** Gets upcoming NFL games for a specified team with dates and opponents.\n**version:** v1.0.0\n**id:** v36P138KsH_UNqxQ1D_BBQ\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/sports/espn-get-nfl-schedule)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -784,
+        -288
+      ],
+      "typeVersion": 1,
+      "id": "1542f2f0-1a9d-4422-a4d2-ff29f0a23c92",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Team": {
+      "main": [
+        [
+          {
+            "node": "Get Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Schedule": {
+      "main": [
+        [
+          {
+            "node": "Format Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Success": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
