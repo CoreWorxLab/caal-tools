@@ -1,0 +1,547 @@
+{
+  "name": "google_tasks",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "google_tasks",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -600,
+        0
+      ],
+      "webhookId": "google_tasks",
+      "notes": "Google Tasks suite - manage tasks. Parameters: action (required) - 'get', 'add', 'complete', or 'delete'; title (required for add) - task name; task_id (required for complete/delete) - task ID; notes (optional for add); due (optional for add) - YYYY-MM-DD; show_completed (optional for get, default false). Examples: 'what's on my task list', 'add task buy groceries', 'mark the groceries task done'.",
+      "id": "82193e8e-6dde-46bf-88c6-c8188a2c0fae"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse input - handle both JSON string and object formats\nlet data;\n\nif (typeof items[0].json.body === 'string') {\n  data = JSON.parse(items[0].json.body);\n} else if (typeof items[0].json.body === 'object') {\n  data = items[0].json.body;\n} else {\n  data = items[0].json;\n}\n\nconst action = (data.action || 'get').toLowerCase();\nconst title = data.title || '';\nconst notes = data.notes || '';\nconst taskId = data.task_id || '';\nconst showCompleted = data.show_completed || false;\nlet due = data.due || '';\n\n// Convert date to ISO format if provided\nif (due && due.match(/^\\d{4}-\\d{2}-\\d{2}$/)) {\n  due = due + 'T00:00:00.000Z';\n}\n\nreturn [{\n  json: {\n    action: action,\n    title: title,\n    notes: notes,\n    taskId: taskId,\n    due: due,\n    showCompleted: showCompleted\n  }\n}];"
+      },
+      "name": "Parse Parameters",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        0
+      ],
+      "id": "028bea7e-985a-481e-9607-028bd0550943"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "get",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "get"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "add",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "add"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "complete",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "complete"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "delete",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "delete"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "name": "Switch Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -200,
+        0
+      ],
+      "id": "8983c72a-6c9f-440e-96e1-d31ddc7ace5e"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "task": "@default",
+        "returnAll": true,
+        "options": {
+          "showCompleted": "={{ $('Parse Parameters').item.json.showCompleted }}",
+          "showHidden": false
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.googleTasks",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -300
+      ],
+      "name": "Get Tasks",
+      "credentials": {
+        "googleTasksOAuth2Api": {
+          "id": null,
+          "name": "${GOOGLETASKSOAUTH2API_CREDENTIAL}"
+        }
+      },
+      "id": "acf0e90b-e754-4c00-b36d-ae12b5018152"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "task": "@default",
+        "title": "={{ $('Parse Parameters').item.json.title }}",
+        "additionalFields": {
+          "dueDate": "={{ $('Parse Parameters').item.json.due }}",
+          "notes": "={{ $('Parse Parameters').item.json.notes }}"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.googleTasks",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -100
+      ],
+      "name": "Create Task",
+      "credentials": {
+        "googleTasksOAuth2Api": {
+          "id": null,
+          "name": "${GOOGLETASKSOAUTH2API_CREDENTIAL}"
+        }
+      },
+      "id": "2169c083-d13f-4153-a4ec-3e3ceadebb57"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "task": "@default",
+        "taskId": "={{ $('Parse Parameters').item.json.taskId }}",
+        "updateFields": {
+          "status": "completed"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.googleTasks",
+      "typeVersion": 1,
+      "position": [
+        0,
+        100
+      ],
+      "name": "Complete Task",
+      "credentials": {
+        "googleTasksOAuth2Api": {
+          "id": null,
+          "name": "${GOOGLETASKSOAUTH2API_CREDENTIAL}"
+        }
+      },
+      "id": "23e4b82e-8905-4c77-b7dc-f11c9f65402d"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "task": "@default",
+        "taskId": "={{ $('Parse Parameters').item.json.taskId }}"
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.googleTasks",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "name": "Delete Task",
+      "credentials": {
+        "googleTasksOAuth2Api": {
+          "id": null,
+          "name": "${GOOGLETASKSOAUTH2API_CREDENTIAL}"
+        }
+      },
+      "id": "b6d5a73e-5cbc-4c2f-9945-a6b391049007"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format tasks for voice\nconst allTasks = items.map(item => item.json);\nconst showCompleted = $('Parse Parameters').item.json.showCompleted;\n\nconst tasks = allTasks\n  .filter(t => t.status !== 'completed' || showCompleted)\n  .map(t => {\n    let dueStr = '';\n    if (t.due) {\n      const due = new Date(t.due);\n      const today = new Date();\n      today.setHours(0,0,0,0);\n      const tomorrow = new Date(today);\n      tomorrow.setDate(tomorrow.getDate() + 1);\n      \n      if (due.toDateString() === today.toDateString()) dueStr = 'today';\n      else if (due.toDateString() === tomorrow.toDateString()) dueStr = 'tomorrow';\n      else dueStr = due.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });\n    }\n    return { id: t.id, title: t.title, notes: t.notes || '', due: dueStr, dueRaw: t.due || null, completed: t.status === 'completed' };\n  })\n  .sort((a, b) => {\n    if (!a.dueRaw && !b.dueRaw) return 0;\n    if (!a.dueRaw) return 1;\n    if (!b.dueRaw) return -1;\n    return new Date(a.dueRaw) - new Date(b.dueRaw);\n  });\n\nlet message = '';\nif (tasks.length === 0) {\n  message = 'Your task list is empty.';\n} else if (tasks.length === 1) {\n  const t = tasks[0];\n  message = `You have one task: ${t.title}${t.due ? ', due ' + t.due : ''}.`;\n} else {\n  message = `You have ${tasks.length} tasks. `;\n  const summaries = tasks.slice(0, 5).map(t => t.title + (t.due ? ' due ' + t.due : ''));\n  message += summaries.join('. ') + '.';\n  if (tasks.length > 5) message += ` Plus ${tasks.length - 5} more.`;\n}\n\nreturn [{ json: { message, action: 'get', tasks } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        -300
+      ],
+      "name": "Format Get",
+      "id": "9ccd6df9-7870-4998-8938-b417e78e0a36"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format success response\nconst task = $input.item.json;\nconst title = task.title || 'your task';\n\nlet message = '';\nif (task.due) {\n  const dueDate = new Date(task.due);\n  const options = { weekday: 'long', month: 'long', day: 'numeric' };\n  const formattedDue = dueDate.toLocaleDateString('en-US', options);\n  message = `Done. Added ${title} to your tasks, due ${formattedDue}.`;\n} else {\n  message = `Done. Added ${title} to your tasks.`;\n}\n\nreturn {\n  message: message,\n  action: 'add',\n  task: { id: task.id, title: task.title, notes: task.notes || '', due: task.due || null, status: task.status }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        -100
+      ],
+      "name": "Format Add",
+      "id": "525e0169-0f1c-4879-8e68-e37d696262f8"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format success\nconst task = $input.item.json;\nconst title = task.title || 'the task';\n\nreturn {\n  message: `Done. Marked ${title} as complete.`,\n  action: 'complete',\n  task: { id: task.id, title: task.title, status: task.status }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        100
+      ],
+      "name": "Format Complete",
+      "id": "dd7ac23e-590c-444e-b9fc-5e5a76e986fa"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format success\nreturn {\n  message: 'Done. Task deleted.',\n  action: 'delete',\n  deleted: true\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        300
+      ],
+      "name": "Format Delete",
+      "id": "47ba6bcb-63d6-4c9a-a1a7-e3e302a07e1a"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format error for voice\nconst errorData = items[0].json;\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\n\nif (errorMsg.includes('authorization') || errorMsg.includes('token') || errorMsg.includes('invalid_grant')) {\n  errorMsg = 'Google Tasks authentication failed. Please re-authorize in n8n.';\n} else if (errorMsg.includes('Credential')) {\n  errorMsg = 'Google Tasks credentials not found in n8n.';\n} else if (errorMsg.includes('not found') || errorMsg.includes('404')) {\n  errorMsg = 'Task not found. It may have been deleted.';\n}\n\nreturn [{ json: {\n  message: `Error: ${errorMsg}`,\n  error: true\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        400
+      ],
+      "name": "Format Error",
+      "id": "f5c48a79-1670-432f-9788-297b6bdbc063"
+    },
+    {
+      "parameters": {
+        "jsCode": "return { message: \"Unknown action. Use 'get', 'add', 'complete', or 'delete'.\", error: true };"
+      },
+      "name": "Unknown Action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        500
+      ],
+      "id": "75e2f08c-9a06-4e44-a1cc-cddb15011eb1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        0
+      ],
+      "name": "Respond to Webhook",
+      "id": "18e4b21c-bc44-43d1-a403-4a25e3935639"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** google-tasks\n**Description:** Manage Google Tasks - get, add, complete, and delete tasks with due dates and notes.\n**version:** v1.0.0\n**id:** WuwQqvxeYV4AzLryZKp9Ug\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/productivity/google-tasks)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -784,
+        -288
+      ],
+      "typeVersion": 1,
+      "id": "898b2a53-cb1f-4d4f-9fde-a79aab9841ac",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Parameters": {
+      "main": [
+        [
+          {
+            "node": "Switch Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Action": {
+      "main": [
+        [
+          {
+            "node": "Get Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Task",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Complete Task",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Delete Task",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unknown Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Tasks": {
+      "main": [
+        [
+          {
+            "node": "Format Get",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Task": {
+      "main": [
+        [
+          {
+            "node": "Format Add",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Complete Task": {
+      "main": [
+        [
+          {
+            "node": "Format Complete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Task": {
+      "main": [
+        [
+          {
+            "node": "Format Delete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Get": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Add": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Complete": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Delete": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unknown Action": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
