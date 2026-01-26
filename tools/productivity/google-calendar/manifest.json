@@ -1,0 +1,67 @@
+{
+  "id": "JJ-eHPyvpW5T8FxdTcUnnQ",
+  "name": "google-calendar",
+  "friendlyName": "Google Calendar",
+  "version": "1.0.0",
+  "description": "Manage Google Calendar events - view, create, and delete events with support for timed and all-day events.",
+  "category": "productivity",
+  "toolSuite": true,
+  "actions": [
+    "get",
+    "create",
+    "delete"
+  ],
+  "icon": "google-calendar.svg",
+  "voice_triggers": [
+    "What's on my calendar today?",
+    "Add a dentist appointment tomorrow at 2pm"
+  ],
+  "required_services": [
+    "google calendar"
+  ],
+  "required_credentials": [
+    {
+      "credential_type": "googleCalendarOAuth2Api",
+      "name": "GOOGLECALENDAROAUTH2API_CREDENTIAL",
+      "description": "n8n credential type: googleCalendarOAuth2Api"
+    }
+  ],
+  "required_variables": [
+    {
+      "name": "CALENDAR",
+      "description": "Your calendar identifier",
+      "example": null
+    },
+    {
+      "name": "CALENDAR",
+      "description": "Your calendar identifier",
+      "example": null
+    },
+    {
+      "name": "CALENDAR",
+      "description": "Your calendar identifier",
+      "example": null
+    },
+    {
+      "name": "CALENDAR",
+      "description": "Your calendar identifier",
+      "example": null
+    },
+    {
+      "name": "CALENDAR",
+      "description": "Your Google Calendar identifier",
+      "example": "primary"
+    }
+  ],
+  "author": {
+    "github": "cmac86"
+  },
+  "tier": "coreworxlab",
+  "tags": [
+    "productivity",
+    "google calendar"
+  ],
+  "dependencies": [],
+  "created": "2026-01-26",
+  "updated": "2026-01-26"
+}
