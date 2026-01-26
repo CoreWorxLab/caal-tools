@@ -1,0 +1,32 @@
+{
+  "id": "qkqPQk-NhkB8q63AsW0-lw",
+  "name": "espn-epl",
+  "friendlyName": "ESPN EPL",
+  "version": "1.0.0",
+  "description": "Get English Premier League scores, standings, and team schedules from ESPN.",
+  "category": "sports",
+  "toolSuite": true,
+  "actions": [
+    "scores",
+    "schedule",
+    "standings"
+  ],
+  "icon": "",
+  "voice_triggers": [
+    "What are the Premier League scores?",
+    "Where is Arsenal in the table?"
+  ],
+  "required_services": [],
+  "required_credentials": [],
+  "required_variables": [],
+  "author": {
+    "github": "cmac86"
+  },
+  "tier": "coreworxlab",
+  "tags": [
+    "sports"
+  ],
+  "dependencies": [],
+  "created": "2026-01-26",
+  "updated": "2026-01-26"
+}

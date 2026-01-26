@@ -1,0 +1,469 @@
+{
+  "name": "espn_epl",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "espn_epl",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -600,
+        0
+      ],
+      "webhookId": "espn_epl",
+      "notes": "Premier League data suite - scores, standings, and schedule. Parameters: action (required) - 'scores', 'standings', or 'schedule'; team (optional for scores/standings, required for schedule) - team name like 'Arsenal', 'Liverpool', 'Spurs'. Examples: 'Premier League scores', 'where is Arsenal in the table', 'when do Liverpool play next'.",
+      "id": "93e1cdde-5426-47f4-9032-811be69e6856"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body || {};\n\nlet data;\nif (typeof body === 'string') {\n  data = JSON.parse(body);\n} else if (typeof body === 'object') {\n  data = body;\n} else {\n  data = $input.item.json;\n}\n\nconst action = (data.action || 'scores').toLowerCase();\nconst teamQuery = data.team ? data.team.toLowerCase() : null;\n\n// EPL team aliases and IDs\nconst teamAliases = {\n  'arsenal': 'arsenal', 'gunners': 'arsenal',\n  'aston villa': 'aston villa', 'villa': 'aston villa',\n  'bournemouth': 'bournemouth', 'cherries': 'bournemouth',\n  'brentford': 'brentford', 'bees': 'brentford',\n  'brighton': 'brighton', 'seagulls': 'brighton',\n  'chelsea': 'chelsea', 'blues': 'chelsea',\n  'crystal palace': 'crystal palace', 'palace': 'crystal palace', 'eagles': 'crystal palace',\n  'everton': 'everton', 'toffees': 'everton',\n  'fulham': 'fulham', 'cottagers': 'fulham',\n  'ipswich': 'ipswich', 'ipswich town': 'ipswich',\n  'leicester': 'leicester', 'leicester city': 'leicester', 'foxes': 'leicester',\n  'liverpool': 'liverpool', 'reds': 'liverpool',\n  'man city': 'manchester city', 'manchester city': 'manchester city', 'city': 'manchester city', 'citizens': 'manchester city',\n  'man united': 'manchester united', 'manchester united': 'manchester united', 'united': 'manchester united', 'red devils': 'manchester united',\n  'newcastle': 'newcastle', 'newcastle united': 'newcastle', 'magpies': 'newcastle', 'toon': 'newcastle',\n  'nottingham forest': 'nottingham forest', 'forest': 'nottingham forest',\n  'southampton': 'southampton', 'saints': 'southampton',\n  'tottenham': 'tottenham', 'spurs': 'tottenham',\n  'west ham': 'west ham', 'hammers': 'west ham',\n  'wolves': 'wolves', 'wolverhampton': 'wolves'\n};\n\nconst teamIds = {\n  'arsenal': '359', 'aston villa': '362', 'bournemouth': '349', 'brentford': '337',\n  'brighton': '331', 'chelsea': '363', 'crystal palace': '384', 'everton': '368',\n  'fulham': '370', 'ipswich': '373', 'leicester': '375', 'liverpool': '364',\n  'manchester city': '382', 'manchester united': '360', 'newcastle': '361',\n  'nottingham forest': '393', 'southampton': '376', 'tottenham': '367',\n  'west ham': '371', 'wolves': '380'\n};\n\nlet normalizedTeam = null;\nlet teamId = null;\nif (teamQuery) {\n  normalizedTeam = teamAliases[teamQuery] || teamQuery;\n  teamId = teamIds[normalizedTeam];\n}\n\nreturn [{ json: { action, teamQuery, normalizedTeam, teamId } }];"
+      },
+      "name": "Parse Parameters",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        0
+      ],
+      "id": "e06739cd-5b2f-4ff8-8fc1-4974136701bc"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "scores",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "scores"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "schedule",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "schedule"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "standings",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "standings"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "name": "Switch Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -200,
+        0
+      ],
+      "id": "63a9d26f-b592-4c23-a8a1-462c764512bf"
+    },
+    {
+      "parameters": {
+        "url": "https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "name": "Get Scores",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        -200
+      ],
+      "id": "8fe9b19f-9909-4f97-9c6a-f43225253bf8"
+    },
+    {
+      "parameters": {
+        "url": "=https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/teams/{{ $('Parse Parameters').item.json.teamId }}/schedule",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "name": "Get Schedule",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e6e74e74-2f7a-4438-972f-a178cf26b7af"
+    },
+    {
+      "parameters": {
+        "url": "https://site.api.espn.com/apis/v2/sports/soccer/eng.1/standings",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "name": "Get Standings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        200
+      ],
+      "id": "9158b616-309a-48a0-b75c-63fdafedbb8e"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst params = $('Parse Parameters').item.json;\nconst teamFilter = params.normalizedTeam;\n\nconst events = data.events || [];\nif (events.length === 0) {\n  return { message: 'No Premier League games scheduled today.', action: 'scores', games: [] };\n}\n\nconst games = [];\nfor (let i = 0; i < events.length; i++) {\n  const event = events[i];\n  const comp = event.competitions && event.competitions[0];\n  if (!comp) continue;\n  \n  const teams = comp.competitors || [];\n  let home = null, away = null;\n  for (let j = 0; j < teams.length; j++) {\n    if (teams[j].homeAway === 'home') home = teams[j];\n    else away = teams[j];\n  }\n  if (!home || !away) continue;\n  \n  const homeName = home.team.shortDisplayName || home.team.displayName;\n  const awayName = away.team.shortDisplayName || away.team.displayName;\n  const homeScore = home.score || '0';\n  const awayScore = away.score || '0';\n  \n  const status = event.status || {};\n  const statusType = status.type || {};\n  let state = statusType.state || 'pre';\n  let statusText = '';\n  \n  if (state === 'in') {\n    statusText = status.displayClock || '';\n  } else if (state === 'post') {\n    statusText = 'Final';\n  } else {\n    const startDate = new Date(event.date);\n    statusText = startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });\n  }\n  \n  games.push({ home: homeName, away: awayName, homeScore, awayScore, state, status: statusText });\n}\n\nlet filteredGames = games;\nif (teamFilter) {\n  filteredGames = games.filter(g => \n    g.home.toLowerCase().includes(teamFilter) || g.away.toLowerCase().includes(teamFilter)\n  );\n}\n\nif (filteredGames.length === 0) {\n  const msg = teamFilter ? 'No games found for ' + teamFilter + ' today.' : 'No Premier League games today.';\n  return { message: msg, action: 'scores', games: [] };\n}\n\nconst formatGame = (g) => {\n  if (g.state === 'post') {\n    if (g.homeScore === g.awayScore) return g.away + ' and ' + g.home + ' drew ' + g.homeScore + ' to ' + g.awayScore + '.';\n    const winner = parseInt(g.homeScore) > parseInt(g.awayScore) ? g.home : g.away;\n    const loser = parseInt(g.homeScore) > parseInt(g.awayScore) ? g.away : g.home;\n    const winScore = Math.max(parseInt(g.homeScore), parseInt(g.awayScore));\n    const loseScore = Math.min(parseInt(g.homeScore), parseInt(g.awayScore));\n    return winner + ' beat ' + loser + ' ' + winScore + ' to ' + loseScore + '.';\n  } else if (g.state === 'in') {\n    if (g.homeScore === g.awayScore) return g.away + ' and ' + g.home + ' are level ' + g.homeScore + ' to ' + g.awayScore + ', ' + g.status + '.';\n    const leader = parseInt(g.homeScore) > parseInt(g.awayScore) ? g.home : g.away;\n    const trailer = parseInt(g.homeScore) > parseInt(g.awayScore) ? g.away : g.home;\n    return leader + ' lead ' + trailer + ' ' + Math.max(parseInt(g.homeScore), parseInt(g.awayScore)) + ' to ' + Math.min(parseInt(g.homeScore), parseInt(g.awayScore)) + ', ' + g.status + '.';\n  } else {\n    return g.away + ' at ' + g.home + ', ' + g.status + '.';\n  }\n};\n\nconst parts = filteredGames.slice(0, 5).map(formatGame);\nreturn { message: parts.join(' '), action: 'scores', games: filteredGames };"
+      },
+      "name": "Format Scores",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        -200
+      ],
+      "id": "5fea0808-a819-43e1-84c7-8df9e3c9d5e5"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst params = $('Parse Parameters').item.json;\nconst events = data.events || [];\nconst team = data.team || {};\nconst teamName = team.shortDisplayName || team.displayName || params.teamQuery;\n\nconst now = new Date();\nconst upcoming = [];\nfor (let i = 0; i < events.length && upcoming.length < 3; i++) {\n  const ev = events[i];\n  const gameDate = new Date(ev.date);\n  if (gameDate > now) {\n    const comp = ev.competitions && ev.competitions[0];\n    let opponent = '', homeAway = 'vs';\n    if (comp && comp.competitors) {\n      for (let j = 0; j < comp.competitors.length; j++) {\n        const c = comp.competitors[j];\n        const cTeam = c.team || {};\n        if (cTeam.id !== params.teamId) {\n          opponent = cTeam.shortDisplayName || cTeam.displayName || 'Unknown';\n          homeAway = c.homeAway === 'home' ? 'at' : 'vs';\n        }\n      }\n    }\n    upcoming.push({ opponent, homeAway, date: ev.date, gameDate });\n  }\n}\n\nif (upcoming.length === 0) {\n  return { message: 'No upcoming fixtures found for ' + teamName + '.', action: 'schedule', games: [] };\n}\n\nconst formatGame = (game) => {\n  const d = game.gameDate;\n  const today = new Date();\n  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);\n  let dayStr = d.toDateString() === today.toDateString() ? 'today' :\n               d.toDateString() === tomorrow.toDateString() ? 'tomorrow' :\n               'on ' + d.toLocaleDateString('en-US', { weekday: 'long' });\n  return { opponent: game.opponent, homeAway: game.homeAway, dayStr };\n};\n\nconst next = formatGame(upcoming[0]);\nlet message = teamName + ' play ' + next.homeAway + ' ' + next.opponent + ' ' + next.dayStr + '.';\nif (upcoming.length > 1) {\n  const after = formatGame(upcoming[1]);\n  message += ' After that, ' + after.homeAway + ' ' + after.opponent + ' ' + after.dayStr + '.';\n}\n\nreturn { message, action: 'schedule', team: teamName, games: upcoming };"
+      },
+      "name": "Format Schedule",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        0
+      ],
+      "id": "a9c00095-a895-4843-aeb9-b8376e703876"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst params = $('Parse Parameters').item.json;\nconst teamFilter = params.normalizedTeam;\n\nconst suffix = (n) => { const s = ['th','st','nd','rd']; const v = n % 100; return s[(v-20)%10] || s[v] || s[0]; };\n\nconst allTeams = [];\nconst children = data.children || [];\nfor (const group of children) {\n  const entries = (group.standings && group.standings.entries) || [];\n  for (const entry of entries) {\n    const team = entry.team || {};\n    const stats = entry.stats || [];\n    const getStat = (name) => (stats.find(s => s.name === name) || {}).value || 0;\n    allTeams.push({\n      name: team.shortDisplayName || team.displayName || 'Unknown',\n      fullName: team.displayName || 'Unknown',\n      points: getStat('points'), wins: getStat('wins'),\n      losses: getStat('losses'), draws: getStat('ties'),\n      gamesPlayed: getStat('gamesPlayed')\n    });\n  }\n}\n\nallTeams.sort((a, b) => b.points - a.points);\nallTeams.forEach((t, i) => t.rank = i + 1);\n\nlet message = '', standings = allTeams;\n\nif (teamFilter) {\n  const found = allTeams.find(t => \n    t.name.toLowerCase().includes(teamFilter) || t.fullName.toLowerCase().includes(teamFilter)\n  );\n  if (!found) {\n    message = 'Could not find ' + teamFilter + ' in the Premier League table.';\n    standings = [];\n  } else {\n    message = found.name + ' are ' + found.rank + suffix(found.rank) + ' in the Premier League with ' + found.points + ' points from ' + found.gamesPlayed + ' games.';\n    standings = [found];\n  }\n} else {\n  const top5 = allTeams.slice(0, 5);\n  message = 'Premier League table: ' + top5.map((t, i) => (i + 1) + '. ' + t.name + ', ' + t.points + ' points').join(', ') + '.';\n  standings = top5;\n}\n\nreturn { message, action: 'standings', standings };"
+      },
+      "name": "Format Standings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        200
+      ],
+      "id": "7f761c27-7c8c-42b4-a70b-e8d47c602af0"
+    },
+    {
+      "parameters": {
+        "jsCode": "return { message: \"Schedule requires a team. Try: 'when do Arsenal play next'\", error: true, action: 'schedule' };"
+      },
+      "name": "Schedule No Team",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        400
+      ],
+      "id": "5a73c82d-10e9-4ccf-afb5-a27441ac8437"
+    },
+    {
+      "parameters": {
+        "jsCode": "const errorData = $input.item.json;\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\nif (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ETIMEDOUT')) {\n  errorMsg = 'Cannot connect to ESPN. Try again later.';\n}\nreturn { message: 'Error: ' + errorMsg, error: true };"
+      },
+      "name": "Format Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ],
+      "id": "fd79b469-c15c-432e-92e1-9622d1ea273d"
+    },
+    {
+      "parameters": {},
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        0
+      ],
+      "id": "661389bb-fabe-40d8-b52b-b0ab34b2238e"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $('Parse Parameters').item.json.teamId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        }
+      },
+      "name": "Has Team?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        0,
+        100
+      ],
+      "id": "66096956-51f0-4390-b735-b4c36270f915"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** espn-epl\n**Description:** Get English Premier League scores, standings, and team schedules from ESPN.\n**version:** v1.0.0\n**id:** qkqPQk-NhkB8q63AsW0-lw\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/sports/espn-epl)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -784,
+        -288
+      ],
+      "typeVersion": 1,
+      "id": "cf9496f8-2ea1-496e-a508-213062af0f7b",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Parameters": {
+      "main": [
+        [
+          {
+            "node": "Switch Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Action": {
+      "main": [
+        [
+          {
+            "node": "Get Scores",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Has Team?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Standings",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Schedule No Team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Team?": {
+      "main": [
+        [
+          {
+            "node": "Get Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Schedule No Team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Scores": {
+      "main": [
+        [
+          {
+            "node": "Format Scores",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Schedule": {
+      "main": [
+        [
+          {
+            "node": "Format Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Standings": {
+      "main": [
+        [
+          {
+            "node": "Format Standings",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Scores": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Schedule": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Standings": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule No Team": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
