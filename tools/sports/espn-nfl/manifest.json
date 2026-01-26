@@ -1,0 +1,32 @@
+{
+  "id": "v8JZaSOuG2czTZ-b06Z7Kg",
+  "name": "espn-nfl",
+  "friendlyName": "ESPN NFL",
+  "version": "1.0.0",
+  "description": "Get NFL scores, team schedules, and standings from ESPN.",
+  "category": "sports",
+  "toolSuite": true,
+  "actions": [
+    "scores",
+    "schedule",
+    "standings"
+  ],
+  "icon": "nfl.svg",
+  "voice_triggers": [
+    "What are the NFL scores?",
+    "When do the Seahawks play next?"
+  ],
+  "required_services": [],
+  "required_credentials": [],
+  "required_variables": [],
+  "author": {
+    "github": "cmac86"
+  },
+  "tier": "coreworxlab",
+  "tags": [
+    "sports"
+  ],
+  "dependencies": [],
+  "created": "2026-01-26",
+  "updated": "2026-01-26"
+}

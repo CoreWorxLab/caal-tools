@@ -1,0 +1,469 @@
+{
+  "name": "espn_nfl",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "espn_nfl",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -600,
+        0
+      ],
+      "webhookId": "espn_nfl",
+      "notes": "NFL data suite - scores, standings, and schedule. Parameters: action (required) - 'scores', 'standings', or 'schedule'; team (optional for scores/standings, required for schedule) - team name like 'Seahawks', 'Chiefs', 'Cowboys'. Examples: 'NFL scores', 'where are the Seahawks in the standings', 'when do the Chiefs play next'.",
+      "id": "2aaba1ce-5293-4dab-9814-42f9d036219c"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body || {};\n\nlet data;\nif (typeof body === 'string') {\n  data = JSON.parse(body);\n} else if (typeof body === 'object') {\n  data = body;\n} else {\n  data = $input.item.json;\n}\n\nconst action = (data.action || 'scores').toLowerCase();\nconst teamQuery = data.team ? data.team.toLowerCase() : null;\n\n// NFL team aliases and abbreviations\nconst teamAliases = {\n  'cardinals': 'ari', 'arizona': 'ari', 'arizona cardinals': 'ari',\n  'falcons': 'atl', 'atlanta': 'atl', 'atlanta falcons': 'atl',\n  'ravens': 'bal', 'baltimore': 'bal', 'baltimore ravens': 'bal',\n  'bills': 'buf', 'buffalo': 'buf', 'buffalo bills': 'buf',\n  'panthers': 'car', 'carolina': 'car', 'carolina panthers': 'car',\n  'bears': 'chi', 'chicago': 'chi', 'chicago bears': 'chi',\n  'bengals': 'cin', 'cincinnati': 'cin', 'cincinnati bengals': 'cin',\n  'browns': 'cle', 'cleveland': 'cle', 'cleveland browns': 'cle',\n  'cowboys': 'dal', 'dallas': 'dal', 'dallas cowboys': 'dal',\n  'broncos': 'den', 'denver': 'den', 'denver broncos': 'den',\n  'lions': 'det', 'detroit': 'det', 'detroit lions': 'det',\n  'packers': 'gb', 'green bay': 'gb', 'green bay packers': 'gb',\n  'texans': 'hou', 'houston': 'hou', 'houston texans': 'hou',\n  'colts': 'ind', 'indianapolis': 'ind', 'indianapolis colts': 'ind',\n  'jaguars': 'jax', 'jacksonville': 'jax', 'jacksonville jaguars': 'jax',\n  'chiefs': 'kc', 'kansas city': 'kc', 'kansas city chiefs': 'kc',\n  'raiders': 'lv', 'las vegas': 'lv', 'las vegas raiders': 'lv',\n  'chargers': 'lac', 'los angeles chargers': 'lac', 'la chargers': 'lac',\n  'rams': 'lar', 'los angeles rams': 'lar', 'la rams': 'lar',\n  'dolphins': 'mia', 'miami': 'mia', 'miami dolphins': 'mia',\n  'vikings': 'min', 'minnesota': 'min', 'minnesota vikings': 'min',\n  'patriots': 'ne', 'new england': 'ne', 'new england patriots': 'ne',\n  'saints': 'no', 'new orleans': 'no', 'new orleans saints': 'no',\n  'giants': 'nyg', 'new york giants': 'nyg', 'ny giants': 'nyg',\n  'jets': 'nyj', 'new york jets': 'nyj', 'ny jets': 'nyj',\n  'eagles': 'phi', 'philadelphia': 'phi', 'philadelphia eagles': 'phi',\n  'steelers': 'pit', 'pittsburgh': 'pit', 'pittsburgh steelers': 'pit',\n  '49ers': 'sf', 'niners': 'sf', 'san francisco': 'sf', 'san francisco 49ers': 'sf',\n  'seahawks': 'sea', 'seattle': 'sea', 'seattle seahawks': 'sea',\n  'buccaneers': 'tb', 'bucs': 'tb', 'tampa': 'tb', 'tampa bay': 'tb', 'tampa bay buccaneers': 'tb',\n  'titans': 'ten', 'tennessee': 'ten', 'tennessee titans': 'ten',\n  'commanders': 'wsh', 'washington': 'wsh', 'washington commanders': 'wsh'\n};\n\nlet abbr = null;\nif (teamQuery) {\n  abbr = teamAliases[teamQuery] || null;\n  if (!abbr && teamQuery.length <= 3) {\n    abbr = teamQuery;\n  }\n}\n\nreturn [{ json: { action, teamQuery, abbr } }];"
+      },
+      "name": "Parse Parameters",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        0
+      ],
+      "id": "9a03a8d4-e86e-41c4-8129-8296cac08863"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "scores",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "scores"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "schedule",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "schedule"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "standings",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "standings"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "name": "Switch Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -200,
+        0
+      ],
+      "id": "65e3172f-e291-49d1-b7eb-937a86aa8a63"
+    },
+    {
+      "parameters": {
+        "url": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "name": "Get Scores",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        -200
+      ],
+      "id": "44266233-c7b1-47d4-bfbb-e5b4e146291b"
+    },
+    {
+      "parameters": {
+        "url": "=https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{{ $('Parse Parameters').item.json.abbr }}/schedule",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "name": "Get Schedule",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "f6f03eae-0e23-4f17-9929-ad757f0b70d5"
+    },
+    {
+      "parameters": {
+        "url": "https://site.api.espn.com/apis/v2/sports/football/nfl/standings",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "name": "Get Standings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        200
+      ],
+      "id": "250b8aa3-5948-4010-9b2b-aedf07a39c49"
+    },
+    {
+      "parameters": {
+        "jsCode": "const espnData = $input.item.json;\nconst params = $('Parse Parameters').item.json;\nconst teamFilter = params.teamQuery;\n\nconst events = espnData.events || [];\nconst games = [];\n\nconst formatQuarter = (period) => {\n  if (period === 1) return '1st quarter';\n  if (period === 2) return '2nd quarter';\n  if (period === 3) return '3rd quarter';\n  if (period === 4) return '4th quarter';\n  if (period > 4) return 'overtime';\n  return 'in progress';\n};\n\nfor (const event of events) {\n  const competition = event.competitions[0];\n  const homeTeam = competition.competitors.find(c => c.homeAway === 'home');\n  const awayTeam = competition.competitors.find(c => c.homeAway === 'away');\n  const status = event.status;\n  \n  games.push({\n    away: awayTeam.team.abbreviation,\n    awayName: awayTeam.team.displayName,\n    awayScore: parseInt(awayTeam.score) || 0,\n    home: homeTeam.team.abbreviation,\n    homeName: homeTeam.team.displayName,\n    homeScore: parseInt(homeTeam.score) || 0,\n    status: status.type.description,\n    period: status.period || 0,\n    clock: status.displayClock || '',\n    isOT: (status.type.shortDetail || '').includes('OT')\n  });\n}\n\nlet filteredGames = games;\nif (teamFilter) {\n  filteredGames = games.filter(g => \n    g.homeName.toLowerCase().includes(teamFilter) ||\n    g.awayName.toLowerCase().includes(teamFilter) ||\n    g.home.toLowerCase() === teamFilter ||\n    g.away.toLowerCase() === teamFilter\n  );\n}\n\nlet message = '';\n\nif (filteredGames.length === 0 && teamFilter) {\n  message = 'No games found for ' + teamFilter + '.';\n} else if (filteredGames.length === 0) {\n  message = 'No NFL games scheduled right now.';\n} else {\n  const voiceGames = filteredGames.slice(0, 5);\n  const voiceParts = [];\n  \n  for (const game of voiceGames) {\n    const awayShort = game.awayName.split(' ').pop();\n    const homeShort = game.homeName.split(' ').pop();\n    \n    if (game.status === 'Scheduled' || game.status === 'Pre-Game') {\n      voiceParts.push(awayShort + ' at ' + homeShort);\n    } else if (game.status === 'Final') {\n      const otText = game.isOT ? ' in overtime' : '';\n      if (game.awayScore > game.homeScore) {\n        voiceParts.push(awayShort + ' beat ' + homeShort + ' ' + game.awayScore + ' to ' + game.homeScore + otText + '. Final.');\n      } else {\n        voiceParts.push(homeShort + ' beat ' + awayShort + ' ' + game.homeScore + ' to ' + game.awayScore + otText + '. Final.');\n      }\n    } else {\n      const quarterText = formatQuarter(game.period);\n      const clockText = game.clock && game.clock !== '0:00' ? ', ' + game.clock + ' left' : '';\n      voiceParts.push(awayShort + ' ' + game.awayScore + ', ' + homeShort + ' ' + game.homeScore + '. ' + quarterText + clockText + '.');\n    }\n  }\n  \n  message = voiceParts.join(' ');\n  if (filteredGames.length > 5) {\n    message += ' Plus ' + (filteredGames.length - 5) + ' more games.';\n  }\n}\n\nreturn { message, action: 'scores', games: filteredGames };"
+      },
+      "name": "Format Scores",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        -200
+      ],
+      "id": "c661d710-6a8b-4ac0-8b30-751321bb0fbe"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst params = $('Parse Parameters').item.json;\nconst events = data.events || [];\nconst team = data.team || {};\nconst teamName = team.shortDisplayName || team.displayName || params.teamQuery;\n\nconst abbrevToName = {\n  'ARI': 'Cardinals', 'ATL': 'Falcons', 'BAL': 'Ravens', 'BUF': 'Bills',\n  'CAR': 'Panthers', 'CHI': 'Bears', 'CIN': 'Bengals', 'CLE': 'Browns',\n  'DAL': 'Cowboys', 'DEN': 'Broncos', 'DET': 'Lions', 'GB': 'Packers',\n  'HOU': 'Texans', 'IND': 'Colts', 'JAX': 'Jaguars', 'KC': 'Chiefs',\n  'LV': 'Raiders', 'LAC': 'Chargers', 'LAR': 'Rams', 'MIA': 'Dolphins',\n  'MIN': 'Vikings', 'NE': 'Patriots', 'NO': 'Saints', 'NYG': 'Giants',\n  'NYJ': 'Jets', 'PHI': 'Eagles', 'PIT': 'Steelers', 'SF': '49ers',\n  'SEA': 'Seahawks', 'TB': 'Buccaneers', 'TEN': 'Titans', 'WSH': 'Commanders'\n};\n\nconst now = new Date();\nconst upcoming = [];\nfor (let i = 0; i < events.length && upcoming.length < 3; i++) {\n  const ev = events[i];\n  const gameDate = new Date(ev.date);\n  if (gameDate > now) {\n    upcoming.push({\n      opponent: ev.shortName || ev.name,\n      date: ev.date,\n      gameDate: gameDate\n    });\n  }\n}\n\nif (upcoming.length === 0) {\n  return { message: 'No upcoming games found for the ' + teamName + '. Season may be over.', action: 'schedule', games: [] };\n}\n\nconst formatGame = (game) => {\n  const d = game.gameDate;\n  const today = new Date();\n  const tomorrow = new Date(today);\n  tomorrow.setDate(tomorrow.getDate() + 1);\n  \n  let dayStr = '';\n  if (d.toDateString() === today.toDateString()) {\n    dayStr = 'today';\n  } else if (d.toDateString() === tomorrow.toDateString()) {\n    dayStr = 'tomorrow';\n  } else {\n    dayStr = 'on ' + d.toLocaleDateString('en-US', { weekday: 'long' });\n  }\n  \n  const parts = game.opponent.split(' @ ');\n  let opponentAbbr = parts[0];\n  let homeAway = 'vs';\n  if (parts.length === 2) {\n    const abbr = params.abbr.toUpperCase();\n    if (parts[0] === abbr) {\n      opponentAbbr = parts[1];\n      homeAway = 'at the';\n    } else {\n      opponentAbbr = parts[0];\n      homeAway = 'the';\n    }\n  }\n  const opponent = abbrevToName[opponentAbbr] || opponentAbbr;\n  \n  return { opponent, homeAway, dayStr };\n};\n\nconst next = formatGame(upcoming[0]);\nlet message = 'The ' + teamName + ' play ' + next.homeAway + ' ' + next.opponent + ' ' + next.dayStr + '.';\n\nif (upcoming.length > 1) {\n  const after = formatGame(upcoming[1]);\n  message += ' After that, ' + after.homeAway + ' ' + after.opponent + ' ' + after.dayStr + '.';\n}\n\nreturn { message, action: 'schedule', team: teamName, games: upcoming };"
+      },
+      "name": "Format Schedule",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        0
+      ],
+      "id": "a43e41a7-72e3-492a-a8b1-7e614ee2cef0"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst params = $('Parse Parameters').item.json;\nconst teamFilter = params.teamQuery;\n\nconst suffix = (n) => { const s = ['th','st','nd','rd']; const v = n % 100; return s[(v-20)%10] || s[v] || s[0]; };\n\nconst allTeams = [];\nfor (const conf of data.children || []) {\n  const confName = conf.name;\n  for (const entry of conf.standings?.entries || []) {\n    const team = entry.team;\n    const stats = {};\n    for (const s of entry.stats || []) {\n      stats[s.name] = s.value;\n    }\n    allTeams.push({\n      name: team.displayName,\n      shortName: team.name,\n      abbr: team.abbreviation,\n      conference: confName,\n      wins: parseInt(stats.wins) || 0,\n      losses: parseInt(stats.losses) || 0,\n      ties: parseInt(stats.ties) || 0,\n      winPct: stats.winPercent || 0,\n      playoffSeed: parseInt(stats.playoffSeed) || 0\n    });\n  }\n}\n\nallTeams.sort((a, b) => b.winPct - a.winPct);\nallTeams.forEach((t, i) => t.rank = i + 1);\n\nlet message = '';\nlet standings = allTeams;\n\nif (teamFilter) {\n  const team = allTeams.find(t => \n    t.name.toLowerCase().includes(teamFilter) ||\n    t.shortName.toLowerCase().includes(teamFilter) ||\n    t.abbr.toLowerCase() === teamFilter\n  );\n  \n  if (!team) {\n    message = 'Could not find ' + teamFilter + ' in the NFL standings.';\n    standings = [];\n  } else {\n    const record = team.ties > 0 ? team.wins + ' wins, ' + team.losses + ' losses, ' + team.ties + ' ties' : team.wins + ' wins, ' + team.losses + ' losses';\n    message = 'The ' + team.shortName + ' are ' + team.rank + suffix(team.rank) + ' in the NFL. ' + record + '.';\n    standings = [team];\n  }\n} else {\n  const top5 = allTeams.slice(0, 5);\n  const parts = top5.map((t, i) => (i + 1) + '. ' + t.shortName + ', ' + t.wins + ' and ' + t.losses);\n  message = 'NFL standings: ' + parts.join(', ') + '.';\n  standings = top5;\n}\n\nreturn { message, action: 'standings', standings };"
+      },
+      "name": "Format Standings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        200
+      ],
+      "id": "3cfb256b-51ee-410d-9bce-d401014ff728"
+    },
+    {
+      "parameters": {
+        "jsCode": "return { message: \"Schedule requires a team. Try: 'when do the Seahawks play next'\", error: true, action: 'schedule' };"
+      },
+      "name": "Schedule No Team",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        400
+      ],
+      "id": "145afb06-3a0c-4e78-9b23-d18a45fe84f5"
+    },
+    {
+      "parameters": {
+        "jsCode": "const errorData = $input.item.json;\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\nif (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ETIMEDOUT')) {\n  errorMsg = 'Cannot connect to ESPN. Try again later.';\n}\nreturn { message: 'Error: ' + errorMsg, error: true };"
+      },
+      "name": "Format Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ],
+      "id": "4c6b1704-9b35-436c-8791-c065026d3184"
+    },
+    {
+      "parameters": {},
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        0
+      ],
+      "id": "397775f2-250b-4128-a0cd-1e727bb610b7"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $('Parse Parameters').item.json.abbr }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        }
+      },
+      "name": "Has Team?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        0,
+        100
+      ],
+      "id": "65faf0c7-4adb-4f9b-b83c-4075a071c9dd"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** espn-nfl\n**Description:** Get NFL scores, team schedules, and standings from ESPN.\n**version:** v1.0.0\n**id:** v8JZaSOuG2czTZ-b06Z7Kg\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/sports/espn-nfl)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -784,
+        -288
+      ],
+      "typeVersion": 1,
+      "id": "f1ceb3b1-ab81-48c4-a2bb-3463c48cad0b",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Parameters": {
+      "main": [
+        [
+          {
+            "node": "Switch Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Action": {
+      "main": [
+        [
+          {
+            "node": "Get Scores",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Has Team?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Standings",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Schedule No Team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Team?": {
+      "main": [
+        [
+          {
+            "node": "Get Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Schedule No Team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Scores": {
+      "main": [
+        [
+          {
+            "node": "Format Scores",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Schedule": {
+      "main": [
+        [
+          {
+            "node": "Format Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Standings": {
+      "main": [
+        [
+          {
+            "node": "Format Standings",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Scores": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Schedule": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Standings": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule No Team": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
