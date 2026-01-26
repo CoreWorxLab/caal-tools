@@ -1,0 +1,399 @@
+{
+  "name": "espn_f1",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "espn_f1",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -600,
+        0
+      ],
+      "webhookId": "espn_f1",
+      "notes": "Formula 1 data suite - results, standings, and schedule. Parameters: action (required) - 'results', 'standings', or 'schedule'; driver (optional for standings) - driver name like 'Verstappen', 'Hamilton'. Examples: 'who won the last F1 race', 'F1 standings', 'when is the next grand prix'.",
+      "id": "378165a2-d494-42c1-b736-5c5dd2c07305"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body || {};\n\nlet data;\nif (typeof body === 'string') {\n  data = JSON.parse(body);\n} else if (typeof body === 'object') {\n  data = body;\n} else {\n  data = $input.item.json;\n}\n\nconst action = (data.action || 'results').toLowerCase();\nconst driverQuery = data.driver ? data.driver.toLowerCase() : null;\n\nreturn [{ json: { action, driverQuery } }];"
+      },
+      "name": "Parse Parameters",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        0
+      ],
+      "id": "a4838bbd-4536-49bd-a753-bb9f4d962b8a"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "results",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "results"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "schedule",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "schedule"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "standings",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "standings"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "name": "Switch Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -200,
+        0
+      ],
+      "id": "55aacc6d-3322-4144-8316-4eb7fd0f1516"
+    },
+    {
+      "parameters": {
+        "url": "https://site.api.espn.com/apis/site/v2/sports/racing/f1/scoreboard?dates=2025&limit=50",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "name": "Get Results",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        -200
+      ],
+      "id": "a184b8c1-a592-4680-879e-b0cadbd850e6"
+    },
+    {
+      "parameters": {
+        "url": "https://site.api.espn.com/apis/site/v2/sports/racing/f1/scoreboard",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "name": "Get Schedule",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e18d5b14-5b75-4a45-ba5a-ce879ced715a"
+    },
+    {
+      "parameters": {
+        "url": "https://site.api.espn.com/apis/v2/sports/racing/f1/standings",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "name": "Get Standings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        200
+      ],
+      "id": "07055b38-11ae-47f8-bf82-b7e1f42466cf"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst events = data.events || [];\n\nconst completedRaces = events.filter(e => e.status && e.status.type && e.status.type.completed);\nif (completedRaces.length === 0) {\n  return { message: 'No completed F1 races found yet this season.', action: 'results', results: [] };\n}\n\ncompletedRaces.sort((a, b) => new Date(b.date) - new Date(a.date));\nconst lastRace = completedRaces[0];\n\nconst competitions = lastRace.competitions || [];\nconst raceComp = competitions.find(c => c.type && c.type.abbreviation === 'Race');\n\nif (!raceComp || !raceComp.competitors) {\n  return { message: 'Could not find race results.', action: 'results', results: [] };\n}\n\nconst competitors = raceComp.competitors.slice().sort((a, b) => (a.order || 99) - (b.order || 99));\nconst podium = competitors.slice(0, 3).map((c, i) => {\n  const athlete = c.athlete || {};\n  const fullName = athlete.displayName || 'Unknown';\n  const lastName = fullName.split(' ').pop();\n  return { position: i + 1, name: fullName, lastName };\n});\n\nconst raceName = lastRace.shortName || lastRace.name;\nlet message = '';\nif (podium.length >= 3) {\n  message = podium[0].lastName + ' won the ' + raceName + '. ' + podium[1].lastName + ' second, ' + podium[2].lastName + ' third.';\n} else if (podium.length > 0) {\n  message = podium[0].lastName + ' won the ' + raceName + '.';\n}\n\nreturn { message, action: 'results', race: raceName, podium };"
+      },
+      "name": "Format Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        -200
+      ],
+      "id": "a7d91775-cbe1-43ff-b9bc-b9353b8b68ba"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst events = data.events || [];\n\nif (events.length === 0) {\n  return { message: 'No upcoming F1 races found.', action: 'schedule', races: [] };\n}\n\nconst races = events.map(event => {\n  const competitions = event.competitions || [];\n  const raceSession = competitions.find(c => c.type && c.type.abbreviation === 'Race');\n  const raceTime = raceSession ? new Date(raceSession.date) : new Date(event.date);\n  return {\n    name: event.shortName || event.name,\n    fullName: event.name,\n    raceDay: raceTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }),\n    dateRaw: raceSession ? raceSession.date : event.date\n  };\n});\n\nraces.sort((a, b) => new Date(a.dateRaw) - new Date(b.dateRaw));\nconst now = new Date();\nconst upcoming = races.filter(r => new Date(r.dateRaw) > now);\n\nlet message = '';\nif (upcoming.length === 0) {\n  message = 'The F1 season has ended. No more races scheduled.';\n} else {\n  const next = upcoming[0];\n  message = 'The next F1 race is the ' + next.name + ' on ' + next.raceDay + '.';\n  if (upcoming.length > 1) {\n    message += ' After that, the ' + upcoming[1].name + '.';\n  }\n}\n\nreturn { message, action: 'schedule', races: upcoming.slice(0, 5) };"
+      },
+      "name": "Format Schedule",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        0
+      ],
+      "id": "8ce72c31-d6c1-4172-b1d7-24e571c7f916"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst params = $('Parse Parameters').item.json;\nconst driverFilter = params.driverQuery;\n\nconst suffix = (n) => { const s = ['th','st','nd','rd']; const v = n % 100; return s[(v-20)%10] || s[v] || s[0]; };\n\nconst allDrivers = [];\nconst children = data.children || [];\nfor (const group of children) {\n  if (group.name !== 'Driver Standings') continue;\n  const entries = (group.standings && group.standings.entries) || [];\n  for (const entry of entries) {\n    const athlete = entry.athlete || {};\n    const stats = entry.stats || [];\n    const points = (stats.find(s => s.name === 'championshipPts') || {}).value || 0;\n    allDrivers.push({\n      name: athlete.displayName || 'Unknown',\n      shortName: athlete.shortName || athlete.displayName || 'Unknown',\n      points\n    });\n  }\n}\n\nallDrivers.sort((a, b) => b.points - a.points);\nallDrivers.forEach((d, i) => d.rank = i + 1);\n\nlet message = '', standings = allDrivers;\n\nif (driverFilter) {\n  const driver = allDrivers.find(d => \n    d.name.toLowerCase().includes(driverFilter) || d.shortName.toLowerCase().includes(driverFilter)\n  );\n  if (!driver) {\n    message = 'Could not find ' + driverFilter + ' in the F1 standings.';\n    standings = [];\n  } else {\n    message = driver.name + ' is ' + driver.rank + suffix(driver.rank) + ' in the F1 championship with ' + driver.points + ' points.';\n    standings = [driver];\n  }\n} else {\n  const top5 = allDrivers.slice(0, 5);\n  const allZero = top5.every(d => d.points === 0);\n  if (allZero) {\n    message = 'The F1 season has not started yet. No points on the board.';\n  } else {\n    message = 'F1 standings: ' + top5.map((d, i) => (i + 1) + '. ' + d.shortName + ', ' + d.points + ' points').join(', ') + '.';\n  }\n  standings = top5;\n}\n\nreturn { message, action: 'standings', standings };"
+      },
+      "name": "Format Standings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        200
+      ],
+      "id": "9e93bf64-70f1-46dc-b94a-b4f69fcd7b85"
+    },
+    {
+      "parameters": {
+        "jsCode": "const errorData = $input.item.json;\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\nif (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ETIMEDOUT')) {\n  errorMsg = 'Cannot connect to ESPN. Try again later.';\n}\nreturn { message: 'Error: ' + errorMsg, error: true };"
+      },
+      "name": "Format Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ],
+      "id": "89d80133-041e-4843-8152-74ee61622f41"
+    },
+    {
+      "parameters": {},
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        0
+      ],
+      "id": "4556c2ad-2135-4d99-baa9-a72d5cd00646"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** espn-f1\n**Description:** Get Formula 1 race results, schedule, and championship standings from ESPN.\n**version:** v1.0.0\n**id:** FO0guQO1b9JulPfqFxR78A\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/sports/espn-f1)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -784,
+        -288
+      ],
+      "typeVersion": 1,
+      "id": "e249d660-f631-46bf-80a6-95b0548a31a5",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Parameters": {
+      "main": [
+        [
+          {
+            "node": "Switch Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Action": {
+      "main": [
+        [
+          {
+            "node": "Get Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Standings",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Results": {
+      "main": [
+        [
+          {
+            "node": "Format Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Schedule": {
+      "main": [
+        [
+          {
+            "node": "Format Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Standings": {
+      "main": [
+        [
+          {
+            "node": "Format Standings",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Results": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Schedule": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Standings": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}

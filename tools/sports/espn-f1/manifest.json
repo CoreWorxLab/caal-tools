@@ -1,0 +1,32 @@
+{
+  "id": "FO0guQO1b9JulPfqFxR78A",
+  "name": "espn-f1",
+  "friendlyName": "ESPN F1",
+  "version": "1.0.0",
+  "description": "Get Formula 1 race results, schedule, and championship standings from ESPN.",
+  "category": "sports",
+  "toolSuite": true,
+  "actions": [
+    "results",
+    "schedule",
+    "standings"
+  ],
+  "icon": "",
+  "voice_triggers": [
+    "Who won the last F1 race?",
+    "What's the F1 standings?"
+  ],
+  "required_services": [],
+  "required_credentials": [],
+  "required_variables": [],
+  "author": {
+    "github": "cmac86"
+  },
+  "tier": "coreworxlab",
+  "tags": [
+    "sports"
+  ],
+  "dependencies": [],
+  "created": "2026-01-26",
+  "updated": "2026-01-26"
+}
