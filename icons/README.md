@@ -1,53 +1,35 @@
-# Tool Icons
+# CAAL Tool Icons
 
-This folder contains SVG icons for tools in the CAAL registry.
+This directory contains SVG icons for tools in the CAAL registry.
 
-## Icon Hierarchy
+## How Icons Are Added
 
-The frontend uses this fallback order:
-1. **Tool-specific icon** - `google_tasks.svg`, `truenas.svg`
-2. **Category icon** - `category-productivity.svg`, `category-homelab.svg`
-3. **Generic wrench** - Last resort fallback
+Icons are automatically added via tool submissions when:
+1. A user selects an icon from [dashboardicons.com](https://dashboardicons.com)
+2. A user provides a custom SVG URL
+3. A user uploads a custom SVG file
 
-## Naming Conventions
+The icon is included in the pull request and added to this directory when merged.
 
-**Tool icons:** Match the tool's `name` field
-- `google_tasks.svg`
-- `espn_nhl.svg`
-- `truenas.svg`
+## Naming Convention
 
-**Category icons:** `category-{category}.svg`
-- `category-productivity.svg`
-- `category-homelab.svg`
-- `category-media.svg`
-- `category-smart-home.svg`
-- `category-sports.svg`
-- `category-developer.svg`
-- `category-utilities.svg`
-- `category-social.svg`
-- `category-other.svg`
+- Icons from dashboardicons.com keep their original name (e.g., `notion.svg`, `plex.svg`)
+- Custom icons are named after the tool (e.g., `my-custom-tool.svg`)
 
-## Requirements
+## Icon Requirements
 
-- **Format:** SVG only
-- **Size:** 24x24 viewBox recommended
-- **Colors:** Use `currentColor` for theming support, or brand colors
-- **Style:** Simple, recognizable silhouettes work best
+- Format: SVG only
+- Size: Icons should be square and work well at small sizes (24x24 to 64x64)
+- Style: Prefer simple, recognizable icons that look good on both light and dark backgrounds
 
-## Usage in Manifests
+## Usage
 
-Reference icons in `manifest.json`:
+Tools reference icons in their `manifest.json`:
+
 ```json
 {
-  "name": "google_tasks",
-  "icon": "google_tasks.svg",
-  ...
+  "icon": "notion.svg"
 }
 ```
 
-If `icon` is empty or missing, frontend falls back to category icon.
-
-## Icon URL
-
-Icons are served from:
-`https://raw.githubusercontent.com/CoreWorxLab/caal-tools/main/icons/{icon}`
+The CAAL frontend displays these icons in the tool browser and installed tools list.
