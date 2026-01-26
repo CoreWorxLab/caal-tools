@@ -1,0 +1,42 @@
+{
+  "id": "JLBpNNUkMXzOZDojN3VdrA",
+  "name": "google-tasks",
+  "friendlyName": "Google Tasks",
+  "version": "1.0.0",
+  "description": "Manage Google Tasks - get, add, complete, and delete tasks with optional due dates and notes.",
+  "category": "productivity",
+  "toolSuite": true,
+  "actions": [
+    "get",
+    "add",
+    "complete",
+    "delete"
+  ],
+  "icon": "google-tasks.svg",
+  "voice_triggers": [
+    "What's on my task list?",
+    "Add task buy groceries"
+  ],
+  "required_services": [
+    "google tasks"
+  ],
+  "required_credentials": [
+    {
+      "credential_type": "googleTasksOAuth2Api",
+      "name": "GOOGLETASKSOAUTH2API_CREDENTIAL",
+      "description": "n8n credential type: googleTasksOAuth2Api"
+    }
+  ],
+  "required_variables": [],
+  "author": {
+    "github": "cmac86"
+  },
+  "tier": "coreworxlab",
+  "tags": [
+    "productivity",
+    "google tasks"
+  ],
+  "dependencies": [],
+  "created": "2026-01-26",
+  "updated": "2026-01-26"
+}
