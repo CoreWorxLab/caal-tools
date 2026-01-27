@@ -158,6 +158,27 @@
         "sports"
       ],
       "updated": "2026-01-26"
+    },
+    {
+      "id": "y_T38DT5FY2AO8iZwWQ9CQ",
+      "name": "espn-nhl",
+      "friendlyName": "ESPN NHL",
+      "version": "1.0.0",
+      "description": "Get NHL scores, schedules, and standings with optional team filtering.",
+      "category": "sports",
+      "path": "tools/sports/espn-nhl",
+      "icon": "nhl.svg",
+      "voice_triggers": [
+        "What are the NHL scores?",
+        "When do the Canucks play next?"
+      ],
+      "required_services": [],
+      "tier": "coreworxlab",
+      "author": "cmac86",
+      "tags": [
+        "sports"
+      ],
+      "updated": "2026-01-26"
     }
   ],
   "utilities": []
