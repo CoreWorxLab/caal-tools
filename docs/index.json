@@ -21,6 +21,27 @@
     "updated": "2026-01-26"
   },
   {
+    "id": "bFrxKATo0kcNpuKFhCKn7g",
+    "name": "espn-f1",
+    "friendlyName": "ESPN F1",
+    "version": "1.0.0",
+    "description": "Get Formula 1 race results, schedule, and driver standings from ESPN.",
+    "category": "sports",
+    "path": "tools/sports/espn-f1",
+    "icon": "f1.svg",
+    "voice_triggers": [
+      "Who won the last F1 race?",
+      "What's the F1 schedule?"
+    ],
+    "required_services": [],
+    "tier": "coreworxlab",
+    "author": "cmac86",
+    "tags": [
+      "sports"
+    ],
+    "updated": "2026-01-26"
+  },
+  {
     "id": "JLBpNNUkMXzOZDojN3VdrA",
     "name": "google-tasks",
     "friendlyName": "Google Tasks",
