@@ -1,0 +1,344 @@
+{
+  "name": "google_contacts",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "google_contacts",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        0
+      ],
+      "name": "Webhook",
+      "webhookId": "google_contacts",
+      "notes": "Google Contacts suite - lookup contact information. Parameters: action (required) - 'search' or 'list'; query (required for search) - name to search for; limit (optional for list, default 10) - max contacts to return. Examples: 'find Mom's email', 'lookup John Smith', 'list my contacts'.",
+      "id": "cea51df3-39b9-4bcb-b5b2-4de2d33f07ce"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body || {};\n\nlet data;\nif (typeof body === 'string') {\n  data = JSON.parse(body);\n} else if (typeof body === 'object') {\n  data = body;\n} else {\n  data = $input.item.json;\n}\n\nconst action = (data.action || 'search').toLowerCase();\nconst query = data.query || data.name || '';\nconst limit = parseInt(data.limit) || 10;\n\nreturn [{ json: { action, query, queryLower: query.toLowerCase(), limit } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -200,
+        0
+      ],
+      "name": "Parse Parameters",
+      "id": "2684bec6-0983-44aa-8fd7-a7453782e0c2"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "search",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "search"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "list",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "list"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        0,
+        0
+      ],
+      "name": "Switch Action",
+      "id": "6fc98b0b-c249-4a1f-bdf0-aef967b194de"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true,
+        "fields": [
+          "names",
+          "emailAddresses",
+          "phoneNumbers",
+          "nicknames"
+        ],
+        "options": {
+          "rawData": false
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.googleContacts",
+      "typeVersion": 1,
+      "position": [
+        200,
+        -100
+      ],
+      "name": "Get All Contacts",
+      "credentials": {
+        "googleContactsOAuth2Api": {
+          "id": null,
+          "name": "${GOOGLECONTACTSOAUTH2API_CREDENTIAL}"
+        }
+      },
+      "id": "5129a592-541a-47a0-bfb6-0114bf4698b2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const contacts = items;\nconst query = $('Parse Parameters').first().json.queryLower;\n\nif (!query) {\n  return { message: 'Please provide a name to search for.', found: false, contacts: [] };\n}\n\n// Filter contacts by name match\n// names is an object with displayName, not an array\nconst matches = contacts.filter(item => {\n  const c = item.json;\n  const displayName = (c.names?.displayName || '').toLowerCase();\n  // nicknames might be object with type keys containing arrays of strings\n  let nicknames = [];\n  if (c.nicknames) {\n    for (const vals of Object.values(c.nicknames)) {\n      if (Array.isArray(vals)) {\n        vals.forEach(v => { if (typeof v === 'string') nicknames.push(v.toLowerCase()); });\n      } else if (typeof vals === 'string') {\n        nicknames.push(vals.toLowerCase());\n      }\n    }\n  }\n  const allNames = [displayName, ...nicknames];\n  return allNames.some(name => name.includes(query));\n});\n\nif (matches.length === 0) {\n  return { message: `No contacts found matching \"${$('Parse Parameters').first().json.query}\".`, found: false, contacts: [] };\n}\n\n// Format matches\n// emailAddresses is object like {\"other\": [\"email@example.com\"], \"home\": [\"email2@example.com\"]}\nconst formatted = matches.map(item => {\n  const c = item.json;\n  const name = c.names?.displayName || 'Unknown';\n  \n  // Extract emails from object structure\n  const emailObj = c.emailAddresses || {};\n  const emails = [];\n  for (const [type, addrs] of Object.entries(emailObj)) {\n    if (Array.isArray(addrs)) {\n      addrs.forEach(email => emails.push({ email, type }));\n    }\n  }\n  \n  // Extract phones from object structure\n  const phoneObj = c.phoneNumbers || {};\n  const phones = [];\n  for (const [type, nums] of Object.entries(phoneObj)) {\n    if (Array.isArray(nums)) {\n      nums.forEach(phone => phones.push({ phone, type }));\n    }\n  }\n  \n  const primaryEmail = emails[0]?.email || null;\n  const primaryPhone = phones[0]?.phone || null;\n  \n  return {\n    name,\n    email: primaryEmail,\n    phone: primaryPhone,\n    emails,\n    phones\n  };\n});\n\n// Build voice message\nlet message = '';\nif (formatted.length === 1) {\n  const c = formatted[0];\n  const parts = [c.name];\n  if (c.email) parts.push(`email ${c.email}`);\n  if (c.phone) parts.push(`phone ${c.phone}`);\n  message = parts.join(', ') + '.';\n} else {\n  message = `Found ${formatted.length} contacts matching \"${$('Parse Parameters').first().json.query}\": `;\n  const names = formatted.slice(0, 3).map(c => c.name);\n  message += names.join(', ');\n  if (formatted.length > 3) message += `, and ${formatted.length - 3} more`;\n  message += '.';\n}\n\nreturn { message, found: true, count: formatted.length, contacts: formatted };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        -100
+      ],
+      "name": "Filter and Format Search",
+      "id": "ae9b928e-182a-42f7-b3c1-4730d03137f1"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": "={{ $json.limit }}",
+        "fields": [
+          "names",
+          "emailAddresses",
+          "phoneNumbers"
+        ],
+        "options": {
+          "rawData": false
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.googleContacts",
+      "typeVersion": 1,
+      "position": [
+        200,
+        100
+      ],
+      "name": "Get Contacts Limited",
+      "credentials": {
+        "googleContactsOAuth2Api": {
+          "id": null,
+          "name": "${GOOGLECONTACTSOAUTH2API_CREDENTIAL}"
+        }
+      },
+      "id": "9e1ed5f6-2c3c-45ed-9248-ad8e3a5e40f8"
+    },
+    {
+      "parameters": {
+        "jsCode": "const contacts = items;\nconst limit = $('Parse Parameters').first().json.limit;\n\nif (contacts.length === 0) {\n  return { message: 'No contacts found.', count: 0, contacts: [] };\n}\n\n// Format contacts\n// emailAddresses is object like {\"other\": [\"email@example.com\"], \"home\": [\"email2@example.com\"]}\nconst formatted = contacts.map(item => {\n  const c = item.json;\n  const name = c.names?.displayName || 'Unknown';\n  \n  // Extract emails from object structure\n  const emailObj = c.emailAddresses || {};\n  const emails = [];\n  for (const [type, addrs] of Object.entries(emailObj)) {\n    if (Array.isArray(addrs)) {\n      addrs.forEach(email => emails.push({ email, type }));\n    }\n  }\n  \n  // Extract phones from object structure\n  const phoneObj = c.phoneNumbers || {};\n  const phones = [];\n  for (const [type, nums] of Object.entries(phoneObj)) {\n    if (Array.isArray(nums)) {\n      nums.forEach(phone => phones.push({ phone, type }));\n    }\n  }\n  \n  const primaryEmail = emails[0]?.email || null;\n  const primaryPhone = phones[0]?.phone || null;\n  \n  return {\n    name,\n    email: primaryEmail,\n    phone: primaryPhone,\n    emails,\n    phones\n  };\n});\n\n// Build voice message\nlet message = '';\nif (formatted.length === 1) {\n  message = `You have 1 contact: ${formatted[0].name}.`;\n} else {\n  message = `Listing ${formatted.length} contacts: `;\n  const names = formatted.slice(0, 5).map(c => c.name);\n  message += names.join(', ');\n  if (formatted.length > 5) message += `, and ${formatted.length - 5} more`;\n  message += '.';\n}\n\nreturn { message, count: formatted.length, contacts: formatted };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        100
+      ],
+      "name": "Format List",
+      "id": "daa0c7f3-4978-413f-a0f1-022e2e5221e0"
+    },
+    {
+      "parameters": {
+        "jsCode": "const errorData = $input.item.json;\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\n\nif (errorMsg.includes('authorization') || errorMsg.includes('token') || errorMsg.includes('invalid_grant')) {\n  errorMsg = 'Google Contacts authentication failed. Please re-authorize in n8n.';\n} else if (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ETIMEDOUT')) {\n  errorMsg = 'Cannot connect to Google Contacts. Check your internet connection.';\n} else if (errorMsg.includes('Credential')) {\n  errorMsg = 'Google Contacts credentials not found in n8n.';\n}\n\nreturn { message: 'Error: ' + errorMsg, error: true };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ],
+      "name": "Format Error",
+      "id": "6fbccf2a-8e47-4839-b676-c29365fc6bc4"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        0
+      ],
+      "name": "Respond to Webhook",
+      "id": "1ab8b7dd-39eb-4a31-b464-51a90656308c"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** google-contacts\n**Description:** Search and list Google Contacts with support for filtering by name and retrieving contact details including emails and phone numbers.\n**version:** v1.0.0\n**id:** IugRPxb-3ekQ0b-Bfpx6wA\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/productivity/google-contacts)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -784,
+        -288
+      ],
+      "typeVersion": 1,
+      "id": "f01758ec-f468-4cb6-97d8-5b0430e6b5e2",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Parameters": {
+      "main": [
+        [
+          {
+            "node": "Switch Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Action": {
+      "main": [
+        [
+          {
+            "node": "Get All Contacts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Contacts Limited",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get All Contacts": {
+      "main": [
+        [
+          {
+            "node": "Filter and Format Search",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter and Format Search": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Contacts Limited": {
+      "main": [
+        [
+          {
+            "node": "Format List",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format List": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}

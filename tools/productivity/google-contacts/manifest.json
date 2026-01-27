@@ -1,0 +1,40 @@
+{
+  "id": "IugRPxb-3ekQ0b-Bfpx6wA",
+  "name": "google-contacts",
+  "friendlyName": "Google Contacts",
+  "version": "1.0.0",
+  "description": "Search and list Google Contacts with support for filtering by name and retrieving contact details including emails and phone numbers.",
+  "category": "productivity",
+  "toolSuite": true,
+  "actions": [
+    "search",
+    "list"
+  ],
+  "icon": "google-contacts.svg",
+  "voice_triggers": [
+    "Find Mom's email",
+    "Lookup John Smith"
+  ],
+  "required_services": [
+    "google contacts"
+  ],
+  "required_credentials": [
+    {
+      "credential_type": "googleContactsOAuth2Api",
+      "name": "GOOGLECONTACTSOAUTH2API_CREDENTIAL",
+      "description": "n8n credential type: googleContactsOAuth2Api"
+    }
+  ],
+  "required_variables": [],
+  "author": {
+    "github": "cmac86"
+  },
+  "tier": "coreworxlab",
+  "tags": [
+    "productivity",
+    "google contacts"
+  ],
+  "dependencies": [],
+  "created": "2026-01-26",
+  "updated": "2026-01-26"
+}
