@@ -1,5 +1,24 @@
 [
   {
+    "id": "nETOdpfq0fJT4fJoqdf0Iw",
+    "name": "espn-epl",
+    "version": "1.0.0",
+    "description": "Get Premier League scores, standings, and team schedules from ESPN.",
+    "category": "sports",
+    "path": "tools/sports/espn-epl",
+    "voice_triggers": [
+      "What are the Premier League scores?",
+      "Where is Arsenal in the table?"
+    ],
+    "required_services": [],
+    "tier": "coreworxlab",
+    "author": "cmac86",
+    "tags": [
+      "sports"
+    ],
+    "updated": "2026-01-26"
+  },
+  {
     "id": "JLBpNNUkMXzOZDojN3VdrA",
     "name": "google-tasks",
     "version": "1.0.0",
