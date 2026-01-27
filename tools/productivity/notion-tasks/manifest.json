@@ -1,0 +1,48 @@
+{
+  "id": "Wv9iVQRT_j_fyCeMWcz_xA",
+  "name": "notion-tasks",
+  "friendlyName": "Notion Tasks",
+  "version": "1.0.0",
+  "description": "Manage tasks in Notion - get, add, complete, and delete tasks with support for due dates and filtering.",
+  "category": "productivity",
+  "toolSuite": true,
+  "actions": [
+    "get",
+    "add",
+    "complete",
+    "delete"
+  ],
+  "icon": "notion.svg",
+  "voice_triggers": [
+    "What's on my Notion task list?",
+    "Add task buy groceries due Friday"
+  ],
+  "required_services": [
+    "notion"
+  ],
+  "required_credentials": [
+    {
+      "credential_type": "notionApi",
+      "name": "NOTIONAPI_CREDENTIAL",
+      "description": "n8n credential type: notionApi"
+    }
+  ],
+  "required_variables": [
+    {
+      "name": "NOTION_DATABASE_ID",
+      "description": "Your Notion tasks database ID",
+      "example": "abc123def456789ghi"
+    }
+  ],
+  "author": {
+    "github": "cmac86"
+  },
+  "tier": "coreworxlab",
+  "tags": [
+    "productivity",
+    "notion"
+  ],
+  "dependencies": [],
+  "created": "2026-01-27",
+  "updated": "2026-01-27"
+}
