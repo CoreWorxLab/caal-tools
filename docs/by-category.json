@@ -4,6 +4,30 @@
   "media": [],
   "productivity": [
     {
+      "id": "IugRPxb-3ekQ0b-Bfpx6wA",
+      "name": "google-contacts",
+      "friendlyName": "Google Contacts",
+      "version": "1.0.0",
+      "description": "Search and list Google Contacts with support for filtering by name and retrieving contact details including emails and phone numbers.",
+      "category": "productivity",
+      "path": "tools/productivity/google-contacts",
+      "icon": "google-contacts.svg",
+      "voice_triggers": [
+        "Find Mom's email",
+        "Lookup John Smith"
+      ],
+      "required_services": [
+        "google contacts"
+      ],
+      "tier": "coreworxlab",
+      "author": "cmac86",
+      "tags": [
+        "productivity",
+        "google contacts"
+      ],
+      "updated": "2026-01-26"
+    },
+    {
       "id": "JLBpNNUkMXzOZDojN3VdrA",
       "name": "google-tasks",
       "friendlyName": "Google Tasks",
