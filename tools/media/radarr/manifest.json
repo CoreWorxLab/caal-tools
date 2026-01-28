@@ -1,0 +1,46 @@
+{
+  "id": "y9pyjCyBOoSrU5oY43viUA",
+  "name": "radarr",
+  "friendlyName": "Radarr",
+  "version": "1.0.0",
+  "description": "Manage Radarr movies - view upcoming releases and search your library.",
+  "category": "media",
+  "toolSuite": true,
+  "actions": [
+    "calendar",
+    "search"
+  ],
+  "icon": "radarr.svg",
+  "voice_triggers": [
+    "What movies are coming out?",
+    "Search for Dune on Radarr"
+  ],
+  "required_services": [
+    "radarr"
+  ],
+  "required_credentials": [
+    {
+      "credential_type": "httpHeaderAuth",
+      "name": "HTTPHEADERAUTH_CREDENTIAL",
+      "description": "n8n credential type: httpHeaderAuth"
+    }
+  ],
+  "required_variables": [
+    {
+      "name": "RADARR_URL",
+      "description": "Your Radarr server URL and port",
+      "example": "http://192.168.1.100:8484"
+    }
+  ],
+  "author": {
+    "github": "cmac86"
+  },
+  "tier": "coreworxlab",
+  "tags": [
+    "media",
+    "radarr"
+  ],
+  "dependencies": [],
+  "created": "2026-01-28",
+  "updated": "2026-01-28"
+}

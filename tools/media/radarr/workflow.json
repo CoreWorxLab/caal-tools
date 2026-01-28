@@ -1,0 +1,323 @@
+{
+  "name": "radarr",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "radarr",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        0
+      ],
+      "name": "Webhook",
+      "webhookId": "radarr",
+      "notes": "Radarr movie suite - calendar and search. Parameters: action (required) - 'calendar' or 'search'; query (required for search) - movie name; days (optional for calendar, default 30) - days to look ahead. Examples: 'what movies are coming out', 'search for Dune on Radarr', 'do I have Inception'.",
+      "id": "c7f31783-d190-4df5-b9ba-8dcec02d220e"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse input and extract action + parameters\nlet data;\n\nif (typeof items[0].json.body === 'string') {\n  data = JSON.parse(items[0].json.body);\n} else if (typeof items[0].json.body === 'object') {\n  data = items[0].json.body;\n} else {\n  data = items[0].json;\n}\n\nconst action = (data.action || '').toLowerCase();\nconst query = data.query || '';\nconst days = parseInt(data.days) || 30;\n\n// For calendar, calculate date range\nconst start = new Date();\nstart.setHours(0, 0, 0, 0);\nconst end = new Date(start);\nend.setDate(end.getDate() + days);\n\nreturn [{\n  json: {\n    action: action,\n    query: query,\n    queryLower: query.toLowerCase(),\n    days: days,\n    start: start.toISOString().split('T')[0],\n    end: end.toISOString().split('T')[0]\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -192,
+        0
+      ],
+      "name": "Parse Parameters",
+      "id": "598981a6-98b9-400b-a000-da0126dd1002"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "calendar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "calendar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "search",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "search"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        16,
+        0
+      ],
+      "name": "Switch Action",
+      "id": "a4925c70-56ae-44ab-982c-bf4468b4aef3"
+    },
+    {
+      "parameters": {
+        "url": "=${RADARR_URL}/api/v3/calendar?start={{ $('Parse Parameters').item.json.start }}&end={{ $('Parse Parameters').item.json.end }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        -100
+      ],
+      "name": "Get Calendar",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${HTTPHEADERAUTH_CREDENTIAL}"
+        }
+      },
+      "id": "e971be2f-e86c-4c14-9aad-4de2bb0d2989"
+    },
+    {
+      "parameters": {
+        "url": "${RADARR_URL}/api/v3/movie",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        100
+      ],
+      "name": "Get All Movies",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${HTTPHEADERAUTH_CREDENTIAL}"
+        }
+      },
+      "id": "718138df-1869-4fbc-9e98-d7a293168b1f"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format calendar for voice\nconst movies = items;\nconst days = $('Parse Parameters').item.json.days;\n\nif (movies.length === 0) {\n  return { message: `No movies scheduled in the next ${days} days.`, count: 0, movies: [] };\n}\n\nconst formatted = movies.map(item => {\n  const m = item.json;\n  // Radarr uses digitalRelease, physicalRelease, or inCinemas\n  const releaseDate = m.digitalRelease || m.physicalRelease || m.inCinemas;\n  const date = releaseDate ? new Date(releaseDate) : null;\n  const formattedDate = date ? date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) : 'TBA';\n  \n  return {\n    title: m.title || 'Unknown Movie',\n    year: m.year,\n    releaseDate: formattedDate,\n    releaseDateRaw: releaseDate,\n    hasFile: m.hasFile || false,\n    monitored: m.monitored || false\n  };\n});\n\nformatted.sort((a, b) => {\n  if (!a.releaseDateRaw) return 1;\n  if (!b.releaseDateRaw) return -1;\n  return new Date(a.releaseDateRaw) - new Date(b.releaseDateRaw);\n});\n\nlet message = '';\nif (formatted.length === 1) {\n  const m = formatted[0];\n  message = `One movie coming: ${m.title} on ${m.releaseDate}.`;\n} else {\n  message = `${formatted.length} movies in the next ${days} days. `;\n  const titles = formatted.slice(0, 4).map(m => m.title);\n  message += titles.join(', ');\n  if (formatted.length > 4) message += `, and ${formatted.length - 4} more.`;\n}\n\nreturn { message, count: formatted.length, movies: formatted };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        -200
+      ],
+      "name": "Format Calendar",
+      "id": "1dce4161-4be2-43f3-8cb0-e46255063099"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filter and format results\nconst allMovies = items;\nconst query = $('Parse Parameters').item.json.queryLower;\n\nconst matches = allMovies.filter(item => {\n  const title = (item.json.title || '').toLowerCase();\n  const originalTitle = (item.json.originalTitle || '').toLowerCase();\n  return title.includes(query) || originalTitle.includes(query);\n});\n\nif (matches.length === 0) {\n  return {\n    message: `No movies found matching \"${$('Parse Parameters').item.json.query}\".`,\n    found: false,\n    movies: []\n  };\n}\n\nconst movies = matches.map(item => {\n  const m = item.json;\n  const sizeGB = m.sizeOnDisk ? (m.sizeOnDisk / 1073741824).toFixed(1) : 0;\n  \n  return {\n    title: m.title,\n    year: m.year,\n    hasFile: m.hasFile || false,\n    sizeGB: parseFloat(sizeGB),\n    quality: m.movieFile?.quality?.quality?.name || 'N/A',\n    status: m.status,\n    monitored: m.monitored\n  };\n});\n\nlet message = '';\nif (movies.length === 1) {\n  const m = movies[0];\n  if (m.hasFile) {\n    message = `Yes, you have ${m.title} (${m.year}). ${m.quality}, ${m.sizeGB} GB.`;\n  } else if (m.monitored) {\n    message = `${m.title} (${m.year}) is in your library but not downloaded yet. It's being monitored.`;\n  } else {\n    message = `${m.title} (${m.year}) is in your library but not downloaded or monitored.`;\n  }\n} else {\n  const downloaded = movies.filter(m => m.hasFile).length;\n  message = `Found ${movies.length} movies matching your search. ${downloaded} downloaded. `;\n  const titles = movies.slice(0, 3).map(m => m.title);\n  message += titles.join(', ');\n  if (movies.length > 3) message += `, and ${movies.length - 3} more.`;\n}\n\nreturn { message, found: true, count: movies.length, movies };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        0
+      ],
+      "name": "Format Search",
+      "id": "7010f951-e8fd-477d-9e29-48dfb740513c"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format error for voice\nconst errorData = items[0].json;\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\n\nif (errorMsg.includes('401') || errorMsg.includes('403') || errorMsg.includes('Unauthorized')) {\n  errorMsg = 'Radarr authentication failed. Check the API key in n8n.';\n} else if (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ETIMEDOUT')) {\n  errorMsg = 'Cannot connect to Radarr. Is it running?';\n} else if (errorMsg.includes('Credential')) {\n  errorMsg = 'Radarr credentials not found in n8n.';\n}\n\nreturn { message: `Error with Radarr: ${errorMsg}`, error: true };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        200
+      ],
+      "name": "Format Error",
+      "id": "b1b4f110-5ddf-437a-89da-07e60ab0241c"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        688,
+        0
+      ],
+      "name": "Respond to Webhook",
+      "id": "920d8c4e-5641-4a00-a8a0-79b30b25e7a5"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** radarr\n**Description:** Manage Radarr movies - view upcoming releases and search your library.\n**version:** v1.0.0\n**id:** y9pyjCyBOoSrU5oY43viUA\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/media/radarr)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -784,
+        -288
+      ],
+      "typeVersion": 1,
+      "id": "cfa564ea-2706-40ad-85e9-09626d5aee7a",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Parameters": {
+      "main": [
+        [
+          {
+            "node": "Switch Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Action": {
+      "main": [
+        [
+          {
+            "node": "Get Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get All Movies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Calendar": {
+      "main": [
+        [
+          {
+            "node": "Format Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get All Movies": {
+      "main": [
+        [
+          {
+            "node": "Format Search",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Calendar": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Search": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
