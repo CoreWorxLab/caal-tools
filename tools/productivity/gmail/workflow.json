@@ -1,0 +1,354 @@
+{
+  "name": "gmail",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "gmail",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -600,
+        0
+      ],
+      "name": "Webhook",
+      "webhookId": "gmail",
+      "notes": "Gmail suite - check and send emails. Parameters: action (required) - 'get_unread' or 'send'; limit (optional for get_unread, default 10) - number of emails; to (required for send) - recipient email address; subject (required for send); body (required for send). For send: if user provides a name instead of email address, use contacts lookup tool first to get their email, then confirm before sending. Examples: 'do I have any new emails', 'send email to john@example.com saying I'll be late', 'email Mom to say happy birthday'.",
+      "id": "d3a8bd05-4165-437d-8a19-9bcb0fa5a4dd"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse input\nlet data;\n\nif (typeof items[0].json.body === 'string') {\n  data = JSON.parse(items[0].json.body);\n} else if (typeof items[0].json.body === 'object') {\n  data = items[0].json.body;\n} else {\n  data = items[0].json;\n}\n\nconst action = data.action || '';\nconst limit = parseInt(data.limit) || 10;\nconst to = data.to || '';\nconst subject = data.subject || '';\nconst body = data.body || data.message || '';\n\nif (!action) {\n  throw new Error('Action is required. Use get_unread or send.');\n}\n\nreturn [{\n  json: {\n    action: action,\n    limit: limit,\n    to: to,\n    subject: subject,\n    body: body\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        0
+      ],
+      "name": "Parse Parameters",
+      "id": "3e37c968-55a9-4fa9-ae3a-a1294fe9630f"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "get_unread",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "get_unread"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "send",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "send"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -200,
+        0
+      ],
+      "name": "Switch Action",
+      "id": "77319c03-23db-44fc-a2a4-4678160f56dd"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": "={{ $json.limit }}",
+        "filters": {
+          "labelIds": [
+            "UNREAD"
+          ],
+          "includeSpamTrash": false
+        },
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        50,
+        -150
+      ],
+      "name": "Get Unread Emails",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": null,
+          "name": "${GMAILOAUTH2_CREDENTIAL}"
+        }
+      },
+      "id": "0fbc0dec-29c3-4414-9116-b9b9933dbda7"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate send parameters\nconst data = items[0].json;\n\nif (!data.to) {\n  throw new Error('Recipient email address (to) is required');\n}\nif (!data.subject) {\n  throw new Error('Email subject is required');\n}\nif (!data.body) {\n  throw new Error('Email body/message is required');\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        50,
+        150
+      ],
+      "name": "Validate Send",
+      "id": "678dc6e9-2754-42bf-a7d8-5cc87c8bdf77"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.body }}",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        250,
+        150
+      ],
+      "name": "Send Email",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": null,
+          "name": "${GMAILOAUTH2_CREDENTIAL}"
+        }
+      },
+      "id": "0b27992c-837b-4a12-bcc3-5641527c6c30"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format emails for voice\nconst emails = items.map(i => i.json).filter(e => e && e.id);\n\nif (!emails || emails.length === 0) {\n  return {\n    message: \"No unread emails.\",\n    count: 0,\n    emails: []\n  };\n}\n\n// Format emails - Gmail API returns capitalized fields: From, Subject, internalDate\nconst formatted = emails.map(email => {\n  // Get sender name (extract from \"Name <email>\" format)\n  let from = email.From || email.from || 'Unknown';\n  const nameMatch = from.match(/^([^<]+)/);\n  if (nameMatch) {\n    from = nameMatch[1].trim().replace(/\"/g, '');\n  }\n  \n  // Get date from internalDate (milliseconds since epoch)\n  const timestamp = email.internalDate || email.date;\n  const date = new Date(parseInt(timestamp));\n  const now = new Date();\n  const diffHours = Math.floor((now - date) / (1000 * 60 * 60));\n  let timeAgo = '';\n  if (diffHours < 1) {\n    const diffMins = Math.floor((now - date) / (1000 * 60));\n    timeAgo = diffMins <= 1 ? 'just now' : `${diffMins} minutes ago`;\n  } else if (diffHours < 24) {\n    timeAgo = diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`;\n  } else {\n    const diffDays = Math.floor(diffHours / 24);\n    timeAgo = diffDays === 1 ? 'yesterday' : `${diffDays} days ago`;\n  }\n  \n  return {\n    from: from,\n    subject: email.Subject || email.subject || '(no subject)',\n    snippet: email.snippet || '',\n    date: timeAgo,\n    id: email.id\n  };\n});\n\n// Build voice message\nlet message = '';\nif (formatted.length === 1) {\n  const e = formatted[0];\n  message = `You have one unread email from ${e.from}: ${e.subject}.`;\n} else {\n  message = `You have ${formatted.length} unread emails. `;\n  const summaries = formatted.slice(0, 3).map(e => `${e.from}: ${e.subject}`);\n  message += summaries.join('. ') + '.';\n  if (formatted.length > 3) {\n    message += ` Plus ${formatted.length - 3} more.`;\n  }\n}\n\nreturn {\n  message: message,\n  count: formatted.length,\n  emails: formatted\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        300,
+        -200
+      ],
+      "name": "Format Get Unread",
+      "id": "43f18545-045c-43f2-ac65-2d1decd34b8e"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format success response for voice\nconst result = $input.item.json;\nconst to = $('Validate Send').item.json.to;\nconst subject = $('Validate Send').item.json.subject;\n\n// Extract recipient name from email if possible\nlet recipientName = to;\nif (to.includes('@')) {\n  recipientName = to.split('@')[0].replace(/[._]/g, ' ');\n}\n\nconst message = `Done. Email sent to ${recipientName} with subject: ${subject}.`;\n\nreturn {\n  message: message,\n  sent: true,\n  to: to,\n  subject: subject,\n  messageId: result.id\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        100
+      ],
+      "name": "Format Send",
+      "id": "87067f52-4f8e-43d9-a0ea-220e52112c71"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format error for voice\nconst errorData = items[0].json;\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\n\n// Make error voice-friendly\nif (errorMsg.includes('authorization') || errorMsg.includes('token') || errorMsg.includes('invalid_grant')) {\n  errorMsg = 'Gmail authentication failed. Please re-authorize the Gmail connection in n8n.';\n} else if (errorMsg.includes('rate limit') || errorMsg.includes('429')) {\n  errorMsg = 'Gmail rate limit reached. Try again in a few minutes.';\n} else if (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ETIMEDOUT')) {\n  errorMsg = 'Cannot connect to Gmail. Check your internet connection.';\n}\n\nreturn {\n  message: `Gmail error: ${errorMsg}`,\n  error: true\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        0
+      ],
+      "name": "Format Error",
+      "id": "e04b3ce5-b455-4fb9-be17-099df6dd8a27"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        750,
+        0
+      ],
+      "name": "Respond to Webhook",
+      "id": "fc763ce2-8bdc-4e99-8eda-ca9b0b3e5924"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** gmail\n**Description:** Manage Gmail - get unread emails and send messages.\n**version:** v1.0.0\n**id:** qf9d71F4kheRwEH9JDa62g\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/productivity/gmail)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -784,
+        -288
+      ],
+      "typeVersion": 1,
+      "id": "48e35f6b-3dc0-4a48-89f3-cd3f48ac3085",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Parameters": {
+      "main": [
+        [
+          {
+            "node": "Switch Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Action": {
+      "main": [
+        [
+          {
+            "node": "Get Unread Emails",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validate Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Unread Emails": {
+      "main": [
+        [
+          {
+            "node": "Format Get Unread",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Send": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email": {
+      "main": [
+        [
+          {
+            "node": "Format Send",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Get Unread": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Send": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "id": "qf9d71F4kheRwEH9JDa62g",
+  "name": "gmail",
+  "friendlyName": "Gmail",
+  "version": "1.0.0",
+  "description": "Manage Gmail - get unread emails and send messages.",
+  "category": "productivity",
+  "toolSuite": true,
+  "actions": [
+    "get_unread",
+    "send"
+  ],
+  "icon": "gmail.svg",
+  "voice_triggers": [
+    "Do I have any new emails?",
+    "Check my unread emails"
+  ],
+  "required_services": [
+    "gmail"
+  ],
+  "required_credentials": [
+    {
+      "credential_type": "gmailOAuth2",
+      "name": "GMAILOAUTH2_CREDENTIAL",
+      "description": "n8n credential type: gmailOAuth2"
+    }
+  ],
+  "required_variables": [],
+  "author": {
+    "github": "cmac86"
+  },
+  "tier": "coreworxlab",
+  "tags": [
+    "productivity",
+    "gmail"
+  ],
+  "dependencies": [],
+  "created": "2026-01-28",
+  "updated": "2026-01-28"
+}
