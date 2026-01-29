@@ -1,0 +1,46 @@
+{
+  "id": "aFV2ViQQVT8tJAzA-RbSqw",
+  "name": "sonarr",
+  "friendlyName": "Sonarr",
+  "version": "1.0.0",
+  "description": "Manage Sonarr TV shows - view upcoming episodes and search your library.",
+  "category": "media",
+  "toolSuite": true,
+  "actions": [
+    "calendar",
+    "search"
+  ],
+  "icon": "sonarr.svg",
+  "voice_triggers": [
+    "What TV shows are coming up?",
+    "Search for Breaking Bad on Sonarr"
+  ],
+  "required_services": [
+    "sonarr"
+  ],
+  "required_credentials": [
+    {
+      "credential_type": "httpHeaderAuth",
+      "name": "HTTPHEADERAUTH_CREDENTIAL",
+      "description": "n8n credential type: httpHeaderAuth"
+    }
+  ],
+  "required_variables": [
+    {
+      "name": "SONARR_URL",
+      "description": "Your Sonarr server URL and port",
+      "example": "http://192.168.1.100:8282"
+    }
+  ],
+  "author": {
+    "github": "cmac86"
+  },
+  "tier": "coreworxlab",
+  "tags": [
+    "media",
+    "sonarr"
+  ],
+  "dependencies": [],
+  "created": "2026-01-29",
+  "updated": "2026-01-29"
+}
