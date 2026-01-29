@@ -1,7 +1,32 @@
 {
   "developer": [],
   "homelab": [],
-  "media": [],
+  "media": [
+    {
+      "id": "9fGeS8i9FH-7OHxAHAYB1A",
+      "name": "radarr",
+      "friendlyName": "Radarr",
+      "version": "1.0.0",
+      "description": "Manage Radarr movies - view upcoming releases and search your library.",
+      "category": "media",
+      "path": "tools/media/radarr",
+      "icon": "radarr.svg",
+      "voice_triggers": [
+        "What movies are coming out?",
+        "Search for Dune on Radarr"
+      ],
+      "required_services": [
+        "radarr"
+      ],
+      "tier": "coreworxlab",
+      "author": "cmac86",
+      "tags": [
+        "media",
+        "radarr"
+      ],
+      "updated": "2026-01-29"
+    }
+  ],
   "productivity": [
     {
       "id": "IugRPxb-3ekQ0b-Bfpx6wA",
