@@ -1,0 +1,323 @@
+{
+  "name": "sonarr",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sonarr",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        0
+      ],
+      "name": "Webhook",
+      "webhookId": "sonarr",
+      "notes": "Sonarr TV show suite - calendar and search. Parameters: action (required) - 'calendar' or 'search'; query (required for search) - show name; days (optional for calendar, default 7) - days to look ahead. Examples: 'what TV shows are coming up', 'search for Breaking Bad on Sonarr', 'what's on TV this week'.",
+      "id": "336a4a0f-51e8-4c7d-91f2-f9e0048c9734"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse input and extract action + parameters\nlet data;\n\nif (typeof items[0].json.body === 'string') {\n  data = JSON.parse(items[0].json.body);\n} else if (typeof items[0].json.body === 'object') {\n  data = items[0].json.body;\n} else {\n  data = items[0].json;\n}\n\nconst action = (data.action || '').toLowerCase();\nconst query = data.query || '';\nconst days = parseInt(data.days) || 7;\n\n// For calendar, calculate date range\nconst start = new Date();\nstart.setHours(0, 0, 0, 0);\nconst end = new Date(start);\nend.setDate(end.getDate() + days);\n\nreturn [{\n  json: {\n    action: action,\n    query: query,\n    queryLower: query.toLowerCase(),\n    days: days,\n    start: start.toISOString().split('T')[0],\n    end: end.toISOString().split('T')[0]\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -192,
+        0
+      ],
+      "name": "Parse Parameters",
+      "id": "cf240e0c-c004-4aae-9578-f28459526cb6"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "calendar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "calendar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "search",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "search"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        16,
+        0
+      ],
+      "name": "Switch Action",
+      "id": "4be1968f-4894-4d01-b32a-64253d2c35fe"
+    },
+    {
+      "parameters": {
+        "url": "=${SONARR_URL}/api/v3/calendar?start={{ $('Parse Parameters').item.json.start }}&end={{ $('Parse Parameters').item.json.end }}&includeSeries=true",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        -100
+      ],
+      "name": "Get Calendar",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${HTTPHEADERAUTH_CREDENTIAL}"
+        }
+      },
+      "id": "edfdf33c-d4ff-4b73-9c64-318338160731"
+    },
+    {
+      "parameters": {
+        "url": "${SONARR_URL}/api/v3/series",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        100
+      ],
+      "name": "Get All Series",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${HTTPHEADERAUTH_CREDENTIAL}"
+        }
+      },
+      "id": "7dc6d1f3-2c1d-4da9-b829-1fc674d4f787"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format calendar for voice\nconst episodes = items;\nconst days = $('Parse Parameters').item.json.days;\n\nif (episodes.length === 0) {\n  return { message: `No episodes scheduled in the next ${days} days.`, count: 0, episodes: [] };\n}\n\nconst formatted = episodes.map(item => {\n  const ep = item.json;\n  const airDate = new Date(ep.airDateUtc);\n  const formattedDate = airDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });\n  \n  return {\n    show: ep.series?.title || ep.seriesTitle || 'Unknown Show',\n    season: ep.seasonNumber,\n    episode: ep.episodeNumber,\n    title: ep.title || 'TBA',\n    airDate: formattedDate,\n    airDateRaw: ep.airDateUtc,\n    hasFile: ep.hasFile || false\n  };\n});\n\nformatted.sort((a, b) => new Date(a.airDateRaw) - new Date(b.airDateRaw));\n\nlet message = '';\nif (formatted.length === 1) {\n  const ep = formatted[0];\n  message = `One episode coming: ${ep.show} season ${ep.season} episode ${ep.episode} on ${ep.airDate}.`;\n} else {\n  message = `${formatted.length} episodes in the next ${days} days. `;\n  const byShow = {};\n  formatted.forEach(ep => { if (!byShow[ep.show]) byShow[ep.show] = 0; byShow[ep.show]++; });\n  const showSummaries = Object.entries(byShow).slice(0, 4).map(([show, count]) => count === 1 ? show : `${show} (${count} episodes)`);\n  message += showSummaries.join(', ');\n  if (Object.keys(byShow).length > 4) message += `, and ${Object.keys(byShow).length - 4} more shows.`;\n}\n\nreturn { message, count: formatted.length, episodes: formatted };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        -200
+      ],
+      "name": "Format Calendar",
+      "id": "6b3dbb43-22c0-414a-b064-0e05f56f8859"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filter and format results\nconst allSeries = items;\nconst query = $('Parse Parameters').item.json.queryLower;\n\nconst matches = allSeries.filter(item => {\n  const title = (item.json.title || '').toLowerCase();\n  return title.includes(query);\n});\n\nif (matches.length === 0) {\n  return {\n    message: `No shows found matching \"${$('Parse Parameters').item.json.query}\".`,\n    found: false,\n    shows: []\n  };\n}\n\nconst shows = matches.map(item => {\n  const s = item.json;\n  const episodeCount = s.statistics?.episodeFileCount || 0;\n  const totalEpisodes = s.statistics?.episodeCount || 0;\n  const percentComplete = totalEpisodes > 0 ? Math.round((episodeCount / totalEpisodes) * 100) : 0;\n  \n  return {\n    title: s.title,\n    year: s.year,\n    seasons: s.statistics?.seasonCount || 0,\n    episodesDownloaded: episodeCount,\n    totalEpisodes: totalEpisodes,\n    percentComplete: percentComplete,\n    status: s.status,\n    network: s.network || 'Unknown'\n  };\n});\n\nlet message = '';\nif (shows.length === 1) {\n  const s = shows[0];\n  message = `Yes, you have ${s.title}. ${s.episodesDownloaded} of ${s.totalEpisodes} episodes downloaded, ${s.percentComplete}% complete.`;\n} else {\n  message = `Found ${shows.length} shows matching your search. `;\n  const titles = shows.slice(0, 3).map(s => s.title);\n  message += titles.join(', ');\n  if (shows.length > 3) message += `, and ${shows.length - 3} more.`;\n}\n\nreturn { message, found: true, count: shows.length, shows };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        0
+      ],
+      "name": "Format Search",
+      "id": "b02c6358-3c1a-4857-b85c-0aa4a02a1886"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format error for voice\nconst errorData = items[0].json;\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\n\nif (errorMsg.includes('401') || errorMsg.includes('403') || errorMsg.includes('Unauthorized')) {\n  errorMsg = 'Sonarr authentication failed. Check the API key in n8n.';\n} else if (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ETIMEDOUT')) {\n  errorMsg = 'Cannot connect to Sonarr. Is it running?';\n} else if (errorMsg.includes('Credential')) {\n  errorMsg = 'Sonarr credentials not found in n8n.';\n}\n\nreturn { message: `Error with Sonarr: ${errorMsg}`, error: true };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        200
+      ],
+      "name": "Format Error",
+      "id": "0eb98f0a-8fdd-4af1-8110-e1a7f2e30766"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        688,
+        0
+      ],
+      "name": "Respond to Webhook",
+      "id": "e9122144-00f7-42b6-82e8-85b6dfa037d7"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** sonarr\n**Description:** Manage Sonarr TV shows - view upcoming episodes and search your library.\n**version:** v1.0.0\n**id:** HyIbrowmZ95x_jxmUMeCIw\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/media/sonarr)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -784,
+        -288
+      ],
+      "typeVersion": 1,
+      "id": "b76a3826-c3d1-4ea8-b9e7-5fa55cf225ec",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Parameters": {
+      "main": [
+        [
+          {
+            "node": "Switch Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Action": {
+      "main": [
+        [
+          {
+            "node": "Get Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get All Series",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Calendar": {
+      "main": [
+        [
+          {
+            "node": "Format Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get All Series": {
+      "main": [
+        [
+          {
+            "node": "Format Search",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Calendar": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Search": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
