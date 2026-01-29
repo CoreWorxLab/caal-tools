@@ -25,6 +25,32 @@
       "updated": "2026-01-29"
     }
   ],
+  "gmail": [
+    {
+      "id": "7FUfsUz1RkqcEdvm_Vglnw",
+      "name": "gmail",
+      "friendlyName": "Gmail",
+      "version": "1.0.0",
+      "description": "Manage Gmail - check unread emails and send messages.",
+      "category": "productivity",
+      "path": "tools/productivity/gmail",
+      "icon": "gmail.svg",
+      "voice_triggers": [
+        "Do I have any new emails?",
+        "Check my unread emails"
+      ],
+      "required_services": [
+        "gmail"
+      ],
+      "tier": "coreworxlab",
+      "author": "cmac86",
+      "tags": [
+        "productivity",
+        "gmail"
+      ],
+      "updated": "2026-01-29"
+    }
+  ],
   "google contacts": [
     {
       "id": "IugRPxb-3ekQ0b-Bfpx6wA",
