@@ -1,0 +1,464 @@
+{
+  "name": "weather_aus",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "weather_aus",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        -48
+      ],
+      "id": "452672aa-4b04-4629-8aee-0eaab5c6da8c",
+      "name": "Webhook",
+      "webhookId": "79b52c8a-43f0-4e17-ac2b-df29df7da883",
+      "notes": "Australian weather tool.\nParameters:\n\naction (required)\n- \"forecast\" | \"current\"\n\nlocation (required)\n- Australian city, suburb, or postcode\n- Do not include state or country (e.g. \"Sydney\", not \"Sydney NSW\")\n\ndays (optional)\n- Integer 1\u20137\n- Forecast only\n\ntarget_day (optional)\n- Weekday name (e.g. \"Monday\")\n- Forecast only"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.searchUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        448,
+        -48
+      ],
+      "id": "49aee0e6-873d-49da-87ac-276d46709ea5",
+      "name": "Location Search"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const body = $input.item.json.body || $input.item.json;\n\nconst action = (body.action || 'forecast').toLowerCase();\nconst rawLocation = (body.location || 'Sydney').toString().trim();\nconst location = /^\\d+$/.test(rawLocation)\n  ? rawLocation\n  : rawLocation.toLowerCase().replace(/\\b[a-z]/g, c => c.toUpperCase());\n\nconst days = Math.min(Math.max(parseInt(body.days) || 7, 1), 7);\nconst target_day = body.target_day ? body.target_day.toString().trim() : null;\n\nreturn {\n  action,\n  location,\n  days,\n  target_day,\n  searchUrl: `https://api.weather.bom.gov.au/v1/locations?search=${encodeURIComponent(location)}`\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        -48
+      ],
+      "id": "99452866-536e-413a-98e6-1d81881d8b90",
+      "name": "Prepare Input"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1792,
+        48
+      ],
+      "id": "eace214f-2d00-40b6-a607-b40c3fdb8a8a",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const raw = $input.item.json;\nconst params = $('Prepare Input').item.json;\n\nif (!raw.data || raw.data.length === 0) {\n  return {\n    error: true,\n    message: `Sorry, I couldn't find weather data for \"${params.location}\".`\n  };\n}\n\nconst loc = raw.data[0];\n\n// BOM quirk: hourly endpoint requires 6-char geohash\nconst fullGeohash = loc.geohash;\nconst hourlyGeohash =\n  typeof fullGeohash === 'string' && fullGeohash.length > 6\n    ? fullGeohash.slice(0, 6)\n    : fullGeohash;\n\nreturn {\n  error: false,\n  locationName: `${loc.name}, ${loc.state}`,\n  geohash: fullGeohash,\n  forecastUrl: `https://api.weather.bom.gov.au/v1/locations/${fullGeohash}/forecasts/daily`,\n  hourlyUrl: `https://api.weather.bom.gov.au/v1/locations/${hourlyGeohash}/forecasts/hourly`,\n  days: params.days,\n  target_day: params.target_day\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        -48
+      ],
+      "id": "fbcaa839-80dd-48a2-9be6-304474e6a1c5",
+      "name": "Parse Location"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a88613cf-ec51-45e0-832c-ced99502e938",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        896,
+        -48
+      ],
+      "id": "100197ce-3828-4319-ba79-4f782c47cdf3",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Prepare Input').item.json.action }}",
+                    "rightValue": "forecast",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "47fb4a4e-7bea-4346-8a1d-21512fbb6423"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "forecast"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "42a87286-79a1-4f83-8989-8a73ea72523b",
+                    "leftValue": "={{ $('Prepare Input').item.json.action }}",
+                    "rightValue": "current",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "current"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1120,
+        112
+      ],
+      "id": "19397b23-4558-402b-a0f9-0c72b6772ab9",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const data = $input.item.json.data || [];\nconst params = $('Parse Location').item.json;\n\nlet periods = data;\n\nif (params.target_day) {\n  const target = params.target_day.toLowerCase().replace(/^\\w/, c => c.toUpperCase());\n  periods = periods.filter(p =>\n    new Date(p.date).toLocaleDateString('en-AU', { weekday: 'long' }) === target\n  );\n\n  if (periods.length === 0) {\n    return {\n      error: true,\n      message: `Sorry, I couldn't find a forecast for ${target} in ${params.locationName}.`\n    };\n  }\n}\n\nperiods = params.target_day ? periods : periods.slice(0, params.days);\n\nfunction formatDay(d) {\n  const date = new Date(d);\n  const today = new Date();\n  const tomorrow = new Date(today);\n  tomorrow.setDate(today.getDate() + 1);\n  if (date.toDateString() === today.toDateString()) return 'Today';\n  if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow';\n  return date.toLocaleDateString('en-AU', { weekday: 'long' });\n}\n\nconst parts = periods.map(p => {\n  const day = formatDay(p.date);\n  const summary = (p.short_text || p.extended_text || 'No details').replace(/\\.$/, '');\n  const min = p.temp_min ?? 'unknown';\n  const max = p.temp_max ?? 'unknown';\n  const rain = p.rain?.chance != null ? `${p.rain.chance} percent chance of rain` : 'unknown rain chance';\n  return `${day} is ${summary}, ${min} to ${max} degrees, with ${rain}`;\n});\n\nreturn {\n  error: false,\n  message: `Forecast for ${params.locationName}: ${parts.join('. ')}.`,\n  location: params.locationName,\n  forecasts: periods.map(p => ({\n    date: p.date,\n    day: formatDay(p.date),\n    temp_min: p.temp_min,\n    temp_max: p.temp_max,\n    summary: p.short_text,\n    rain_chance: p.rain?.chance ?? null\n  }))\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        -64
+      ],
+      "id": "540792fd-162e-4f4e-b453-960cbf081ea3",
+      "name": "Format Forecast"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const action = $('Prepare Input').item.json.action;\n\nreturn {\n  error: true,\n  message: `Sorry, I don't know how to handle \"${action}\" requests yet.`\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        320
+      ],
+      "id": "fd14edf1-b377-4274-bb0f-47869719a7c4",
+      "name": "Format Error"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const data = $input.item.json.data || [];\nconst params = $('Parse Location').item.json;\n\nconst now = new Date();\nif (!data.length) {\n  return {\n    error: true,\n    message: 'No current weather data available.'\n  };\n}\n\nconst current = data.find(p => new Date(p.time) >= now) || data[data.length - 1];\n\n\nif (!current) {\n  return { error: true, message: 'No current weather data available.' };\n}\n\nconst temp = current.temp;\nconst feels = current.temp_feels_like;\nconst rain = current.rain?.chance ?? null;\nconst humidity = current.relative_humidity ?? null;\nconst uv = current.uv ?? null;\n\nlet parts = [`It is currently ${temp} degrees in ${params.locationName}`];\nif (feels != null) parts.push(`feels like ${feels}`);\nif (rain != null) parts.push(`with a ${rain} percent chance of rain`);\nif (humidity != null) parts.push(`humidity ${humidity} percent`);\nif (uv != null) parts.push(`UV index ${uv}`);\n\nreturn {\n  error: false,\n  message: parts.join(', ') + '.',\n  location: params.locationName,\n  current: {\n    temp,\n    feels_like: feels,\n    rain_chance: rain,\n    humidity,\n    uv\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        128
+      ],
+      "id": "039f7822-55bf-4bd3-a201-08d581e194c2",
+      "name": "Format Current"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.forecastUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1344,
+        -64
+      ],
+      "id": "3ada9341-33f7-4e3e-98a9-db23fb9a157d",
+      "name": "Get Forecast"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.hourlyUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1344,
+        128
+      ],
+      "id": "62b05348-47ba-4775-b8e0-1452fa9d12bb",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** weather-aus\n**Description:** Get Australian weather forecasts or current conditions for any city, suburb, or postcode.\n**version:** v1.0.0\n**id:** mXoo792Qi9j8e5rzW3kZiw\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/utilities/weather-aus)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -784,
+        -288
+      ],
+      "typeVersion": 1,
+      "id": "407ebc0b-9a2d-42e8-b1e4-640280f04ba0",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Input": {
+      "main": [
+        [
+          {
+            "node": "Location Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Location Search": {
+      "main": [
+        [
+          {
+            "node": "Parse Location",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Location": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Get Forecast",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Forecast": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Current": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Forecast": {
+      "main": [
+        [
+          {
+            "node": "Format Forecast",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Format Current",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}

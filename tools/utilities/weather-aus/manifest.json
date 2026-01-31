@@ -1,0 +1,31 @@
+{
+  "id": "mXoo792Qi9j8e5rzW3kZiw",
+  "name": "weather-aus",
+  "friendlyName": "Australian Weather",
+  "version": "1.0.0",
+  "description": "Get Australian weather forecasts or current conditions for any city, suburb, or postcode.",
+  "category": "utilities",
+  "toolSuite": true,
+  "actions": [
+    "forecast",
+    "current"
+  ],
+  "icon": "sydney-svgrepo-com.svg",
+  "voice_triggers": [
+    "What's the weather in Sydney?",
+    "Give me the forecast for Melbourne"
+  ],
+  "required_services": [],
+  "required_credentials": [],
+  "required_variables": [],
+  "author": {
+    "github": "AbdulShahzeb"
+  },
+  "tier": "community",
+  "tags": [
+    "utilities"
+  ],
+  "dependencies": [],
+  "created": "2026-01-30",
+  "updated": "2026-01-30"
+}
