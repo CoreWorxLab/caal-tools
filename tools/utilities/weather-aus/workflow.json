@@ -17,7 +17,7 @@
       "id": "452672aa-4b04-4629-8aee-0eaab5c6da8c",
       "name": "Webhook",
       "webhookId": "79b52c8a-43f0-4e17-ac2b-df29df7da883",
-      "notes": "Australian weather tool.\nParameters:\n\naction (required)\n- \"forecast\" | \"current\"\n\nlocation (required)\n- Australian city, suburb, or postcode\n- Do not include state or country (e.g. \"Sydney\", not \"Sydney NSW\")\n\ndays (optional)\n- Integer 1\u20137\n- Forecast only\n\ntarget_day (optional)\n- Weekday name (e.g. \"Monday\")\n- Forecast only"
+      "notes": "Weather tool - forecast and current conditions for Australia. Parameters: action (required) - 'forecast' or 'current'; location (required) - city/suburb/postcode; days (optional, default 7) - forecast days ahead (1-7), use for 'next week'; target_day (optional) - specific weekday like 'Monday', use only for 'on Friday' style queries. Examples: 'Sydney weather', 'Melbourne next week' (days=7), 'Brisbane Thursday' (target_day='Thursday')."
     },
     {
       "parameters": {
