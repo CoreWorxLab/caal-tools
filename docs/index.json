@@ -292,5 +292,26 @@
       "truenas"
     ],
     "updated": "2026-01-29"
+  },
+  {
+    "id": "mXoo792Qi9j8e5rzW3kZiw",
+    "name": "weather-aus",
+    "friendlyName": "Australian Weather",
+    "version": "1.0.0",
+    "description": "Get Australian weather forecasts or current conditions for any city, suburb, or postcode.",
+    "category": "utilities",
+    "path": "tools/utilities/weather-aus",
+    "icon": "sydney-svgrepo-com.svg",
+    "voice_triggers": [
+      "What's the weather in Sydney?",
+      "Give me the forecast for Melbourne"
+    ],
+    "required_services": [],
+    "tier": "community",
+    "author": "AbdulShahzeb",
+    "tags": [
+      "utilities"
+    ],
+    "updated": "2026-01-30"
   }
 ]
