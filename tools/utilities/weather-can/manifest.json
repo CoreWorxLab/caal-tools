@@ -1,0 +1,31 @@
+{
+  "id": "qDQeZEW4jLuT1sqSvZH9Wg",
+  "name": "weather-can",
+  "friendlyName": "Weather Canada",
+  "version": "1.0.0",
+  "description": "Gets current weather conditions or forecast for Canadian cities using Environment Canada official data.",
+  "category": "utilities",
+  "toolSuite": true,
+  "actions": [
+    "forecast",
+    "current"
+  ],
+  "icon": "maple-leaf.svg",
+  "voice_triggers": [
+    "What's the weather in Toronto?",
+    "Vancouver forecast"
+  ],
+  "required_services": [],
+  "required_credentials": [],
+  "required_variables": [],
+  "author": {
+    "github": "cmac86"
+  },
+  "tier": "coreworxlab",
+  "tags": [
+    "utilities"
+  ],
+  "dependencies": [],
+  "created": "2026-02-01",
+  "updated": "2026-02-01"
+}

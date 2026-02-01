@@ -1,0 +1,373 @@
+{
+  "name": "weather_can",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "weather_can",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a1b2c3d4-1111-4aaa-bbbb-000000000001",
+      "name": "Webhook",
+      "webhookId": "a1b2c3d4-2222-4aaa-bbbb-000000000002",
+      "notes": "Weather tool - forecast and current conditions for Canada.\nUses Environment Canada official data.\n\nParameters:\n- action (required): 'forecast' or 'current'\n- location (required): Canadian city name (e.g., Toronto, Vancouver, Calgary, Montreal, Ottawa)\n- days (optional, default 5): forecast days ahead (1-6), use for 'next week' queries\n- target_day (optional): specific weekday like 'Monday', use only for 'on Friday' style queries\n\nExamples: 'Toronto weather', 'Vancouver forecast', 'Calgary right now' (action='current'), 'Montreal on Wednesday' (target_day='Wednesday')"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const body = $input.item.json.body || $input.item.json;\n\nconst action = (body.action || 'forecast').toLowerCase();\nconst rawLocation = (body.location || 'Toronto').toString().trim();\nconst location = rawLocation.replace(/\\b[a-z]/g, c => c.toUpperCase());\nconst days = Math.min(Math.max(parseInt(body.days) || 5, 1), 6);\nconst target_day = body.target_day ? body.target_day.toString().trim() : null;\n\n// Map common unaccented names to accented versions for the API\nconst accentMap = {\n  'montreal': 'Montr\u00e9al',\n  'quebec': 'Qu\u00e9bec',\n  'quebec city': 'Qu\u00e9bec',\n  'trois-rivieres': 'Trois-Rivi\u00e8res',\n  'levis': 'L\u00e9vis',\n  'becancour': 'B\u00e9cancour',\n  'matane': 'Matane',\n  'rimouski': 'Rimouski',\n  'gaspe': 'Gasp\u00e9',\n  'baie-comeau': 'Baie-Comeau'\n};\nconst searchTerm = accentMap[rawLocation.toLowerCase()] || rawLocation;\n\nreturn {\n  action,\n  location,\n  days,\n  target_day,\n  searchUrl: `https://api.weather.gc.ca/collections/citypageweather-realtime/items?lang=en&f=json&q=${encodeURIComponent(searchTerm)}&limit=10`\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "id": "a1b2c3d4-1111-4aaa-bbbb-000000000003",
+      "name": "Prepare Input"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.searchUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        440,
+        0
+      ],
+      "id": "a1b2c3d4-1111-4aaa-bbbb-000000000004",
+      "name": "Fetch Weather"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const raw = $input.item.json;\nconst params = $('Prepare Input').item.json;\n\nconst features = raw.features || [];\nif (features.length === 0) {\n  return {\n    error: true,\n    message: `Sorry, I couldn't find weather data for \"${params.location}\". Try a major Canadian city name.`\n  };\n}\n\n// Normalize string: remove accents for comparison\nfunction norm(s) {\n  return (s || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\n}\n\n// Pick best match from results\nconst search = norm(params.location);\nlet best = features[0];\nfor (const f of features) {\n  const name = norm(f.properties?.name?.en || '');\n  if (name === search) { best = f; break; }\n  if (name.startsWith(search) && norm(best.properties?.name?.en || '') !== search) {\n    best = f;\n  }\n}\n\nconst props = best.properties;\n\n// Deduplicate forecast periods (API sometimes returns duplicates)\nconst rawForecasts = props.forecastGroup?.forecasts || [];\nconst seen = new Set();\nconst forecasts = rawForecasts.filter(f => {\n  const key = f.period?.textForecastName?.en || '';\n  if (seen.has(key)) return false;\n  seen.add(key);\n  return true;\n});\n\nreturn {\n  error: false,\n  locationName: props.name?.en || params.location,\n  region: props.region?.en || '',\n  currentConditions: props.currentConditions || null,\n  forecasts,\n  warnings: props.warnings || [],\n  days: params.days,\n  target_day: params.target_day\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "id": "a1b2c3d4-1111-4aaa-bbbb-000000000005",
+      "name": "Parse Response"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a1b2c3d4-3333-4aaa-bbbb-000000000001",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        880,
+        0
+      ],
+      "id": "a1b2c3d4-1111-4aaa-bbbb-000000000006",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Prepare Input').item.json.action }}",
+                    "rightValue": "forecast",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "a1b2c3d4-3333-4aaa-bbbb-000000000002"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "forecast"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "a1b2c3d4-3333-4aaa-bbbb-000000000003",
+                    "leftValue": "={{ $('Prepare Input').item.json.action }}",
+                    "rightValue": "current",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "current"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1100,
+        160
+      ],
+      "id": "a1b2c3d4-1111-4aaa-bbbb-000000000007",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const data = $input.item.json;\nconst params = $('Prepare Input').item.json;\nconst forecasts = data.forecasts || [];\n\nif (forecasts.length === 0) {\n  return { error: true, message: `No forecast data available for ${data.locationName}.` };\n}\n\nlet periods = forecasts;\n\n// If target_day specified, filter to matching periods\nif (params.target_day) {\n  const target = params.target_day.toLowerCase();\n  periods = periods.filter(f => {\n    const name = (f.period?.textForecastName?.en || '').toLowerCase();\n    return name.includes(target);\n  });\n  if (periods.length === 0) {\n    return {\n      error: true,\n      message: `Sorry, I couldn't find a forecast for ${params.target_day} in ${data.locationName}.`\n    };\n  }\n} else {\n  // Get daytime periods, include \"Tonight\" if it's first\n  const dayPeriods = [];\n  for (let i = 0; i < periods.length; i++) {\n    const name = (periods[i].period?.textForecastName?.en || '').toLowerCase();\n    if (i === 0 && name === 'tonight') {\n      dayPeriods.push(periods[i]);\n    } else if (!name.includes('night')) {\n      dayPeriods.push(periods[i]);\n    }\n  }\n  periods = dayPeriods.slice(0, params.days);\n}\n\nconst parts = periods.map(f => {\n  const name = f.period?.textForecastName?.en || 'Unknown';\n  const temps = f.temperatures?.temperature || [];\n  const high = temps.find(t => t.class?.en === 'high');\n  const low = temps.find(t => t.class?.en === 'low');\n  const summary = f.abbreviatedForecast?.textSummary?.en || f.cloudPrecip?.en || 'No details';\n\n  let tempStr = '';\n  if (high) tempStr = `high ${high.value?.en}`;\n  if (low) tempStr = tempStr ? `${tempStr}, low ${low.value?.en}` : `low ${low.value?.en}`;\n\n  return `${name}: ${summary}, ${tempStr}`;\n});\n\nlet warningNote = '';\nif (data.warnings && data.warnings.length > 0) {\n  warningNote = ` Warning in effect for ${data.locationName}.`;\n}\n\nreturn {\n  error: false,\n  message: `Forecast for ${data.locationName}: ${parts.join('. ')}.${warningNote}`,\n  location: data.locationName,\n  forecasts: periods.map(f => {\n    const temps = f.temperatures?.temperature || [];\n    const high = temps.find(t => t.class?.en === 'high');\n    const low = temps.find(t => t.class?.en === 'low');\n    return {\n      period: f.period?.textForecastName?.en,\n      high: high?.value?.en ?? null,\n      low: low?.value?.en ?? null,\n      summary: f.abbreviatedForecast?.textSummary?.en,\n      text: f.textSummary?.en\n    };\n  })\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        -16
+      ],
+      "id": "a1b2c3d4-1111-4aaa-bbbb-000000000008",
+      "name": "Format Forecast"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const data = $input.item.json;\nconst cc = data.currentConditions;\n\nif (!cc || cc.temperature?.value?.en == null) {\n  return { error: true, message: `No current weather data available for ${data.locationName}.` };\n}\n\nconst temp = cc.temperature.value.en;\nconst condition = cc.condition?.en || 'conditions not reported';\nconst windSpeed = cc.wind?.speed?.value?.en;\nconst windDir = cc.wind?.direction?.value?.en;\nconst windChill = cc.windChill?.value?.en;\nconst humidex = cc.humidex?.value?.en;\nconst humidity = cc.relativeHumidity?.value?.en;\nconst gust = cc.wind?.gust?.value?.en;\n\nlet parts = [`It is currently ${temp} degrees in ${data.locationName}, ${condition.toLowerCase()}`];\nif (windChill != null) parts.push(`feels like ${windChill}`);\nelse if (humidex != null) parts.push(`feels like ${humidex}`);\nif (windSpeed != null && windDir) {\n  let windPart = `wind ${windDir} at ${windSpeed} km/h`;\n  if (gust != null && gust > 0) windPart += ` gusting to ${gust}`;\n  parts.push(windPart);\n}\nif (humidity != null) parts.push(`humidity ${humidity} percent`);\n\nif (data.warnings && data.warnings.length > 0) {\n  parts.push('weather warning in effect');\n}\n\nreturn {\n  error: false,\n  message: parts.join(', ') + '.',\n  location: data.locationName,\n  current: {\n    temp,\n    condition,\n    wind_chill: windChill ?? null,\n    humidex: humidex ?? null,\n    wind_speed: windSpeed ?? null,\n    wind_direction: windDir ?? null,\n    gust: gust ?? null,\n    humidity: humidity ?? null\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        176
+      ],
+      "id": "a1b2c3d4-1111-4aaa-bbbb-000000000009",
+      "name": "Format Current"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const action = $('Prepare Input').item.json.action;\n\nreturn {\n  error: true,\n  message: `Sorry, I don't know how to handle \"${action}\" requests yet.`\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        368
+      ],
+      "id": "a1b2c3d4-1111-4aaa-bbbb-000000000010",
+      "name": "Format Error"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1540,
+        96
+      ],
+      "id": "a1b2c3d4-1111-4aaa-bbbb-000000000011",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** weather-can\n**Description:** Gets current weather conditions or forecast for Canadian cities using Environment Canada official data.\n**version:** v1.0.0\n**id:** qDQeZEW4jLuT1sqSvZH9Wg\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/utilities/weather-can)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -784,
+        -288
+      ],
+      "typeVersion": 1,
+      "id": "71bf2f31-0027-467a-a2a4-3c8bd33d2202",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Input": {
+      "main": [
+        [
+          {
+            "node": "Fetch Weather",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Weather": {
+      "main": [
+        [
+          {
+            "node": "Parse Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Response": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Format Forecast",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Current",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Forecast": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Current": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
