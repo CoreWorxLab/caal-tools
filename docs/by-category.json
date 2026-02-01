@@ -324,6 +324,27 @@
         "utilities"
       ],
       "updated": "2026-01-30"
+    },
+    {
+      "id": "hbLGwIBVmViC-xsFC37GxQ",
+      "name": "weather-can",
+      "friendlyName": "Weather Canada",
+      "version": "1.0.0",
+      "description": "Gets weather forecasts and current conditions for Canadian cities using Environment Canada official data.",
+      "category": "utilities",
+      "path": "tools/utilities/weather-can",
+      "icon": "maple-leaf.svg",
+      "voice_triggers": [
+        "What's the weather in Toronto?",
+        "Vancouver forecast for next week"
+      ],
+      "required_services": [],
+      "tier": "coreworxlab",
+      "author": "cmac86",
+      "tags": [
+        "utilities"
+      ],
+      "updated": "2026-02-01"
     }
   ]
 }
