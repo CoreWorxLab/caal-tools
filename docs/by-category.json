@@ -1,31 +1,6 @@
 {
   "developer": [],
-  "homelab": [
-    {
-      "id": "BFOmfeNJZQNdGfbXYN27jg",
-      "name": "truenas",
-      "friendlyName": "TrueNAS",
-      "version": "1.0.0",
-      "description": "Manage TrueNAS system - check status including CPU, memory, storage pools, and apps, or control app start/stop/restart operations.",
-      "category": "homelab",
-      "path": "tools/homelab/truenas",
-      "icon": "truenas.svg",
-      "voice_triggers": [
-        "What's my TrueNAS status?",
-        "Check my NAS"
-      ],
-      "required_services": [
-        "truenas"
-      ],
-      "tier": "coreworxlab",
-      "author": "cmac86",
-      "tags": [
-        "homelab",
-        "truenas"
-      ],
-      "updated": "2026-01-29"
-    }
-  ],
+  "homelab": [],
   "media": [
     {
       "id": "9fGeS8i9FH-7OHxAHAYB1A",
