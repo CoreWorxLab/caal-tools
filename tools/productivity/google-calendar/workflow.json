@@ -1,0 +1,541 @@
+{
+  "name": "google_calendar",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "google_calendar",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -600,
+        0
+      ],
+      "name": "Webhook",
+      "webhookId": "google_calendar",
+      "notes": "Google Calendar suite - view and manage events. Parameters: action (required) - 'get', 'create', or 'delete'; start_date (required for get) - YYYY-MM-DD; end_date (required for get) - YYYY-MM-DD (exclusive); title (required for create) - event name; date (required for create) - YYYY-MM-DD; start_time (optional for create) - HH:MM 24hr format; end_time (optional for create) - HH:MM; event_id (required for delete) - event ID from get. Examples: 'what's on my calendar today', 'add dentist appointment tomorrow at 2pm', 'delete the dentist appointment'.",
+      "id": "a497dd16-8b90-445d-a076-98006b32b373"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body || {};\n\nlet data;\nif (typeof body === 'string') {\n  data = JSON.parse(body);\n} else if (typeof body === 'object') {\n  data = body;\n} else {\n  data = $input.item.json;\n}\n\nconst action = (data.action || 'get').toLowerCase();\n\n// Get action params\nconst start_date = data.start_date || null;\nconst end_date = data.end_date || null;\n\n// Create action params\nconst title = data.title || data.summary || null;\nconst date = data.date || null;\nconst start_time = data.start_time || null;\nconst end_time = data.end_time || null;\nconst description = data.description || '';\nconst location = data.location || '';\n\n// Delete action params\nconst event_id = data.event_id || data.id || null;\n\n// Build datetime for create\nlet startDateTime = null;\nlet endDateTime = null;\nlet isAllDay = false;\n\nif (action === 'create' && date) {\n  if (start_time) {\n    startDateTime = date + 'T' + start_time + ':00';\n    if (end_time) {\n      endDateTime = date + 'T' + end_time + ':00';\n    } else {\n      // Default 1 hour duration\n      const [h, m] = start_time.split(':').map(Number);\n      const endH = String(h + 1).padStart(2, '0');\n      endDateTime = date + 'T' + endH + ':' + String(m).padStart(2, '0') + ':00';\n    }\n  } else {\n    isAllDay = true;\n  }\n}\n\nreturn [{ json: {\n  action,\n  start_date,\n  end_date,\n  title,\n  date,\n  startDateTime,\n  endDateTime,\n  isAllDay,\n  description,\n  location,\n  event_id\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        0
+      ],
+      "name": "Parse Parameters",
+      "id": "4a151ea9-f58d-4123-be49-4348a3824d62"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "get",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "get"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "create",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "create"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "delete",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "delete"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -200,
+        0
+      ],
+      "name": "Switch Action",
+      "id": "05192c99-1bf8-413f-8701-2a59404b491f"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "mode": "id",
+          "value": "${CALENDAR}"
+        },
+        "timeMin": "={{ $json.start_date }}",
+        "timeMax": "={{ $json.end_date }}",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        -200
+      ],
+      "name": "Get Events",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": null,
+          "name": "${GOOGLECALENDAROAUTH2API_CREDENTIAL}"
+        }
+      },
+      "id": "43e33859-4c02-43d4-9e91-082c3f52ab30"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": ""
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $('Parse Parameters').item.json.isAllDay }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "name": "Is All Day?",
+      "id": "a4dd2b8d-2622-41bb-8ca7-8cf88b4efd3b"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "calendar": {
+          "__rl": true,
+          "mode": "id",
+          "value": "${CALENDAR}"
+        },
+        "start": "={{ $('Parse Parameters').item.json.startDateTime }}",
+        "end": "={{ $('Parse Parameters').item.json.endDateTime }}",
+        "additionalFields": {
+          "summary": "={{ $('Parse Parameters').item.json.title }}",
+          "description": "={{ $('Parse Parameters').item.json.description }}",
+          "location": "={{ $('Parse Parameters').item.json.location }}"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        200,
+        -50
+      ],
+      "name": "Create Event Timed",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": null,
+          "name": "${GOOGLECALENDAROAUTH2API_CREDENTIAL}"
+        }
+      },
+      "id": "b43c0630-acac-4b2a-b5c4-f73df65016c6"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "calendar": {
+          "__rl": true,
+          "mode": "id",
+          "value": "${CALENDAR}"
+        },
+        "start": "={{ $('Parse Parameters').item.json.date }}",
+        "end": "={{ $('Parse Parameters').item.json.date }}",
+        "useDefaultReminders": true,
+        "additionalFields": {
+          "allday": "yes",
+          "summary": "={{ $('Parse Parameters').item.json.title }}",
+          "description": "={{ $('Parse Parameters').item.json.description }}",
+          "location": "={{ $('Parse Parameters').item.json.location }}"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        200,
+        100
+      ],
+      "name": "Create Event All Day",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": null,
+          "name": "${GOOGLECALENDAROAUTH2API_CREDENTIAL}"
+        }
+      },
+      "id": "9bfbd23f-9489-4084-839c-c56addd855bd"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "mode": "id",
+          "value": "${CALENDAR}"
+        },
+        "eventId": "={{ $json.event_id }}",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        200
+      ],
+      "name": "Delete Event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": null,
+          "name": "${GOOGLECALENDAROAUTH2API_CREDENTIAL}"
+        }
+      },
+      "id": "608d2d6c-1462-4be9-8b2c-5ad18ca86cf7"
+    },
+    {
+      "parameters": {
+        "jsCode": "function utcToLocal(utcString, timeZone) {\n  if (!utcString) return '';\n  const date = new Date(utcString);\n  const options = {\n    timeZone: timeZone,\n    hour: 'numeric',\n    minute: '2-digit',\n    hour12: true\n  };\n  return new Intl.DateTimeFormat('en-US', options).format(date);\n}\n\nconst events = items.map(item => {\n  const startObj = item.json.start;\n  const endObj = item.json.end;\n  const tz = startObj?.timeZone || 'America/Vancouver';\n  \n  let startTime = '';\n  let endTime = '';\n  let isAllDay = false;\n  \n  if (startObj?.dateTime) {\n    startTime = utcToLocal(startObj.dateTime, tz);\n    endTime = utcToLocal(endObj?.dateTime, tz);\n  } else if (startObj?.date) {\n    isAllDay = true;\n    startTime = 'all day';\n  }\n  \n  return {\n    id: item.json.id,\n    title: item.json.summary || 'Untitled Event',\n    time: startTime,\n    endTime: endTime,\n    isAllDay: isAllDay,\n    location: item.json.location || '',\n    description: item.json.description || ''\n  };\n});\n\nlet message = '';\nif (events.length === 0) {\n  message = 'You have no events scheduled.';\n} else if (events.length === 1) {\n  const e = events[0];\n  if (e.isAllDay) {\n    message = `You have one event: ${e.title}, all day.`;\n  } else {\n    message = `You have one event: ${e.title} at ${e.time}.`;\n  }\n} else {\n  message = `You have ${events.length} events. `;\n  const topEvents = events.slice(0, 5);\n  const summaries = topEvents.map(e => {\n    if (e.isAllDay) return `${e.title}, all day`;\n    return `${e.title} at ${e.time}`;\n  });\n  message += summaries.join('. ') + '.';\n  if (events.length > 5) {\n    message += ` Plus ${events.length - 5} more.`;\n  }\n}\n\nreturn [{ json: { message, action: 'get', events } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        -200
+      ],
+      "name": "Format Get",
+      "id": "fb4e0e86-4dd4-4153-a8d3-03117108502b"
+    },
+    {
+      "parameters": {
+        "jsCode": "const event = $input.item.json;\nconst params = $('Parse Parameters').item.json;\nconst title = params.title || event.summary || 'the event';\n\nlet message = '';\nif (params.isAllDay) {\n  const d = new Date(params.date + 'T12:00:00');\n  const formatted = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });\n  message = `Done. Added ${title} on ${formatted}, all day.`;\n} else {\n  const start = new Date(params.startDateTime);\n  const time = start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });\n  const date = start.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });\n  message = `Done. Added ${title} on ${date} at ${time}.`;\n}\n\nreturn { message, action: 'create', event: { id: event.id, title: event.summary } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        0
+      ],
+      "name": "Format Create",
+      "id": "c7036901-0ef0-4bad-b63f-8629ea783a97"
+    },
+    {
+      "parameters": {
+        "jsCode": "return { message: 'Done. Event deleted.', action: 'delete', deleted: true };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        200
+      ],
+      "name": "Format Delete",
+      "id": "7cc3a434-b1d3-4a37-9ebf-ac9198da4561"
+    },
+    {
+      "parameters": {
+        "jsCode": "const errorData = $input.item.json;\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\n\nif (errorMsg.includes('authorization') || errorMsg.includes('token') || errorMsg.includes('invalid_grant')) {\n  errorMsg = 'Google Calendar authentication failed. Please re-authorize in n8n.';\n} else if (errorMsg.includes('not found') || errorMsg.includes('404')) {\n  errorMsg = 'Event not found. It may have been deleted.';\n} else if (errorMsg.includes('Credential')) {\n  errorMsg = 'Google Calendar credentials not found in n8n.';\n}\n\nreturn { message: 'Error: ' + errorMsg, error: true };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ],
+      "name": "Format Error",
+      "id": "9b47a5a5-4191-4c2e-981c-cba0ad4c2949"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        0
+      ],
+      "name": "Respond to Webhook",
+      "id": "d6b88beb-1031-45af-8e47-7e05f9fdda05"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** google-calendar\n**Description:** Manage Google Calendar events - view, create, and delete events with support for timed and all-day events.\n**version:** v1.0.0\n**id:** ndPj-EJI58ABJvg0drlAgw\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/productivity/google-calendar)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -784,
+        -288
+      ],
+      "typeVersion": 1,
+      "id": "d3c97fe8-8078-4abd-b5ce-c3e5b8fc109f",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Parameters": {
+      "main": [
+        [
+          {
+            "node": "Switch Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Action": {
+      "main": [
+        [
+          {
+            "node": "Get Events",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is All Day?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Delete Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Events": {
+      "main": [
+        [
+          {
+            "node": "Format Get",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is All Day?": {
+      "main": [
+        [
+          {
+            "node": "Create Event All Day",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Event Timed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Event Timed": {
+      "main": [
+        [
+          {
+            "node": "Format Create",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Event All Day": {
+      "main": [
+        [
+          {
+            "node": "Format Create",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Event": {
+      "main": [
+        [
+          {
+            "node": "Format Delete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Get": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Create": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Delete": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
