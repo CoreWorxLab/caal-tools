@@ -1,5 +1,5 @@
 {
-  "name": "x_twitter",
+  "name": "x-twitter",
   "nodes": [
     {
       "parameters": {
@@ -62,7 +62,7 @@
         "respondWith": "json",
         "responseBody": "={{ $json }}",
         "options": {},
-        "path": "x_twitter"
+        "path": "x-twitter"
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
