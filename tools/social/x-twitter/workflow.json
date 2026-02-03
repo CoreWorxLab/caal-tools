@@ -3,103 +3,18 @@
   "nodes": [
     {
       "parameters": {
-        "resource": "user",
-        "me": true
-      },
-      "type": "n8n-nodes-base.twitter",
-      "typeVersion": 2,
-      "position": [
-        -464,
-        512
-      ],
-      "id": "24aadb0d-e431-4cf8-a45c-52e7ce929017",
-      "name": "Get Self",
-      "credentials": {
-        "twitterOAuth2Api": {
-          "id": null,
-          "name": "${TWITTEROAUTH2API_CREDENTIAL}"
-        }
-      },
-      "onError": "continueErrorOutput"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "67fd363d-d77a-4ec7-ad89-103113bdc388",
-              "leftValue": "={{ $('Validate Input').item.json.username }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEmpty",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "looseTypeValidation": true,
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        -688,
-        400
-      ],
-      "id": "dd1d048e-e6ff-4b2b-a239-42d12ffaa8f5",
-      "name": "If"
-    },
-    {
-      "parameters": {
         "respondWith": "json",
         "responseBody": "={{ $json }}",
-        "options": {},
-        "path": "x-twitter"
+        "options": {}
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        -16,
-        256
+        448,
+        1776
       ],
-      "id": "49580b63-4f94-4145-b099-6467b402bf60",
+      "id": "4ffa634d-4e3e-41e1-ab47-937b341c754f",
       "name": "Respond to Webhook"
-    },
-    {
-      "parameters": {
-        "mode": "runOnceForEachItem",
-        "jsCode": "const action = $('Validate Input').item.json.action;\n\nreturn {\n  error: true,\n  message: `Sorry, I don't know how to handle \"${action}\" requests yet. I can tweet, send DMs, or search for users.`\n};"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -240,
-        704
-      ],
-      "id": "d95ef029-7e3d-4381-9ac7-63d3cb4ee070",
-      "name": "Format Unknown Action"
-    },
-    {
-      "parameters": {
-        "mode": "runOnceForEachItem",
-        "jsCode": "const user = $input.item.json;\nconst params = $('Validate Input').item.json;\n\nif (!user || !user.username) {\n  return {\n    error: true,\n    message: `Sorry, I couldn't find a user with the username ${params.username}.`\n  };\n}\n\n// Helper function to convert a string to ASCII\nfunction toASCII(str) {\n  return str\n    .normalize('NFKD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .replace(/[^\\x00-\\x7F]/g, '')\n    .trim();\n}\n\nconst username = user.username || user.screen_name || 'unknown';\nconst name = toASCII(user.name || 'Unknown');\nconst id = user.id || 'No ID available';\n\nreturn {\n  error: false,\n  message: `I found ${username}. Their display name is ${name}`,\n  user: {\n    name,\n    username,\n    id\n  }\n};"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -240,
-        496
-      ],
-      "id": "7cc90417-ea6d-4dde-9ae5-3a885fc8c036",
-      "name": "Format Search Response"
     },
     {
       "parameters": {
@@ -109,69 +24,44 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -240,
-        272
+        224,
+        1296
       ],
-      "id": "523ec4c5-09ae-426f-a01a-531cde306481",
+      "id": "b1bc1a57-c965-4e48-be31-3a24cb6a4f28",
       "name": "Format DM Response"
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const response = $input.item.json;\nconst params = $('Validate Input').item.json;\n\nif (!response || !response.id) {\n  return {\n    error: true,\n    message: 'Sorry, I had trouble posting your tweet. Please try again.'\n  };\n}\n\nconst tweetText = params.text;\nconst previewText = tweetText.length > 50 ? tweetText.substring(0, 50) + '...' : tweetText;\n\nreturn {\n  error: false,\n  message: `I've posted your tweet: \"${previewText}\"`,\n  tweet_id: response.id,\n  tweet_text: tweetText\n};"
+        "jsCode": "const response = $input.item.json;\n\nif (!response || !response.id) {\n  return {\n    error: true,\n    message: 'Sorry, I had trouble posting your tweet. Please try again.'\n  };\n}\n\nreturn {\n  error: false,\n  message: `Done. I've posted your tweet: \"${response.text}\"`,\n  tweet_id: response.id,\n  tweet_text: response.text\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -240,
-        -416
+        224,
+        1104
       ],
-      "id": "fb6668fb-2912-421a-b881-0da156eb4047",
+      "id": "9013b971-0acb-4a69-b95b-3b3768ceee6b",
       "name": "Format Tweet Response"
-    },
-    {
-      "parameters": {
-        "resource": "user",
-        "user": {
-          "__rl": true,
-          "value": "={{ $('Validate Input').item.json.username }}",
-          "mode": "username"
-        }
-      },
-      "type": "n8n-nodes-base.twitter",
-      "typeVersion": 2,
-      "position": [
-        -464,
-        160
-      ],
-      "id": "4599ff7c-0d49-4988-96fb-25b29fdb446a",
-      "name": "Get User",
-      "credentials": {
-        "twitterOAuth2Api": {
-          "id": null,
-          "name": "${TWITTEROAUTH2API_CREDENTIAL}"
-        }
-      },
-      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
         "resource": "directMessage",
         "user": {
           "__rl": true,
-          "value": "={{ $('Validate Input').item.json.username }}",
+          "value": "={{ $json.username }}",
           "mode": "username"
         },
-        "text": "={{ $('Validate Input').item.json.text }}",
+        "text": "={{ $json.text }}",
         "additionalFields": {}
       },
       "type": "n8n-nodes-base.twitter",
       "typeVersion": 2,
       "position": [
-        -464,
-        -64
+        0,
+        1344
       ],
-      "id": "6f065cba-6952-4cbd-9336-b89f87495694",
+      "id": "f0af78b0-f72e-4045-b7b9-11bd967ffdce",
       "name": "Send DM",
       "credentials": {
         "twitterOAuth2Api": {
@@ -189,10 +79,10 @@
       "type": "n8n-nodes-base.twitter",
       "typeVersion": 2,
       "position": [
-        -464,
-        -368
+        0,
+        1056
       ],
-      "id": "d7c104e2-fc26-405c-ac78-81b9127b32a7",
+      "id": "528e1268-3b53-4008-a286-c664a6de9150",
       "name": "Post Tweet",
       "credentials": {
         "twitterOAuth2Api": {
@@ -201,97 +91,6 @@
         }
       },
       "onError": "continueErrorOutput"
-    },
-    {
-      "parameters": {
-        "rules": {
-          "values": [
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 3
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $('Validate Input').item.json.action }}",
-                    "rightValue": "tweet",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    },
-                    "id": "tweet-condition"
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true,
-              "outputKey": "tweet"
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 3
-                },
-                "conditions": [
-                  {
-                    "id": "dm-condition",
-                    "leftValue": "={{ $('Validate Input').item.json.action }}",
-                    "rightValue": "dm",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true,
-              "outputKey": "dm"
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 3
-                },
-                "conditions": [
-                  {
-                    "id": "search-condition",
-                    "leftValue": "={{ $('Validate Input').item.json.action }}",
-                    "rightValue": "search",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true,
-              "outputKey": "search"
-            }
-          ]
-        },
-        "options": {
-          "fallbackOutput": "extra"
-        }
-      },
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 3.4,
-      "position": [
-        -912,
-        240
-      ],
-      "id": "0af08b6d-06f3-448a-a1e0-d46e2bebcbc7",
-      "name": "Action Switch"
     },
     {
       "parameters": {
@@ -323,24 +122,24 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -1136,
-        448
+        -672,
+        2208
       ],
-      "id": "35b76457-5a55-4563-b841-f46478e109d2",
+      "id": "c6d39d5b-3e9f-41f0-8d77-372804e9f0c3",
       "name": "Check Errors"
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const body = $input.item.json.body || $input.item.json;\n\nconst action = (body.action || '').toLowerCase().trim();\nconst text = (body.text || '').toString().trim();\nconst username = body.username\n  ? body.username\n      .toString()\n      .replace(/\\s+/g, '')\n      .replace(/^@/, '')\n      .replace(/[^A-Za-z0-9_]/g, '')\n      .slice(0, 15)\n      .toLowerCase()\n  : '';\n\n// Validate action\nconst validActions = ['tweet', 'dm', 'search'];\nif (!action || !validActions.includes(action)) {\n  return {\n    error: true,\n    message: `Please specify a valid action: tweet, DM, or search. You said: ${action || 'nothing'}.`\n  };\n}\n\n// Validate required parameters for each action\nif (action === 'tweet' && !text) {\n  return {\n    error: true,\n    message: 'To post a tweet, I need some text to tweet.'\n  };\n}\n\nif (action === 'dm') {\n  if (!username) {\n    return {\n      error: true,\n      message: 'To send a direct message, I need a username.'\n    };\n  }\n  if (!text) {\n    return {\n      error: true,\n      message: `To send a direct message to ${username}, I need some text to send.`\n    };\n  }\n}\n\nreturn {\n  error: false,\n  action,\n  text,\n  username\n};"
+        "jsCode": "// Use a third-party web service like https://get-id-x.foundtt.com/en/ to find your X ID, or use the get_my_user action\n\nconst SELF_USER_ID = '${SELF_USER_ID}' // MUST be a string\n\n// Do not edit below this\n\nconst body = $input.item.json.body || $input.item.json;\n\nconst action   = (body.action || '').toLowerCase().trim();\nconst text     = (body.text || '').toString().trim();\nconst query    = (body.query || '').toString().trim();\nconst tweet_id = (body.tweet_id || '').toString().trim();\nconst id       = (body.id || '').toString().trim();\nconst username = body.username\n  ? body.username.toString().replace(/\\s+/g, '').replace(/^@/, '').replace(/[^A-Za-z0-9_]/g, '').slice(0, 15)\n  : '';\n\n// --- action → category map ---\nconst categoryMap = {\n  get_tweet:             'tweet_action',\n  post_tweet:            'tweet_action',\n  like_tweet:            'tweet_action',\n  unlike_tweet:          'tweet_action',\n  retweet_tweet:         'tweet_action',\n  unretweet_tweet:       'tweet_action',\n  delete_tweet:          'tweet_action',\n  dm_user:               'user_action',\n  mute_user:             'user_action',\n  unmute_user:           'user_action',\n  get_user_by_query:     'get_user',\n  get_user_by_username:  'get_user',\n  get_my_user:           'get_user',\n  get_blocked_users:     'get_user',\n};\n\nif (!action || !categoryMap[action]) {\n  return {\n    error: true,\n    message: `Sorry, I can't handle \"${action || 'none'}\" action requests yet.`\n  };\n}\n\nconst category = categoryMap[action];\n\n// --- required field check per action ---\nconst fieldRules = {\n  get_tweet:             () => !tweet_id && 'tweet_id',\n  post_tweet:            () => !text     && 'text',\n  like_tweet:            () => !tweet_id && 'tweet_id',\n  unlike_tweet:          () => !tweet_id && 'tweet_id',\n  retweet_tweet:         () => !tweet_id && 'tweet_id',\n  unretweet_tweet:       () => !tweet_id && 'tweet_id',\n  delete_tweet:          () => !tweet_id && 'tweet_id',\n  dm_user:               () => !username ? 'username' : !text ? 'text' : null,\n  mute_user:             () => !id      && 'id',\n  unmute_user:           () => !id      && 'id',\n  get_user_by_query:     () => !query    && 'query',\n  get_user_by_username:  () => !username && 'username',\n  get_my_user:           () => null,\n  get_blocked_users:     () => null,\n};\n\nconst missingField = fieldRules[action]();\nif (missingField) {\n  return {\n    error: true,\n    message: `The \"${action}\" action requires \"${missingField}\".`\n  };\n}\n\nconst numericFields = { id, self_user_id: SELF_USER_ID, tweet_id };\nfor (const [key, value] of Object.entries(numericFields)) {\n  if (value && !/^\\d+$/.test(value)) {\n    return {\n      error: true,\n      message: `The field \"${key}\" must contain only numeric characters.`\n    };\n  }\n}\n\nreturn {\n  error: false,\n  action,\n  category,\n  text,\n  query,\n  username,\n  id,\n  tweet_id,\n  self_user_id: SELF_USER_ID\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1360,
-        448
+        -896,
+        2208
       ],
-      "id": "3651e053-bdf6-4f8c-ac3a-d13a15f9ffec",
+      "id": "c50a4045-0746-4ca1-a74e-484c58190cf7",
       "name": "Validate Input"
     },
     {
@@ -353,117 +152,1081 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        -1584,
-        448
+        -1120,
+        2208
       ],
-      "id": "b8b666f5-afbd-4b75-93d8-25b1363121e5",
+      "id": "472d6585-1358-43cb-b696-b4f40d56a5c1",
       "name": "Webhook",
       "webhookId": "x-twitter-webhook-id",
-      "notes": "X (Twitter) tool for posting tweets, sending direct messages, and looking up display names. Actions: 'tweet' posts a tweet (requires text); 'dm' sends a direct message to a user (requires username and text); 'search' retrieves a user's display name from their username - provide a username to search for that user, or leave username empty to get your own display name. Parameters: action (required) - 'tweet', 'dm', or 'search'; text (required for tweet/dm) - the message content; username (required for dm, optional for search) - the X username/handle to look up, leave empty to get your own display name."
+      "notes": "X (Twitter) automation tool.\n\nREQUIRED (always include):\n  action (string) — must be exactly one of the values listed below. Do not invent other values.\n\n--- TWEET INTERACTIONS ---\n\n  action: \"get_tweet\"\n    tweet_id (string, required) — the ID of the tweet to retrieve.\n    \n    Returns: tweet text, creation date, and full engagement metrics (views, likes, retweets, quote tweets, replies, bookmarks)\n    \n    WHEN TO USE: When asked about a specific tweet's content, performance, or engagement stats. Examples: \"How many likes does tweet X have?\", \"What does tweet Y say?\", \"How many views on tweet Z?\"\n\n  action: \"post_tweet\"\n    text (string, required) — the tweet content.\n\n  action: \"like_tweet\"\n    tweet_id (string, required) — the ID of the tweet to like.\n\n  action: \"unlike_tweet\"\n    tweet_id (string, required) — the ID of the tweet to unlike.\n\n  action: \"retweet_tweet\"\n    tweet_id (string, required) — the ID of the tweet to retweet.\n\n  action: \"unretweet_tweet\"\n    tweet_id (string, required) — the ID of the tweet to undo a retweet on.\n\n  action: \"delete_tweet\"\n    tweet_id (string, required) — the ID of the tweet to delete. Can only delete your own tweets.\n\n--- USER ACTIONS ---\n\n  action: \"dm_user\"\n    username (string, required) — the recipient's X username/handle without the '@' symbol.\n    text (string, required) — the DM content.\n\n  action: \"mute_user\"\n    id (string, required) — the numeric user ID to mute.\n\n  action: \"unmute_user\"\n    id (string, required) — the numeric user ID to unmute.\n\n--- USER LOOKUP ---\n\nThese actions retrieve full user profile data. Use them when asked about:\n  - follower counts, following counts, tweet counts (public_metrics)\n  - whether someone is verified\n  - account creation date\n  - bio/description, location\n  - connection status (are they following you? are you following them? blocking? muting?)\n  - whether they accept your DMs\n  - pinned tweet ID, most recent tweet ID\n\n  action: \"get_user_by_query\"\n    query (string, required) — a free-text search string (e.g. \"elon musk\"). Returns the top matching user profile with all metrics.\n    \n    WHEN TO USE: When the user asks questions like \"how many followers does X have?\", \"is Y verified?\", \"when did Z join Twitter?\", or provides a name/description rather than an exact username.\n\n  action: \"get_user_by_username\"\n    username (string, required) — the exact X username/handle, without the @ symbol. Returns full profile with all metrics.\n    \n    WHEN TO USE: When you already know the exact username/handle.\n\n  action: \"get_my_user\"\n    (no other fields needed) — returns the authenticated user's own profile with all metrics.\n    \n    WHEN TO USE: When asked \"how many followers do I have?\", \"what's my bio?\", etc.\n\n  action: \"get_blocked_users\"\n    (no other fields needed) — returns a list of all accounts the user has blocked, including their names and usernames.\n\n\nRULES:\n  - All IDs are strings. Always wrap them in quotes, never send as numbers.\n  - \"id\" is always a numeric user ID. Never a username, never a handle.\n  - \"tweet_id\" is always a numeric tweet ID. Never a URL, never tweet text.\n  - \"username\" must not include the @ symbol.\n  - Only include fields that are listed for the action you chose. Do not send extra fields.\n  - If you do not have a required ID or tweet_id, do NOT guess or fabricate one. Use get_user_by_query or get_user_by_username first to retrieve it, then use the returned ID in a follow-up request.\n  \nEXAMPLES:\n  Q: \"How many followers does Elon Musk have?\"\n  → Use get_user_by_query with query: \"elon musk\"\n  \n  Q: \"Can I DM @sama?\"\n  → Use get_user_by_username with username: \"sama\"\n  \n  Q: \"Mute @spambot123 on X\"\n  → First use get_user_by_username with username: \"spambot123\" to get their ID, then use mute_user with that ID\n  \n  Q: \"What's my follower count?\"\n  → Use get_my_user\n  \n  Q: \"Does Satya Nadella follow me?\"\n  → Use get_user_by_query with query: \"satya nadella\"\n  \n  Q: \"How many likes does tweet 1234567890 have?\"\n  → Use get_tweet with tweet_id: \"1234567890\"\n  \n  Q: \"What does my most recent tweet say?\"\n  → First use get_my_user to get your most_recent_tweet_id, then use get_tweet with that ID"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "search-condition",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "tweet_action",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "tweet_action"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "1eb3b618-5955-4407-a37d-88e6584918af",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "user_action",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "user_action"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "34f6aa54-74b8-4cf8-b7cf-6ab0fa50d406",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "get_user",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "get_user"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -448,
+        1488
+      ],
+      "id": "afd5b9fa-efed-42e6-9caa-2e053e816685",
+      "name": "Category Switch"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "dm_user",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "4a6759c4-15d2-4bcf-b92b-7c59566079be"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "dm_user"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9f72aa1d-b038-4f59-a088-9918031e0e9e",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "mute_user",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "mute_user"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "fe77b553-29ab-462f-ac2f-b0a21bfdeb28",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "unmute_user",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "unmute_user"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -224,
+        1488
+      ],
+      "id": "43c40f2d-e85e-4429-a6db-450b41c857e3",
+      "name": "User Action Switch"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "get_user_by_query",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "0d19de46-a2f8-4781-a878-8524868fdb73"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "get_user_by_query"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "7955b8a6-2e28-40dd-8ed6-b4161e022763",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "get_user_by_username",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "get_user_by_username"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "7ce73dd4-13bb-4b6e-9615-5b221f8f8738",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "get_my_user",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "get_my_user"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "1f2d27e6-14c1-4234-aabe-f8923195f8cb",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "get_blocked_users",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "get_blocked_users"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -224,
+        2336
+      ],
+      "id": "4209ad0f-3dfa-447b-869f-4eaace89de72",
+      "name": "Get User Switch"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.x.com/2/users/{{ $json.self_user_id }}/muting",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "twitterOAuth1Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "target_user_id",
+              "value": "={{ $json.id }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        1584
+      ],
+      "id": "564e09b1-f5cf-495d-80ea-66abacde46c7",
+      "name": "Mute User",
+      "credentials": {
+        "twitterOAuth1Api": {
+          "id": null,
+          "name": "${TWITTEROAUTH1API_CREDENTIAL}"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.x.com/2/users/{{ $json.self_user_id }}/blocking",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "twitterOAuth1Api",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        2656
+      ],
+      "id": "52c01112-25ce-4187-b831-e0cbad2586fe",
+      "name": "Get Blocked Users",
+      "credentials": {
+        "twitterOAuth1Api": {
+          "id": null,
+          "name": "${TWITTEROAUTH1API_CREDENTIAL}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://api.x.com/2/users/{{ $json.self_user_id }}/muting/{{ $json.id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "twitterOAuth1Api",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        1824
+      ],
+      "id": "b34dee51-0cc1-4557-8c6f-db4854647aff",
+      "name": "Unmute User",
+      "credentials": {
+        "twitterOAuth1Api": {
+          "id": null,
+          "name": "${TWITTEROAUTH1API_CREDENTIAL}"
+        }
+      },
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "return {\n  error: true,\n  message: `You are out of credits. Add more credits to use the X API.`\n};"
+        "jsCode": "if (!$json.data.muting) {\n  return {\n    error: true,\n    message: 'Sorry, I could not mute the user.',\n    muting: $json.data.muting\n  };\n}\n\nreturn {\n  error: false,\n  message: 'Okay, I have muted the user for you.',\n  muting: $json.data.muting\n}"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -240,
-        -112
+        224,
+        1696
       ],
-      "id": "e7a6851a-fca6-4d3f-ba9e-39684fb85202",
-      "name": "Handle Out-of-Credits"
+      "id": "8718aa2d-f26a-45a1-804b-956529dfa80f",
+      "name": "Format Mute Response"
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const params = $('Validate Input').item.json;\nconst message = $json.error?.message || JSON.stringify($json.error) || '';\n\nlet errorMessage;\nif (message.includes(\"Cannot read properties of undefined\") || message.includes(\"reading 'id'\")) {\n  errorMessage = `Sorry, I couldn't send a direct message to ${params.username}. The account might be suspended.`;\n} else if (message.toLowerCase().includes('forbidden')) {\n  errorMessage = `Sorry, I couldn't send the direct message. They may not accept messages from you.`;\n} else if (message.toLowerCase().includes('payment')) {\n  errorMessage = `You are out of credits. Add more credits to use the X API.`;\n} else if (message.toLowerCase().includes('Bad request')) {\n  errorMessage = `I couldn't fulfil that request. Please double check the parameters.`;\n}\n\nreturn {\n  error: true,\n  message: errorMessage\n};"
+        "jsCode": "if ($json.data.muting) {\n  return {\n    error: true,\n    message: 'Sorry, I could not unmute the user.',\n    muting: $json.data.muting\n  }\n}\n\nreturn {\n  error: false,\n  message: 'Okay, I have unmuted the user for you.',\n  muting: $json.data.muting\n}"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -240,
-        80
+        224,
+        1888
       ],
-      "id": "4ceb63b6-3a1a-4a8d-8e8f-368be2645021",
-      "name": "Handle DM Error"
+      "id": "41e1ea08-d2a2-47ec-96ba-b02179098e52",
+      "name": "Format Unmute Response"
     },
     {
       "parameters": {
-        "content": "## CAAL Registry Tracking\n**Tool Name:** x-twitter\n**Description:** Post tweets, send direct messages, and search for X users. Requires X Developer account with credit balance for API usage.\n**version:** v1.0.0\n**id:** wn9K89sz3bAItFVWpvzkhQ\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/social/x-twitter)\n\n### (Do not delete this sticky)",
-        "height": 260,
-        "width": 360
+        "mode": "runOnceForEachItem",
+        "jsCode": "const blocked_users = $input.item.json.data || [];\nconst blocked_total = $input.item.json.meta?.result_count || 0;\n\nif (blocked_total === 0 || blocked_users.length === 0) {\n  return {\n    message: \"You have not blocked any users.\",\n    raw: $input.item.json\n  };\n}\n\nconst names = blocked_users.map(user => user.name).join(', ');\n\nreturn {\n  message: `You have blocked ${blocked_total} users: ${names}`,\n  raw: $input.item.json\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        2656
+      ],
+      "id": "f891f7b9-53be-400b-9165-3ebe303783cd",
+      "name": "Format Blocked Users"
+    },
+    {
+      "parameters": {
+        "url": "https://api.x.com/2/users/search",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "twitterOAuth1Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ $json.query }}"
+            },
+            {
+              "name": "max_results",
+              "value": "1"
+            },
+            {
+              "name": "user.fields",
+              "value": "id,name,username,description,location,pinned_tweet_id,most_recent_tweet_id,receives_your_dm,connection_status,public_metrics,created_at"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        2080
+      ],
+      "id": "90ff43e9-d7f7-4a8b-8132-9e8053407161",
+      "name": "Get User by Query",
+      "credentials": {
+        "twitterOAuth1Api": {
+          "id": null,
+          "name": "${TWITTEROAUTH1API_CREDENTIAL}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const data = $input.item.json.data;\n\nif (!Array.isArray(data) || data.length === 0) {\n  return {\n    error: true,\n    message: \"Sorry, I couldn't find any users matching that request.\"\n  };\n}\n\nconst response = data[0];\nconst createdAt = new Date(response.created_at);\n\n// Format like: \"2 June 2009\"\nconst createdDate = createdAt.toLocaleDateString('en-GB', {\n  day: 'numeric',\n  month: 'long',\n  year: 'numeric'\n});\n\nlet message = `I found a user called ${response.name} with username ${response.username}. The account was created on ${createdDate}.`;\n\n// Can you DM them?\nif (response.receives_your_dm) {\n  message += \" You can DM them.\"\n} else {\n  message += \" You cannot DM them.\"\n}\n\n// Your connection status with the user\nconst connection = response.connection_status || [];\nconst statusMessages = [];\n\n// follow/followed info is always reported\nif (connection.includes(\"followed_by\")) {\n  statusMessages.push(\"This user is following you.\");\n} else {\n  statusMessages.push(\"This user is not following you.\");\n}\n\nif (connection.includes(\"following\")) {\n  statusMessages.push(\"You are following this user.\");\n} else {\n  statusMessages.push(\"You are not following this user.\");\n}\n\n// other statuses only if present\nif (connection.includes(\"follow_request_received\")) statusMessages.push(\"You have received a follow request from this user.\");\nif (connection.includes(\"follow_request_sent\")) statusMessages.push(\"You have sent a follow request to this user.\");\nif (connection.includes(\"blocking\")) statusMessages.push(\"You are blocking this user.\");\nif (connection.includes(\"muting\")) statusMessages.push(\"You have muted this user.\");\n\n// Append to message\nif (statusMessages.length > 0) {\n  message += \" \" + statusMessages.join(\" \");\n}\n\n// Metrics\nconst metrics = response.public_metrics;\n\nfunction formatCount(n) {\n  if (n >= 1_000_000_000) return `${Math.round(n / 1_000_000_000)} billion`;\n  if (n >= 1_000_000) return `${Math.round(n / 1_000_000)} million`;\n  if (n >= 1_000) return `${Math.round(n / 1_000)} thousand`;\n  return `${Math.round(n)}`;\n}\n\nconst followers = formatCount(metrics.followers_count);\nconst following = formatCount(metrics.following_count);\nconst tweets = formatCount(metrics.tweet_count);\n\nmessage += ` They have about ${followers} followers, ${following} following, and have posted roughly ${tweets} tweets.`;\n\nconst pinned_tweet_id = response.pinned_tweet_id || ''\nconst most_recent_tweet_id = response.most_recent_tweet_id || ''\n\nreturn {\n  error: false,\n  message,\n  id: response.id,\n  created_date: createdDate,\n  can_receive_your_dm: response.receives_your_dm,\n  bio: response.description,\n  connection,\n  metrics: response.public_metrics,\n  pinned_tweet_id,\n  most_recent_tweet_id\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        2080
+      ],
+      "id": "f6ab874d-75a7-4aa4-9f2e-603f15752d1f",
+      "name": "Format Get User by Query"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.x.com/2/users/by/username/{{ $json.username }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "twitterOAuth1Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "user.fields",
+              "value": "id,name,username,description,location,pinned_tweet_id,most_recent_tweet_id,receives_your_dm,connection_status,public_metrics,created_at"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        2272
+      ],
+      "id": "e9c99e39-6d8d-44e1-909e-693a8fa51295",
+      "name": "Get User by Username",
+      "credentials": {
+        "twitterOAuth1Api": {
+          "id": null,
+          "name": "${TWITTEROAUTH1API_CREDENTIAL}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Check for errors first\nconst errors = $input.item.json.errors || [];\n\nif (errors.length > 0) {\n  const err = errors[0];\n  const username = err.value || \"unknown\";\n  const detail = err.detail || \"An error occurred.\";\n\n  return {\n    error: true,\n    message: `I couldn't find a user with the username ${username}.`,\n    detail\n  };\n}\n\nconst response = $input.item.json.data;\nconst createdAt = new Date(response.created_at);\n\n// Format like: \"2 June 2009\"\nconst createdDate = createdAt.toLocaleDateString('en-GB', {\n  day: 'numeric',\n  month: 'long',\n  year: 'numeric'\n});\n\nlet message = `${response.username}'s display name is ${response.name}'. The account was created on ${createdDate}.`;\n\n// Can you DM them?\nif (response.receives_your_dm) {\n  message += \" You can DM them.\"\n} else {\n  message += \" You cannot DM them.\"\n}\n\n// Your connection status with the user\nconst connection = response.connection_status || [];\nconst statusMessages = [];\n\n// follow/followed info is always reported\nif (connection.includes(\"followed_by\")) {\n  statusMessages.push(\"This user is following you.\");\n} else {\n  statusMessages.push(\"This user is not following you.\");\n}\n\nif (connection.includes(\"following\")) {\n  statusMessages.push(\"You are following this user.\");\n} else {\n  statusMessages.push(\"You are not following this user.\");\n}\n\n// other statuses only if present\nif (connection.includes(\"follow_request_received\")) statusMessages.push(\"You have received a follow request from this user.\");\nif (connection.includes(\"follow_request_sent\")) statusMessages.push(\"You have sent a follow request to this user.\");\nif (connection.includes(\"blocking\")) statusMessages.push(\"You are blocking this user.\");\nif (connection.includes(\"muting\")) statusMessages.push(\"You have muted this user.\");\n\n// Append to message\nif (statusMessages.length > 0) {\n  message += \" \" + statusMessages.join(\" \");\n}\n\n// Metrics\nconst metrics = response.public_metrics;\n\nfunction formatCount(n) {\n  if (n >= 1_000_000_000) return `${Math.round(n / 1_000_000_000)} billion`;\n  if (n >= 1_000_000) return `${Math.round(n / 1_000_000)} million`;\n  if (n >= 1_000) return `${Math.round(n / 1_000)} thousand`;\n  return `${Math.round(n)}`;\n}\n\nconst followers = formatCount(metrics.followers_count);\nconst following = formatCount(metrics.following_count);\nconst tweets = formatCount(metrics.tweet_count);\n\nmessage += ` They have about ${followers} followers, ${following} following, and have posted roughly ${tweets} tweets.`;\n\nconst pinned_tweet_id = response.pinned_tweet_id || ''\nconst most_recent_tweet_id = response.most_recent_tweet_id || ''\n\nreturn {\n  error: false,\n  message,\n  id: response.id,\n  created_date: createdDate,\n  can_receive_your_dm: response.receives_your_dm,\n  bio: response.description,\n  connection,\n  metrics: response.public_metrics,\n  pinned_tweet_id,\n  most_recent_tweet_id\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        2272
+      ],
+      "id": "372f105b-e5fd-482a-91de-6b4707fd9ab6",
+      "name": "Format Get User by Username"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.x.com/2/users/me",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "twitterOAuth1Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "user.fields",
+              "value": "id,name,username,description,location,pinned_tweet_id,most_recent_tweet_id,public_metrics,created_at"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        2464
+      ],
+      "id": "478fa65a-0cde-46d3-ad26-50d8c3efc9cd",
+      "name": "Get my User",
+      "credentials": {
+        "twitterOAuth1Api": {
+          "id": null,
+          "name": "${TWITTEROAUTH1API_CREDENTIAL}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const response = $input.item.json.data;\nconst createdAt = new Date(response.created_at);\n\n// Format like: \"2 June 2009\"\nconst createdDate = createdAt.toLocaleDateString('en-GB', {\n  day: 'numeric',\n  month: 'long',\n  year: 'numeric'\n});\n\nlet message = `Your account was created on ${createdDate}.`;\n\n// Metrics\nconst metrics = response.public_metrics;\n\nfunction formatCount(n) {\n  if (n >= 1_000_000_000) return `${Math.round(n / 1_000_000_000)} billion`;\n  if (n >= 1_000_000) return `${Math.round(n / 1_000_000)} million`;\n  if (n >= 1_000) return `${Math.round(n / 1_000)} thousand`;\n  return `${Math.round(n)}`;\n}\n\nconst followers = formatCount(metrics.followers_count);\nconst following = formatCount(metrics.following_count);\nconst tweets = formatCount(metrics.tweet_count);\n\nmessage += ` You have about ${followers} followers, ${following} following, and have posted roughly ${tweets} tweets.`;\n\nconst pinned_tweet_id = response.pinned_tweet_id || ''\nconst most_recent_tweet_id = response.most_recent_tweet_id || ''\n\nreturn {\n  error: false,\n  message,\n  id: response.id,\n  created_date: createdDate,\n  bio: response.description,\n  metrics: response.public_metrics,\n  pinned_tweet_id,\n  most_recent_tweet_id\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        2464
+      ],
+      "id": "fb94b8be-2f3a-4bca-b3da-bcfa425afa55",
+      "name": "Format Get my User"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const params = $('Validate Input').item.json;\nlet message = $json.error?.message || JSON.stringify($json.error) || '';\n\nlet errorMessage;\nif (message.includes(\"Cannot read properties of undefined\") || message.includes(\"reading 'id'\")) {\n  errorMessage = `Sorry, I couldn't send a direct message to ${params.username}. The account might be suspended.`;\n} else if (message.toLowerCase().includes('forbidden')) {\n  errorMessage = `Sorry, I couldn't send the direct message. They may not accept messages from you.`;\n} else if (message.toLowerCase().includes('payment')) {\n  errorMessage = `You are out of credits. Add more credits to use the X API.`;\n} else if (message.includes('Bad request')) {\n  errorMessage = `I couldn't fulfil that request. Please double check the parameters.`;\n}\n\nreturn {\n  error: true,\n  message: errorMessage\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        1504
+      ],
+      "id": "6e749eea-a5bb-4184-91f0-67c941fb7396",
+      "name": "Handle User Interact Error"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const params = $('Validate Input').item.json;\nlet message = $json.error?.message || JSON.stringify($json.error) || '';\n\nlet errorMessage;\nif (message.toLowerCase().includes('payment')) {\n  errorMessage = `You are out of credits. Add more credits to use the X API.`;\n} else if (message.toLowerCase().includes('bad request')) {\n  errorMessage = `I couldn't fulfil that request. Please double check the parameters.`;\n} else if (message.toLowerCase().includes('forbidden')) {\n  errorMessage = `I don't have permissions to interact with that tweet.`;\n}\n\nreturn {\n  error: true,\n  message: errorMessage\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        624
+      ],
+      "id": "f4c4f65e-84f6-41c2-ac73-857df9a1a4a3",
+      "name": "Handle Tweet Interact Error"
+    },
+    {
+      "parameters": {
+        "operation": "like",
+        "tweetId": {
+          "__rl": true,
+          "value": "={{ $json.tweet_id }}",
+          "mode": "id"
+        }
+      },
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [
+        0,
+        240
+      ],
+      "id": "3dd3cc1e-03ab-497a-baf3-e84e6412f70a",
+      "name": "Like Tweet",
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": null,
+          "name": "${TWITTEROAUTH2API_CREDENTIAL}"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "retweet",
+        "tweetId": {
+          "__rl": true,
+          "value": "={{ $json.tweet_id }}",
+          "mode": "id"
+        }
+      },
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [
+        0,
+        864
+      ],
+      "id": "10093d2c-4475-46e3-8709-5dfd7743d4d5",
+      "name": "Retweet Tweet",
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": null,
+          "name": "${TWITTEROAUTH2API_CREDENTIAL}"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tweetDeleteId": {
+          "__rl": true,
+          "value": "={{ $json.tweet_id }}",
+          "mode": "id"
+        }
+      },
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "767902e3-7545-421d-834c-1aee06a96297",
+      "name": "Delete Tweet",
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": null,
+          "name": "${TWITTEROAUTH2API_CREDENTIAL}"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Extract action and response\nconst action = $('Validate Input').item.json.action\n\nconst response = (action === 'unlike_tweet' || action === 'unretweet_tweet') \n  ? $input.item.json.data \n  : $input.item.json;\n\n\n// Helper to create a voice-friendly message\nlet message = '';\nlet error;\n\nswitch(action) {\n  case 'like_tweet':\n    error = !response.liked;\n    message = response.liked\n      ? \"I have liked the tweet.\"\n      : \"I could not like that tweet.\";\n    break;\n\n  case 'unlike_tweet':\n    error = response.liked;\n    message = !response.liked\n      ? \"I have unliked the tweet.\"\n      : \"The tweet is still liked.\";\n    break;\n\n  case 'retweet_tweet':\n    error = !response.retweeted;\n    message = response.retweeted\n      ? \"I have retweeted the tweet.\"\n      : \"I could not retweet that tweet.\";\n    break;\n\n  case 'unretweet_tweet':\n    error = response.retweeted;\n    message = !response.retweeted\n      ? \"I have removed your retweet.\"\n      : \"The retweet is still active.\";\n    break;\n\n  case 'delete_tweet':\n    error = !response.deleted;\n    message = response.deleted\n      ? \"I have deleted the tweet.\"\n      : \"I could not delete that tweet.\";\n    break;\n\n  case 'hide_tweet_replies':\n    error = !response.hidden;\n    message = response.hidden\n      ? \"Replies to this tweet have been hidden.\"\n      : \"Unable to hide replies.\";\n    break;\n\n  case 'unhide_tweet_replies':\n    error = response.hidden;\n    message = !response.hidden\n      ? \"Replies to this tweet are now visible.\"\n      : \"Replies are still hidden.\";\n    break;\n\n  default:\n    error = false;\n    message = \"Action completed successfully.\";\n}\n\n// Return the voice-friendly message\nreturn {\n  error,\n  message\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        384
+      ],
+      "id": "72b9f6da-a7f2-47ab-9412-0c48c1db1116",
+      "name": "Handle Tweet Interact Success"
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://api.x.com/2/users/{{ $json.self_user_id }}/likes/{{ $json.tweet_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "twitterOAuth1Api",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        432
+      ],
+      "id": "95ec329c-e45b-4d1b-bbe4-3d41dc582e55",
+      "name": "Unlike Tweet",
+      "credentials": {
+        "twitterOAuth1Api": {
+          "id": null,
+          "name": "${TWITTEROAUTH1API_CREDENTIAL}"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://api.x.com/2/users/{{ $json.self_user_id }}/retweets/{{ $json.tweet_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "twitterOAuth1Api",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        672
+      ],
+      "id": "25daaf45-f868-429d-90c6-300e621ad2ba",
+      "name": "Unretweet Tweet",
+      "credentials": {
+        "twitterOAuth1Api": {
+          "id": null,
+          "name": "${TWITTEROAUTH1API_CREDENTIAL}"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "0f97b07d-594e-46bc-997e-582b1485c630",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "get_tweet",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "get_tweet"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "post_tweet",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "6bb01861-f72e-4363-8347-530e956ae454"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "post_tweet"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "bdb9234b-cfd0-4cde-a61d-bc1fee274b4f",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "delete_tweet",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "delete_tweet"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "81b88a85-2c69-420b-9564-5c9d0599114d",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "like_tweet",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "like_tweet"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "3e0f35b7-2456-45db-a312-65a5888a354d",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "unlike_tweet",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "unlike_tweet"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "0c552620-6781-42c2-a29a-e152bbe8e1a9",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "retweet_tweet",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "retweet_tweet"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "c363ae01-81d4-4918-bfb2-0f35304800a4",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "unretweet_tweet",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "unretweet_tweet"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -224,
+        384
+      ],
+      "id": "212fbbe4-666c-4101-b8d3-d277ee7ceb08",
+      "name": "Tweet Action Switch"
+    },
+    {
+      "parameters": {
+        "content": "## ADD SELF_USER_ID\nOpen Validate Input and add your unique X user ID. You can use the `get_my_user` action or find it using a [third-party web service](https://get-id-x.foundtt.com/en/).",
+        "height": 192
       },
       "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        -784,
-        -288
-      ],
       "typeVersion": 1,
-      "id": "a874ab21-507c-45ab-8f5d-8ad87cb12953",
+      "position": [
+        -976,
+        2000
+      ],
+      "id": "26550088-8635-4a0e-9c32-846d2426a20a",
       "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.x.com/2/tweets/{{ $json.tweet_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "twitterOAuth1Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "tweet.fields",
+              "value": "created_at,id,public_metrics,text"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        -176
+      ],
+      "id": "b9499831-98fe-4bc3-bb5e-9188d46940a7",
+      "name": "Get Tweet",
+      "credentials": {
+        "twitterOAuth1Api": {
+          "id": null,
+          "name": "${TWITTEROAUTH1API_CREDENTIAL}"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Check for errors first\nconst errors = $input.item.json.errors || [];\n\nif (errors.length > 0) {\n  const err = errors[0];\n  const detail = err.detail || \"An error occurred.\";\n\n  return {\n    error: true,\n    message: `I couldn't find a tweet with the that ID.`,\n    detail\n  };\n}\n\nconst response = $input.item.json.data;\nconst createdAt = new Date(response.created_at);\n\n// Format like: \"2 June 2009\"\nconst createdDate = createdAt.toLocaleDateString('en-GB', {\n  day: 'numeric',\n  month: 'long',\n  year: 'numeric'\n});\n\nconst metrics = response.public_metrics;\n\nfunction formatCount(n) {\n  if (n >= 1_000_000_000) return `${Math.round(n / 1_000_000_000)} billion`;\n  if (n >= 1_000_000) return `${Math.round(n / 1_000_000)} million`;\n  if (n >= 1_000) return `${Math.round(n / 1_000)} thousand`;\n  return `${Math.round(n)}`;\n}\n\nconst views = formatCount(metrics.impression_count);\nconst likes = formatCount(metrics.like_count);\nconst retweets = formatCount(metrics.retweet_count);\nconst replies = formatCount(metrics.reply_count);\nconst quotes = formatCount(metrics.quote_count);\nconst bookmarks = formatCount(metrics.bookmark_count);\n\nconst message = `This tweet says: ${response.text}. It was posted on ${createdDate}. It has ${views} views, ${likes} likes, ${retweets} retweets, ${quotes} quote tweets, ${replies} replies, and ${bookmarks} bookmarks.`;\n\nreturn {\n  error: false,\n  message,\n  tweet_id: response.id,\n  created_date: createdDate,\n  metrics\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        256,
+        -160
+      ],
+      "id": "5715e729-376a-4019-8f44-0d28951e72e5",
+      "name": "Format Get Tweet"
     }
   ],
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "host.docker.internal:5678",
+            "accept": "*/*",
+            "accept-encoding": "gzip, deflate, br",
+            "user-agent": "Python/3.11 aiohttp/3.13.2",
+            "content-length": "58",
+            "content-type": "application/json"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "action": "get_tweet",
+            "tweet_id": "2016933604513685836"
+          },
+          "webhookUrl": "http://localhost:5678/webhook/x-twitter",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
   "connections": {
-    "If": {
-      "main": [
-        [
-          {
-            "node": "Get User",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Get Self",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get Self": {
-      "main": [
-        [
-          {
-            "node": "Format Search Response",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Handle Out-of-Credits",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Unknown Action": {
-      "main": [
-        [
-          {
-            "node": "Respond to Webhook",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Search Response": {
-      "main": [
-        [
-          {
-            "node": "Respond to Webhook",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Format DM Response": {
       "main": [
         [
@@ -486,24 +1249,6 @@
         ]
       ]
     },
-    "Get User": {
-      "main": [
-        [
-          {
-            "node": "Format Search Response",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Handle Out-of-Credits",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Send DM": {
       "main": [
         [
@@ -515,7 +1260,7 @@
         ],
         [
           {
-            "node": "Handle DM Error",
+            "node": "Handle User Interact Error",
             "type": "main",
             "index": 0
           }
@@ -533,39 +1278,7 @@
         ],
         [
           {
-            "node": "Handle Out-of-Credits",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Action Switch": {
-      "main": [
-        [
-          {
-            "node": "Post Tweet",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Send DM",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "If",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Format Unknown Action",
+            "node": "Handle Tweet Interact Error",
             "type": "main",
             "index": 0
           }
@@ -583,7 +1296,7 @@
         ],
         [
           {
-            "node": "Action Switch",
+            "node": "Category Switch",
             "type": "main",
             "index": 0
           }
@@ -612,7 +1325,125 @@
         ]
       ]
     },
-    "Handle Out-of-Credits": {
+    "Category Switch": {
+      "main": [
+        [
+          {
+            "node": "Tweet Action Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "User Action Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get User Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "User Action Switch": {
+      "main": [
+        [
+          {
+            "node": "Send DM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mute User",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unmute User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get User Switch": {
+      "main": [
+        [
+          {
+            "node": "Get User by Query",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get User by Username",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get my User",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Blocked Users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mute User": {
+      "main": [
+        [
+          {
+            "node": "Format Mute Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle User Interact Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unmute User": {
+      "main": [
+        [
+          {
+            "node": "Format Unmute Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle User Interact Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Mute Response": {
       "main": [
         [
           {
@@ -623,7 +1454,300 @@
         ]
       ]
     },
-    "Handle DM Error": {
+    "Format Unmute Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Blocked Users": {
+      "main": [
+        [
+          {
+            "node": "Format Blocked Users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Blocked Users": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get User by Query": {
+      "main": [
+        [
+          {
+            "node": "Format Get User by Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Get User by Query": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get User by Username": {
+      "main": [
+        [
+          {
+            "node": "Format Get User by Username",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Get User by Username": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get my User": {
+      "main": [
+        [
+          {
+            "node": "Format Get my User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Get my User": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle User Interact Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Tweet Interact Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Tweet": {
+      "main": [
+        [
+          {
+            "node": "Handle Tweet Interact Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Tweet Interact Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Like Tweet": {
+      "main": [
+        [
+          {
+            "node": "Handle Tweet Interact Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Tweet Interact Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retweet Tweet": {
+      "main": [
+        [
+          {
+            "node": "Handle Tweet Interact Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Tweet Interact Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Tweet Interact Success": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unlike Tweet": {
+      "main": [
+        [
+          {
+            "node": "Handle Tweet Interact Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Tweet Interact Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unretweet Tweet": {
+      "main": [
+        [
+          {
+            "node": "Handle Tweet Interact Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Tweet Interact Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tweet Action Switch": {
+      "main": [
+        [
+          {
+            "node": "Get Tweet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Post Tweet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Delete Tweet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Like Tweet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unlike Tweet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retweet Tweet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unretweet Tweet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Tweet": {
+      "main": [
+        [
+          {
+            "node": "Format Get Tweet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Tweet Interact Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Get Tweet": {
       "main": [
         [
           {
