@@ -1,0 +1,69 @@
+{
+  "id": "wn9K89sz3bAItFVWpvzkhQ",
+  "name": "x-twitter",
+  "friendlyName": "X (Twitter)",
+  "version": "2.0.0",
+  "description": "X (Twitter) automation: post tweets, like/retweet/delete, send DMs, lookup users with connection status and full metrics, mute users, and view blocked accounts. Requires X Developer account with API access.",
+  "category": "social",
+  "toolSuite": true,
+  "actions": [
+    "get_tweet",
+    "post_tweet",
+    "like_tweet",
+    "unlike_tweet",
+    "retweet_tweet",
+    "unretweet_tweet",
+    "delete_tweet",
+    "dm_user",
+    "mute_user",
+    "unmute_user",
+    "get_user_by_query",
+    "get_user_by_username",
+    "get_my_user",
+    "get_blocked_users"
+  ],
+  "icon": "x.svg",
+  "voice_triggers": [
+    "Post a tweet saying hello world",
+    "How many followers does Elon Musk have?",
+    "Send a DM to AbShahzeb saying great work",
+    "Does Sam Altman follow me on X?",
+    "Mute the user @spambot123 on X",
+    "Like the tweet with ID 1234567890",
+    "Show me who I've blocked"
+  ],
+  "required_services": [
+    "x (twitter)"
+  ],
+  "required_credentials": [
+    {
+      "credential_type": "twitterOAuth2Api",
+      "name": "TWITTEROAUTH2API_CREDENTIAL",
+      "description": "n8n credential type: twitterOAuth2Api"
+    },
+    {
+      "credential_type": "twitterOAuth1Api",
+      "name": "TWITTEROAUTH1API_CREDENTIAL",
+      "description": "n8n credential type: twitterOAuth1Api"
+    }
+  ],
+  "required_variables": [
+    {
+      "name": "SELF_USER_ID",
+      "description": "Your X User ID, can be found using get_my_user or third-party web services."
+    }
+  ],
+  "author": {
+    "github": "AbdulShahzeb"
+  },
+  "tier": "community",
+  "tags": [
+    "social",
+    "x (twitter)",
+    "automation",
+    "social media"
+  ],
+  "dependencies": [],
+  "created": "2026-02-02",
+  "updated": "2026-02-04"
+}
