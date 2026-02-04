@@ -1,5 +1,5 @@
 {
-  "name": "x-twitter",
+  "name": "x_twitter",
   "nodes": [
     {
       "parameters": {
@@ -145,7 +145,7 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "x-twitter",
+        "path": "x_twitter",
         "responseMode": "responseNode",
         "options": {}
       },
