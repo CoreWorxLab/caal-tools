@@ -1,0 +1,28 @@
+<!--?xml version="1.0" encoding="UTF-8"?-->
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="weather-fra icon">
+
+  <!-- Background -->
+  <rect x="4" y="4" width="120" height="120" rx="20" fill="#f5f7fa"></rect>
+
+  <!-- French tricolor -->
+  <rect x="16" y="20" width="32" height="88" rx="8" fill="#0055A4"></rect>
+  <rect x="48" y="20" width="32" height="88" rx="8" fill="#FFFFFF"></rect>
+  <rect x="80" y="20" width="32" height="88" rx="8" fill="#EF4135"></rect>
+
+  <!-- Sun -->
+  <circle cx="52" cy="48" r="10" fill="#FDB813"></circle>
+
+  <!-- Cloud -->
+  <path d="M72 72
+       c0-6-5-10-11-10
+       c-1 0-2 0-3 .4
+       c-2-4-6-6.4-10-6.4
+       c-6 0-11 5-11 11
+       c0 .4 0 .8.1 1.2
+       C33 69 30 72 30 76
+       c0 4 3 8 8 8
+       h34
+       c5 0 8-4 8-8
+       c0-4-3-8-8-8z" fill="#cfd8dc"></path>
+
+</svg>
