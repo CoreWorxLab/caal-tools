@@ -1,0 +1,31 @@
+{
+  "id": "2ATjQGqqA1vZdKL3czPuNA",
+  "name": "weather-fra",
+  "friendlyName": "Weather France",
+  "version": "1.0.0",
+  "description": "Gets current weather conditions and forecast data for French cities using the Open-Meteo API.",
+  "category": "utilities",
+  "toolSuite": true,
+  "actions": [
+    "forecast",
+    "current"
+  ],
+  "icon": "weather-fra.svg",
+  "voice_triggers": [
+    "What's the weather in Paris?",
+    "Paris forecast"
+  ],
+  "required_services": [],
+  "required_credentials": [],
+  "required_variables": [],
+  "author": {
+    "github": "mmaudet"
+  },
+  "tier": "community",
+  "tags": [
+    "utilities"
+  ],
+  "dependencies": [],
+  "created": "2026-02-07",
+  "updated": "2026-02-07"
+}

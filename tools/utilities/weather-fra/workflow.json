@@ -1,0 +1,404 @@
+{
+  "name": "weather_fra",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "weather_fra",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "f1a20001-1111-4aaa-bbbb-000000000001",
+      "name": "Webhook",
+      "webhookId": "f1a20001-2222-4aaa-bbbb-000000000002",
+      "notes": "Weather tool - forecast and current conditions for France.\nUses Open-Meteo API (free, no key required).\n\nParameters:\n- action (required): 'forecast' or 'current'\n- location (required): French city name (e.g., Paris, Lyon, Marseille, Toulouse, Bordeaux)\n- days (optional, default 5): forecast days ahead (1-7)\n- target_day (optional): specific weekday like 'Lundi', use for 'on Friday' style queries\n\nExamples: 'Paris weather', 'Lyon forecast', 'Marseille right now' (action='current'), 'Toulouse on Wednesday' (target_day='Mercredi')"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const body = $input.item.json.body || $input.item.json;\n\nconst action = (body.action || 'forecast').toLowerCase();\nconst rawLocation = (body.location || 'Paris').toString().trim();\nconst location = rawLocation.replace(/\\b[a-z]/g, c => c.toUpperCase());\nconst days = Math.min(Math.max(parseInt(body.days) || 5, 1), 7);\nconst target_day = body.target_day ? body.target_day.toString().trim() : null;\n\nconst accentMap = {\n  'orleans': 'Orl\\u00e9ans',\n  'beziers': 'B\\u00e9ziers',\n  'nimes': 'N\\u00eemes',\n  'clermont ferrand': 'Clermont-Ferrand',\n  'saint etienne': 'Saint-\\u00c9tienne',\n  'le mans': 'Le Mans',\n  'aix en provence': 'Aix-en-Provence'\n};\nconst searchTerm = accentMap[rawLocation.toLowerCase()] || rawLocation;\n\nreturn {\n  action,\n  location,\n  days,\n  target_day,\n  searchUrl: `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchTerm)}&count=10&language=fr`\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "f1a20001-1111-4aaa-bbbb-000000000003",
+      "name": "Prepare Input"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.searchUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        448,
+        0
+      ],
+      "id": "f1a20001-1111-4aaa-bbbb-000000000004",
+      "name": "Geocode City"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const raw = $input.item.json;\nconst params = $('Prepare Input').item.json;\n\nconst results = (raw.results || []);\nconst frResults = results.filter(r => r.country_code === 'FR');\nconst best = frResults.length > 0 ? frResults[0] : null;\n\nif (!best) {\n  return {\n    error: true,\n    message: `Ville ${params.location} introuvable en France. Essayez un nom de ville fran\\u00e7aise.`\n  };\n}\n\nconst forecastDays = Math.min(params.days + 1, 7);\n\nreturn {\n  error: false,\n  location: best.name || params.location,\n  region: best.admin1 || '',\n  latitude: best.latitude,\n  longitude: best.longitude,\n  action: params.action,\n  days: params.days,\n  target_day: params.target_day,\n  weatherUrl: `https://api.open-meteo.com/v1/forecast?latitude=${best.latitude}&longitude=${best.longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,precipitation&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weather_code,wind_speed_10m_max,wind_direction_10m_dominant&timezone=Europe/Paris&forecast_days=${forecastDays}`\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "f1a20001-1111-4aaa-bbbb-000000000005",
+      "name": "Parse Geocode"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f1a20001-3333-4aaa-bbbb-000000000001",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        880,
+        0
+      ],
+      "id": "f1a20001-1111-4aaa-bbbb-000000000006",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.weatherUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1104,
+        160
+      ],
+      "id": "f1a20001-1111-4aaa-bbbb-000000000007",
+      "name": "Fetch Weather"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Prepare Input').item.json.action }}",
+                    "rightValue": "forecast",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "f1a20001-3333-4aaa-bbbb-000000000002"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "forecast"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "f1a20001-3333-4aaa-bbbb-000000000003",
+                    "leftValue": "={{ $('Prepare Input').item.json.action }}",
+                    "rightValue": "current",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "current"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1328,
+        160
+      ],
+      "id": "f1a20001-1111-4aaa-bbbb-000000000008",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const weather = $input.item.json;\nconst params = $('Parse Geocode').item.json;\n\nconst daily = weather.daily;\nif (!daily || !daily.time) {\n  return { error: true, message: `Pas de donn\\u00e9es de pr\\u00e9vision pour ${params.location}.` };\n}\n\nconst weatherCodes = {\n  0: 'Ciel d\\u00e9gag\\u00e9', 1: 'Principalement d\\u00e9gag\\u00e9', 2: 'Partiellement nuageux', 3: 'Couvert',\n  45: 'Brouillard', 48: 'Brouillard givrant',\n  51: 'Bruine l\\u00e9g\\u00e8re', 53: 'Bruine mod\\u00e9r\\u00e9e', 55: 'Bruine dense',\n  56: 'Bruine vergla\\u00e7ante', 57: 'Bruine vergla\\u00e7ante dense',\n  61: 'Pluie l\\u00e9g\\u00e8re', 63: 'Pluie mod\\u00e9r\\u00e9e', 65: 'Pluie forte',\n  66: 'Pluie vergla\\u00e7ante', 67: 'Pluie vergla\\u00e7ante forte',\n  71: 'Neige l\\u00e9g\\u00e8re', 73: 'Neige mod\\u00e9r\\u00e9e', 75: 'Neige forte', 77: 'Grains de neige',\n  80: 'Averses l\\u00e9g\\u00e8res', 81: 'Averses mod\\u00e9r\\u00e9es', 82: 'Averses violentes',\n  85: 'Averses de neige l\\u00e9g\\u00e8res', 86: 'Averses de neige fortes',\n  95: 'Orage', 96: 'Orage avec gr\\u00eale', 99: 'Orage avec forte gr\\u00eale'\n};\n\nconst dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];\n\nlet forecasts = [];\nfor (let i = 0; i < daily.time.length; i++) {\n  const date = new Date(daily.time[i] + 'T12:00:00');\n  const dayName = dayNames[date.getDay()];\n  forecasts.push({\n    date: daily.time[i],\n    day: dayName,\n    temp_min: daily.temperature_2m_min[i],\n    temp_max: daily.temperature_2m_max[i],\n    precipitations: daily.precipitation_sum[i],\n    conditions: weatherCodes[daily.weather_code[i]] || ('Code ' + daily.weather_code[i]),\n    wind_max: daily.wind_speed_10m_max[i]\n  });\n}\n\nif (params.target_day) {\n  const target = params.target_day.toLowerCase();\n  forecasts = forecasts.filter(f => f.day.toLowerCase().includes(target));\n  if (forecasts.length === 0) {\n    return {\n      error: true,\n      message: `Pas de pr\\u00e9vision pour ${params.target_day} \\u00e0 ${params.location}.`\n    };\n  }\n} else {\n  forecasts = forecasts.slice(0, params.days);\n}\n\nconst parts = forecasts.map(f =>\n  `${f.day} ${f.date}: ${f.conditions}, ${f.temp_min}\\u00b0C \\u00e0 ${f.temp_max}\\u00b0C`\n);\n\nreturn {\n  error: false,\n  message: `Pr\\u00e9visions pour ${params.location}: ${parts.join('. ')}.`,\n  location: params.location,\n  region: params.region,\n  forecasts: forecasts\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1552,
+        -16
+      ],
+      "id": "f1a20001-1111-4aaa-bbbb-000000000009",
+      "name": "Format Forecast"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const weather = $input.item.json;\nconst params = $('Parse Geocode').item.json;\n\nconst current = weather.current;\nif (!current || current.temperature_2m == null) {\n  return { error: true, message: `Pas de donn\\u00e9es m\\u00e9t\\u00e9o actuelles pour ${params.location}.` };\n}\n\nconst weatherCodes = {\n  0: 'ciel d\\u00e9gag\\u00e9', 1: 'principalement d\\u00e9gag\\u00e9', 2: 'partiellement nuageux', 3: 'couvert',\n  45: 'brouillard', 48: 'brouillard givrant',\n  51: 'bruine l\\u00e9g\\u00e8re', 53: 'bruine mod\\u00e9r\\u00e9e', 55: 'bruine dense',\n  61: 'pluie l\\u00e9g\\u00e8re', 63: 'pluie mod\\u00e9r\\u00e9e', 65: 'pluie forte',\n  71: 'neige l\\u00e9g\\u00e8re', 73: 'neige mod\\u00e9r\\u00e9e', 75: 'neige forte',\n  80: 'averses l\\u00e9g\\u00e8res', 81: 'averses mod\\u00e9r\\u00e9es', 82: 'averses violentes',\n  95: 'orage', 96: 'orage avec gr\\u00eale', 99: 'orage avec forte gr\\u00eale'\n};\n\nconst temp = current.temperature_2m;\nconst apparent = current.apparent_temperature;\nconst condition = weatherCodes[current.weather_code] || ('code ' + current.weather_code);\nconst windSpeed = current.wind_speed_10m;\nconst windDir = current.wind_direction_10m;\nconst humidity = current.relative_humidity_2m;\n\nfunction windCardinal(deg) {\n  const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];\n  return dirs[Math.round(deg / 45) % 8];\n}\n\nconst parts = [`Il fait actuellement ${temp} degr\\u00e9s \\u00e0 ${params.location}, ${condition}`];\nif (apparent != null && Math.abs(apparent - temp) >= 2) {\n  parts.push(`ressenti ${apparent}`);\n}\nif (windSpeed != null && windDir != null) {\n  parts.push(`vent ${windCardinal(windDir)} \\u00e0 ${windSpeed} km/h`);\n}\nif (humidity != null) {\n  parts.push(`humidit\\u00e9 ${humidity}%`);\n}\n\nreturn {\n  error: false,\n  message: parts.join(', ') + '.',\n  location: params.location,\n  region: params.region,\n  current: {\n    temp: temp,\n    apparent_temp: apparent,\n    condition: condition,\n    wind_speed: windSpeed,\n    wind_direction: windDir != null ? windCardinal(windDir) : null,\n    humidity: humidity,\n    precipitation: current.precipitation\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1552,
+        176
+      ],
+      "id": "f1a20001-1111-4aaa-bbbb-000000000010",
+      "name": "Format Current"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const action = $('Prepare Input').item.json.action;\n\nreturn {\n  error: true,\n  message: `Action ${action} non support\\u00e9e. Utilisez forecast ou current.`\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1552,
+        368
+      ],
+      "id": "f1a20001-1111-4aaa-bbbb-000000000011",
+      "name": "Format Error"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1760,
+        96
+      ],
+      "id": "f1a20001-1111-4aaa-bbbb-000000000012",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** weather-fra\n**Description:** Gets current weather conditions and forecast data for French cities using the Open-Meteo API.\n**version:** v1.0.0\n**id:** 2ATjQGqqA1vZdKL3czPuNA\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/utilities/weather-fra)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -784,
+        -288
+      ],
+      "typeVersion": 1,
+      "id": "a5e76493-7f8d-4dcf-81bf-3c238989f719",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Input": {
+      "main": [
+        [
+          {
+            "node": "Geocode City",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geocode City": {
+      "main": [
+        [
+          {
+            "node": "Parse Geocode",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Geocode": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch Weather",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Weather": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Format Forecast",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Current",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Forecast": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Current": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
