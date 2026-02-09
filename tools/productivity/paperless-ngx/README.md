@@ -77,14 +77,14 @@ services:
   n8n:
     environment:
       - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
-      - PAPERLESS_URL=http://192.168.7.203:8000
+      - PAPERLESS_URL=http://YOUR_PAPERLESS_IP:8000
 ```
 
 **Or add to your `.env` file:**
 
 ```bash
 N8N_BLOCK_ENV_ACCESS_IN_NODE=false
-PAPERLESS_URL=http://192.168.7.203:8000
+PAPERLESS_URL=http://192.168.1.100:8000
 ```
 
 **Then restart n8n:**
