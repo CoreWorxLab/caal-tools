@@ -17,7 +17,7 @@
       "id": "weather-webhook-001",
       "name": "Webhook",
       "webhookId": "weather-webhook-002",
-      "notes": "Weather tool - forecast and current conditions for US locations.\nUses NOAA Weather.gov official data.\n\nParameters:\n- action (required): 'forecast' or 'current'\n- location (required): US city name with state (e.g., 'Chicago Illinois', 'Austin Texas', 'Portland Oregon')\n- days (optional, default 3): forecast days ahead (1-7), use for 'next week' queries\n- target_day (optional): specific weekday like 'Monday', use only for 'on Friday' style queries\n\nExamples: 'Chicago weather', 'Austin forecast', 'Portland tomorrow' (days=1), 'Seattle on Wednesday' (target_day='Wednesday')"
+      "notes": "Weather tool - forecast and current conditions for US locations.\nUses NOAA Weather.gov official data.\n\nParameters:\n- action (required): 'forecast' or 'current'\n- location (required): US city name with state (e.g., 'Chicago Illinois', 'Austin Texas', 'Portland Oregon')\n- days (optional, default 3): number of days ahead to forecast (1-7). Use for queries like 'tomorrow' (days=1), 'next 5 days' (days=5), 'next week' (days=7). DO NOT use when user asks for a specific weekday.\n- target_day (optional): specific weekday name like 'Monday', 'Tuesday', etc. Use ONLY when user asks for weather 'on Friday' or 'this Saturday'. DO NOT use with 'tomorrow' or 'next week' - use days parameter instead.\n\nExamples: 'Chicago weather' (default 3 days), 'Austin forecast' (3 days), 'Portland tomorrow' (use days=1), 'next week Seattle' (use days=7), 'weather in Boston on Wednesday' (use target_day='Wednesday')"
     },
     {
       "parameters": {
@@ -660,6 +660,5 @@
   "settings": {
     "availableInMCP": true,
     "callerPolicy": "workflowsFromSameOwner"
-  },
-  "pinData": {}
+  }
 }

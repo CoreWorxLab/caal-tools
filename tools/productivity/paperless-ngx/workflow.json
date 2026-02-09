@@ -209,7 +209,7 @@
       "id": "http-search-paperless",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "paperless_api",
+          "id": null,
           "name": "Paperless API"
         }
       }
@@ -249,7 +249,7 @@
       "id": "http-get-paperless",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "paperless_api",
+          "id": null,
           "name": "Paperless API"
         }
       }
@@ -275,7 +275,7 @@
       "id": "http-update-paperless",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "paperless_api",
+          "id": null,
           "name": "Paperless API"
         }
       }
@@ -298,7 +298,7 @@
       "id": "http-tags-paperless",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "paperless_api",
+          "id": null,
           "name": "Paperless API"
         }
       }
@@ -321,7 +321,7 @@
       "id": "http-correspondents-paperless",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "paperless_api",
+          "id": null,
           "name": "Paperless API"
         }
       }
@@ -344,7 +344,7 @@
       "id": "http-types-paperless",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "paperless_api",
+          "id": null,
           "name": "Paperless API"
         }
       }
@@ -645,6 +645,6 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "availableInMCP": true
   }
 }
