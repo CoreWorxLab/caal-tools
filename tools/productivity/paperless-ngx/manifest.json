@@ -14,7 +14,7 @@
     "correspondents",
     "types"
   ],
-  "icon": "document.svg",
+  "icon": "us-weather-icon.svg",
   "voice_triggers": [
     "Search paperless for tax documents",
     "Show me recent documents in paperless",
