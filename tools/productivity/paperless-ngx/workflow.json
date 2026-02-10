@@ -1,0 +1,650 @@
+{
+  "name": "paperless_ngx",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "paperless_ngx",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -800,
+        400
+      ],
+      "webhookId": "paperless_ngx",
+      "id": "webhook-paperless-ngx",
+      "notes": "Paperless-ngx document management - search documents, retrieve details, update metadata, manage tags and correspondents.\n\nParameters:\n- action (required): 'search', 'get', 'update', 'tags', 'correspondents', 'types'\n\nFor 'search':\n- query (required): search terms or keywords\n- limit (optional, default 10): number of results\n- ordering (optional): 'created' or '-created' (newest first)\n\nFor 'get':\n- document_id (optional): specific document ID to retrieve; if omitted, returns recent documents\n- limit (optional, default 10): number of recent documents\n- filter (optional): 'today', 'week', 'month' for date filtering\n\nFor 'update':\n- document_id (required): document ID to update\n- title (optional): new document title\n- tags (optional): comma-separated tag names or IDs\n- correspondent (optional): correspondent name or ID\n- document_type (optional): document type name or ID\n- date (optional): document date (YYYY-MM-DD)\n- archive_serial_number (optional): ASN for the document\n\nFor 'tags':\n- action_type (optional, default 'list'): 'list' to get all tags, 'get' to get documents by tag\n- tag_name (optional): tag name to search by\n- tag_id (optional): specific tag ID\n\nFor 'correspondents':\n- action_type (optional, default 'list'): 'list' to get all correspondents, 'get' to get documents by correspondent\n- correspondent_name (optional): correspondent name to search by\n- correspondent_id (optional): specific correspondent ID\n\nFor 'types':\n- action_type (optional, default 'list'): 'list' to get all document types, 'get' to get documents by type\n- type_name (optional): document type name to search by\n- type_id (optional): specific document type ID\n\nExamples: 'search paperless for invoices', 'show recent documents', 'get document 123', 'update document 456 add tag receipt', 'list all tags', 'show documents from John Doe'",
+      "settings": {
+        "availableInMCP": true
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body || $input.item.json;\nlet data = typeof body === 'string' ? JSON.parse(body) : body;\n\nconst action = (data.action || 'search').toLowerCase().trim();\n\n// Common parameters\nconst limit = parseInt(data.limit) || 10;\nconst ordering = data.ordering || '-created';\n\n// Search parameters\nconst query = data.query || '';\n\n// Get parameters\nconst documentId = data.document_id || data.id || null;\nconst filter = (data.filter || '').toLowerCase().trim();\n\n// Update parameters\nconst title = data.title || null;\nconst tags = data.tags || null;\nconst correspondent = data.correspondent || null;\nconst documentType = data.document_type || data.type || null;\nconst date = data.date || null;\nconst asn = data.archive_serial_number || data.asn || null;\n\n// Tags/Correspondents/Types parameters\nconst actionType = (data.action_type || 'list').toLowerCase().trim();\nconst tagName = data.tag_name || null;\nconst tagId = data.tag_id || null;\nconst correspondentName = data.correspondent_name || null;\nconst correspondentId = data.correspondent_id || null;\nconst typeName = data.type_name || null;\nconst typeId = data.type_id || null;\n\n// Build date filter for 'get' action\nlet dateFilter = null;\nif (action === 'get' && filter) {\n  const today = new Date();\n  today.setHours(0, 0, 0, 0);\n  \n  if (filter === 'today') {\n    dateFilter = today.toISOString().split('T')[0];\n  } else if (filter === 'week') {\n    const weekAgo = new Date(today);\n    weekAgo.setDate(weekAgo.getDate() - 7);\n    dateFilter = weekAgo.toISOString().split('T')[0];\n  } else if (filter === 'month') {\n    const monthAgo = new Date(today);\n    monthAgo.setMonth(monthAgo.getMonth() - 1);\n    dateFilter = monthAgo.toISOString().split('T')[0];\n  }\n}\n\nreturn [{\n  json: {\n    action,\n    query,\n    limit,\n    ordering,\n    documentId,\n    filter,\n    dateFilter,\n    title,\n    tags,\n    correspondent,\n    documentType,\n    date,\n    asn,\n    actionType,\n    tagName,\n    tagId,\n    correspondentName,\n    correspondentId,\n    typeName,\n    typeId\n  }\n}];"
+      },
+      "name": "Parse Parameters",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -600,
+        400
+      ],
+      "id": "parse-params-paperless"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "search",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "search"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "get",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "get"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "update",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "update"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "tags",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "tags"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "correspondents",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "correspondents"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "types",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "types"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "name": "Route Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -400,
+        400
+      ],
+      "id": "switch-action-paperless"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=${$env.PAPERLESS_URL}/api/documents/",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ $json.query }}"
+            },
+            {
+              "name": "page_size",
+              "value": "={{ $json.limit }}"
+            },
+            {
+              "name": "ordering",
+              "value": "={{ $json.ordering }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Search Documents",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -200,
+        200
+      ],
+      "id": "http-search-paperless",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "Paperless API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.documentId ? $env.PAPERLESS_URL + '/api/documents/' + $json.documentId + '/' : $env.PAPERLESS_URL + '/api/documents/' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "page_size",
+              "value": "={{ $json.limit }}"
+            },
+            {
+              "name": "ordering",
+              "value": "={{ $json.ordering }}"
+            },
+            {
+              "name": "created__date__gte",
+              "value": "={{ $json.dateFilter || '' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Get Documents",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -200,
+        300
+      ],
+      "id": "http-get-paperless",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "Paperless API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=${$env.PAPERLESS_URL}/api/documents/${ $json.documentId }/",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({\n  title: $json.title || undefined,\n  tags: $json.tags ? $json.tags.split(',').map(t => t.trim()) : undefined,\n  correspondent: $json.correspondent || undefined,\n  document_type: $json.documentType || undefined,\n  created_date: $json.date || undefined,\n  archive_serial_number: $json.asn || undefined\n}) }}",
+        "options": {}
+      },
+      "name": "Update Document",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -200,
+        400
+      ],
+      "id": "http-update-paperless",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "Paperless API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.actionType === 'list' ? $env.PAPERLESS_URL + '/api/tags/' : $env.PAPERLESS_URL + '/api/documents/?tags__name=' + ($json.tagName || '') + ($json.tagId ? '&tags__id=' + $json.tagId : '') }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {}
+      },
+      "name": "Get Tags",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -200,
+        500
+      ],
+      "id": "http-tags-paperless",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "Paperless API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.actionType === 'list' ? $env.PAPERLESS_URL + '/api/correspondents/' : $env.PAPERLESS_URL + '/api/documents/?correspondent__name=' + ($json.correspondentName || '') + ($json.correspondentId ? '&correspondent__id=' + $json.correspondentId : '') }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {}
+      },
+      "name": "Get Correspondents",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -200,
+        600
+      ],
+      "id": "http-correspondents-paperless",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "Paperless API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.actionType === 'list' ? $env.PAPERLESS_URL + '/api/document_types/' : $env.PAPERLESS_URL + '/api/documents/?document_type__name=' + ($json.typeName || '') + ($json.typeId ? '&document_type__id=' + $json.typeId : '') }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {}
+      },
+      "name": "Get Types",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -200,
+        700
+      ],
+      "id": "http-types-paperless",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "Paperless API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.item.json;\nconst results = response.results || [];\n\nif (results.length === 0) {\n  return [{\n    json: {\n      message: \"No documents found matching your search.\",\n      documents: []\n    }\n  }];\n}\n\nconst docs = results.slice(0, 5).map(doc => ({\n  id: doc.id,\n  title: doc.title,\n  created: doc.created,\n  correspondent: doc.correspondent_name || 'None',\n  tags: doc.tags || []\n}));\n\nconst message = results.length === 1 \n  ? `Found 1 document: ${results[0].title}`\n  : `Found ${results.length} documents. Top results: ${docs.map(d => d.title).join(', ')}`;\n\nreturn [{\n  json: {\n    message,\n    documents: docs,\n    total: results.length\n  }\n}];"
+      },
+      "name": "Format Search Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        200
+      ],
+      "id": "format-search-paperless"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.item.json;\n\n// Single document response\nif (response.id) {\n  const doc = response;\n  const message = `Document ${doc.id}: ${doc.title}. Created ${new Date(doc.created).toLocaleDateString()}. ${doc.correspondent ? 'From ' + doc.correspondent : 'No correspondent'}. ${doc.tags && doc.tags.length > 0 ? 'Tags: ' + doc.tags.join(', ') : 'No tags'}.`;\n  \n  return [{\n    json: {\n      message,\n      document: {\n        id: doc.id,\n        title: doc.title,\n        created: doc.created,\n        correspondent: doc.correspondent || null,\n        tags: doc.tags || [],\n        content: doc.content || null\n      }\n    }\n  }];\n}\n\n// Multiple documents response\nconst results = response.results || [];\n\nif (results.length === 0) {\n  return [{\n    json: {\n      message: \"No recent documents found.\",\n      documents: []\n    }\n  }];\n}\n\nconst docs = results.slice(0, 5).map(doc => ({\n  id: doc.id,\n  title: doc.title,\n  created: doc.created,\n  correspondent: doc.correspondent_name || 'None'\n}));\n\nconst message = results.length === 1\n  ? `Found 1 document: ${results[0].title}`\n  : `Found ${results.length} recent documents. Latest: ${docs.map(d => d.title).join(', ')}`;\n\nreturn [{\n  json: {\n    message,\n    documents: docs,\n    total: results.length\n  }\n}];"
+      },
+      "name": "Format Get Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "id": "format-get-paperless"
+    },
+    {
+      "parameters": {
+        "jsCode": "const doc = $input.item.json;\nconst message = `Updated document ${doc.id}: ${doc.title}. ${doc.correspondent ? 'Correspondent: ' + doc.correspondent : ''}${doc.tags && doc.tags.length > 0 ? ' Tags: ' + doc.tags.join(', ') : ''}`;\n\nreturn [{\n  json: {\n    message,\n    document: {\n      id: doc.id,\n      title: doc.title,\n      correspondent: doc.correspondent || null,\n      tags: doc.tags || [],\n      updated: new Date().toISOString()\n    }\n  }\n}];"
+      },
+      "name": "Format Update Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        400
+      ],
+      "id": "format-update-paperless"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.item.json;\nconst params = $('Parse Parameters').item.json;\n\n// List tags response\nif (params.actionType === 'list') {\n  const tags = response.results || [];\n  \n  if (tags.length === 0) {\n    return [{\n      json: {\n        message: \"No tags found.\",\n        tags: []\n      }\n    }];\n  }\n  \n  const tagList = tags.slice(0, 10).map(t => t.name).join(', ');\n  const message = tags.length === 1\n    ? `Found 1 tag: ${tags[0].name}`\n    : `Found ${tags.length} tags: ${tagList}${tags.length > 10 ? ', and more' : ''}`;\n  \n  return [{\n    json: {\n      message,\n      tags: tags.map(t => ({ id: t.id, name: t.name, count: t.document_count || 0 }))\n    }\n  }];\n}\n\n// Documents by tag response\nconst docs = response.results || [];\n\nif (docs.length === 0) {\n  return [{\n    json: {\n      message: \"No documents found with that tag.\",\n      documents: []\n    }\n  }];\n}\n\nconst docList = docs.slice(0, 5).map(d => d.title).join(', ');\nconst message = docs.length === 1\n  ? `Found 1 document with that tag: ${docs[0].title}`\n  : `Found ${docs.length} documents with that tag. Top results: ${docList}`;\n\nreturn [{\n  json: {\n    message,\n    documents: docs.slice(0, 5).map(d => ({ id: d.id, title: d.title, created: d.created }))\n  }\n}];"
+      },
+      "name": "Format Tags Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        500
+      ],
+      "id": "format-tags-paperless"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.item.json;\nconst params = $('Parse Parameters').item.json;\n\n// List correspondents response\nif (params.actionType === 'list') {\n  const correspondents = response.results || [];\n  \n  if (correspondents.length === 0) {\n    return [{\n      json: {\n        message: \"No correspondents found.\",\n        correspondents: []\n      }\n    }];\n  }\n  \n  const corrList = correspondents.slice(0, 10).map(c => c.name).join(', ');\n  const message = correspondents.length === 1\n    ? `Found 1 correspondent: ${correspondents[0].name}`\n    : `Found ${correspondents.length} correspondents: ${corrList}${correspondents.length > 10 ? ', and more' : ''}`;\n  \n  return [{\n    json: {\n      message,\n      correspondents: correspondents.map(c => ({ id: c.id, name: c.name, count: c.document_count || 0 }))\n    }\n  }];\n}\n\n// Documents by correspondent response\nconst docs = response.results || [];\n\nif (docs.length === 0) {\n  return [{\n    json: {\n      message: \"No documents found from that correspondent.\",\n      documents: []\n    }\n  }];\n}\n\nconst docList = docs.slice(0, 5).map(d => d.title).join(', ');\nconst message = docs.length === 1\n  ? `Found 1 document from that correspondent: ${docs[0].title}`\n  : `Found ${docs.length} documents from that correspondent. Top results: ${docList}`;\n\nreturn [{\n  json: {\n    message,\n    documents: docs.slice(0, 5).map(d => ({ id: d.id, title: d.title, created: d.created }))\n  }\n}];"
+      },
+      "name": "Format Correspondents Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        600
+      ],
+      "id": "format-correspondents-paperless"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.item.json;\nconst params = $('Parse Parameters').item.json;\n\n// List document types response\nif (params.actionType === 'list') {\n  const types = response.results || [];\n  \n  if (types.length === 0) {\n    return [{\n      json: {\n        message: \"No document types found.\",\n        types: []\n      }\n    }];\n  }\n  \n  const typeList = types.slice(0, 10).map(t => t.name).join(', ');\n  const message = types.length === 1\n    ? `Found 1 document type: ${types[0].name}`\n    : `Found ${types.length} document types: ${typeList}${types.length > 10 ? ', and more' : ''}`;\n  \n  return [{\n    json: {\n      message,\n      types: types.map(t => ({ id: t.id, name: t.name, count: t.document_count || 0 }))\n    }\n  }];\n}\n\n// Documents by type response\nconst docs = response.results || [];\n\nif (docs.length === 0) {\n  return [{\n    json: {\n      message: \"No documents found of that type.\",\n      documents: []\n    }\n  }];\n}\n\nconst docList = docs.slice(0, 5).map(d => d.title).join(', ');\nconst message = docs.length === 1\n  ? `Found 1 document of that type: ${docs[0].title}`\n  : `Found ${docs.length} documents of that type. Top results: ${docList}`;\n\nreturn [{\n  json: {\n    message,\n    documents: docs.slice(0, 5).map(d => ({ id: d.id, title: d.title, created: d.created }))\n  }\n}];"
+      },
+      "name": "Format Types Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        700
+      ],
+      "id": "format-types-paperless"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        400
+      ],
+      "id": "respond-paperless"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Parameters": {
+      "main": [
+        [
+          {
+            "node": "Route Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Action": {
+      "main": [
+        [
+          {
+            "node": "Search Documents",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Documents",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Document",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Tags",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Correspondents",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Types",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Documents": {
+      "main": [
+        [
+          {
+            "node": "Format Search Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Documents": {
+      "main": [
+        [
+          {
+            "node": "Format Get Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Document": {
+      "main": [
+        [
+          {
+            "node": "Format Update Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Tags": {
+      "main": [
+        [
+          {
+            "node": "Format Tags Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Correspondents": {
+      "main": [
+        [
+          {
+            "node": "Format Correspondents Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Types": {
+      "main": [
+        [
+          {
+            "node": "Format Types Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Search Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Get Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Update Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Tags Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Correspondents Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Types Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "availableInMCP": true
+  }
+}

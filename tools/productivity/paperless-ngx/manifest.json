@@ -1,0 +1,56 @@
+{
+  "id": "paperless-ngx-suite",
+  "name": "paperless-ngx",
+  "friendlyName": "Paperless-ngx",
+  "version": "1.0.0",
+  "description": "Manage documents, search archives, and update metadata in Paperless-ngx document management system.",
+  "category": "productivity",
+  "toolSuite": true,
+  "actions": [
+    "search",
+    "get",
+    "update",
+    "tags",
+    "correspondents",
+    "types"
+  ],
+  "icon": "paperless.svg",
+  "voice_triggers": [
+    "Search paperless for tax documents",
+    "Show me recent documents in paperless",
+    "Get document 123 from paperless",
+    "Update document 456 with tag invoice",
+    "List all tags in paperless",
+    "Show documents from correspondent John Doe"
+  ],
+  "required_services": [
+    "paperless-ngx"
+  ],
+  "required_credentials": [
+    {
+      "credential_type": "httpHeaderAuth",
+      "name": "paperless_api",
+      "description": "Paperless-ngx API Token (Header Auth with 'Authorization: Token YOUR_API_KEY')"
+    }
+  ],
+  "required_variables": [
+    {
+      "name": "PAPERLESS_URL",
+      "description": "Your Paperless-ngx instance URL (e.g., http://192.168.1.100:8000)",
+      "example": "http://192.168.1.100:8000"
+    }
+  ],
+  "author": {
+    "github": "cmac86"
+  },
+  "tier": "coreworxlab",
+  "tags": [
+    "productivity",
+    "documents",
+    "archive",
+    "paperless"
+  ],
+  "dependencies": [],
+  "created": "2026-02-09",
+  "updated": "2026-02-09"
+}

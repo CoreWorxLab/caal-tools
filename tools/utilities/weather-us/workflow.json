@@ -1,0 +1,664 @@
+{
+  "name": "weather_us",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "weather_us",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "weather-webhook-001",
+      "name": "Webhook",
+      "webhookId": "weather-webhook-002",
+      "notes": "Weather tool - forecast and current conditions for US locations.\nUses NOAA Weather.gov official data.\n\nParameters:\n- action (required): 'forecast' or 'current'\n- location (required): US city name with state (e.g., 'Chicago Illinois', 'Austin Texas', 'Portland Oregon')\n- days (optional, default 3): number of days ahead to forecast (1-7). Use for queries like 'tomorrow' (days=1), 'next 5 days' (days=5), 'next week' (days=7). DO NOT use when user asks for a specific weekday.\n- target_day (optional): specific weekday name like 'Monday', 'Tuesday', etc. Use ONLY when user asks for weather 'on Friday' or 'this Saturday'. DO NOT use with 'tomorrow' or 'next week' - use days parameter instead.\n\nExamples: 'Chicago weather' (default 3 days), 'Austin forecast' (3 days), 'Portland tomorrow' (use days=1), 'next week Seattle' (use days=7), 'weather in Boston on Wednesday' (use target_day='Wednesday')"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const body = $input.item.json.body || $input.item.json;\n\nconst action = (body.action || 'forecast').toLowerCase();\nconst rawLocation = (body.location || '').toString().trim();\nconst days = Math.min(Math.max(parseInt(body.days) || 3, 1), 7);\nconst target_day = body.target_day ? body.target_day.toString().trim() : null;\n\nif (!rawLocation) {\n  throw new Error('Location is required. Please provide a US city and state.');\n}\n\n// Normalize location: replace commas with spaces\nconst normalizedLocation = rawLocation.replace(/,/g, ' ').replace(/\\s+/g, ' ').trim();\n\n// Parse city and state from location string\nconst parts = normalizedLocation.split(' ');\nlet city = '';\nlet state = '';\n\n// Try to find state (last 1-2 words if they match state patterns)\nif (parts.length >= 2) {\n  const lastWord = parts[parts.length - 1];\n  // Check if last word is a state abbreviation or name\n  if (lastWord.length === 2 || lastWord.length > 4) {\n    state = lastWord;\n    city = parts.slice(0, -1).join(' ');\n  } else {\n    city = parts.join(' ');\n  }\n} else {\n  city = normalizedLocation;\n}\n\n// Build Nominatim URL with structured query (more reliable)\nlet geocodeUrl;\nif (state) {\n  geocodeUrl = `https://nominatim.openstreetmap.org/search?city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}&country=USA&format=json&limit=1`;\n} else {\n  geocodeUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(normalizedLocation)}&countrycodes=us&format=json&limit=1`;\n}\n\nreturn {\n  action,\n  location: normalizedLocation,\n  days,\n  target_day,\n  geocodeUrl\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "id": "weather-prepare-001",
+      "name": "Prepare Input"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.geocodeUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "n8n-weather-workflow/1.0 (CAAL Voice Assistant)"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        440,
+        0
+      ],
+      "id": "weather-geocode-001",
+      "name": "Geocode Location",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const geocodeData = $input.item.json;\nconst params = $('Prepare Input').item.json;\n\n// Handle Nominatim response - can be array or single object (n8n unwraps single items)\nlet result;\nif (Array.isArray(geocodeData)) {\n  if (geocodeData.length === 0) {\n    return {\n      error: true,\n      message: `Sorry, I couldn't find \"${params.location}\". Try including the full state name like \"Chicago Illinois\".`\n    };\n  }\n  result = geocodeData[0];\n} else if (geocodeData && geocodeData.lat && geocodeData.lon) {\n  // Single object (n8n unwrapped the array)\n  result = geocodeData;\n} else {\n  return {\n    error: true,\n    message: `Sorry, I couldn't find \"${params.location}\". Try including the full state name like \"Chicago Illinois\".`\n  };\n}\n\nconst lat = parseFloat(result.lat);\nconst lon = parseFloat(result.lon);\n\nif (isNaN(lat) || isNaN(lon)) {\n  return {\n    error: true,\n    message: `Sorry, invalid coordinates for \"${params.location}\".`\n  };\n}\n\n// Extract city and state from display_name or parsed location\nconst displayName = result.display_name || params.location;\nconst parts = displayName.split(',').map(p => p.trim());\n\nlet city = parts[0] || 'Unknown';\nlet state = '';\n\n// Look for state abbreviation in display_name parts\nfor (const part of parts) {\n  if (part.length === 2 && /^[A-Z]{2}$/.test(part)) {\n    state = part;\n    break;\n  }\n}\n\n// If no state found, try to use the second-to-last part\nif (!state && parts.length >= 2) {\n  state = parts[parts.length - 2] || '';\n}\n\n// Round to 4 decimal places\nconst roundedLat = Math.round(lat * 10000) / 10000;\nconst roundedLon = Math.round(lon * 10000) / 10000;\n\nreturn {\n  error: false,\n  latitude: roundedLat,\n  longitude: roundedLon,\n  city,\n  state,\n  displayName,\n  pointsUrl: `https://api.weather.gov/points/${roundedLat},${roundedLon}`,\n  action: params.action,\n  days: params.days,\n  target_day: params.target_day\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "id": "weather-parse-geocode-001",
+      "name": "Parse Geocode"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "error-check-001",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        880,
+        0
+      ],
+      "id": "weather-if-error-001",
+      "name": "If Error"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.pointsUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/geo+json"
+            },
+            {
+              "name": "User-Agent",
+              "value": "n8n-weather-workflow/1.0 (CAAL Voice Assistant)"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1100,
+        160
+      ],
+      "id": "weather-points-001",
+      "name": "Get Weather Points",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const pointsData = $input.item.json;\nconst geocodeData = $('Parse Geocode').item.json;\n\nif (!pointsData.properties) {\n  return {\n    error: true,\n    message: `Sorry, weather data is not available for this location.`\n  };\n}\n\nconst properties = pointsData.properties || {};\nconst forecastUrl = properties.forecast || '';\nconst forecastHourlyUrl = properties.forecastHourly || '';\nconst observationStations = properties.observationStations || '';\n\nif (!forecastUrl) {\n  return {\n    error: true,\n    message: `Sorry, no forecast available for ${geocodeData.city}.`\n  };\n}\n\nreturn {\n  error: false,\n  city: geocodeData.city,\n  state: geocodeData.state,\n  latitude: geocodeData.latitude,\n  longitude: geocodeData.longitude,\n  forecastUrl,\n  forecastHourlyUrl,\n  observationStations,\n  action: geocodeData.action,\n  days: geocodeData.days,\n  target_day: geocodeData.target_day\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        160
+      ],
+      "id": "weather-extract-points-001",
+      "name": "Extract Points Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "error-check-002",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1540,
+        160
+      ],
+      "id": "weather-if-error-002",
+      "name": "If Error2"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "forecast",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "action-switch-001"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "forecast"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "action-switch-002",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "current",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "current"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1760,
+        320
+      ],
+      "id": "weather-switch-001",
+      "name": "Switch Action"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.forecastUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/geo+json"
+            },
+            {
+              "name": "User-Agent",
+              "value": "n8n-weather-workflow/1.0 (CAAL Voice Assistant)"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1980,
+        176
+      ],
+      "id": "weather-get-forecast-001",
+      "name": "Get Forecast",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.observationStations }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/geo+json"
+            },
+            {
+              "name": "User-Agent",
+              "value": "n8n-weather-workflow/1.0 (CAAL Voice Assistant)"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1980,
+        464
+      ],
+      "id": "weather-get-stations-001",
+      "name": "Get Observation Stations",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const forecastData = $input.item.json;\nconst pointsData = $('Extract Points Data').item.json;\n\nif (!forecastData.properties || !forecastData.properties.periods) {\n  return {\n    error: true,\n    message: `Sorry, no forecast data available for ${pointsData.city}.`\n  };\n}\n\nconst periods = forecastData.properties.periods || [];\nif (periods.length === 0) {\n  return {\n    error: true,\n    message: `Sorry, no forecast periods available for ${pointsData.city}.`\n  };\n}\n\nlet filteredPeriods = periods;\n\n// If target_day specified, filter to matching periods\nif (pointsData.target_day) {\n  const target = pointsData.target_day.toLowerCase();\n  filteredPeriods = periods.filter(p => {\n    const name = (p.name || '').toLowerCase();\n    return name.includes(target);\n  });\n  if (filteredPeriods.length === 0) {\n    return {\n      error: true,\n      message: `Sorry, I couldn't find a forecast for ${pointsData.target_day} in ${pointsData.city}.`\n    };\n  }\n} else {\n  // Get daytime periods or first period if it's Tonight\n  const dayPeriods = [];\n  for (let i = 0; i < periods.length; i++) {\n    const p = periods[i];\n    const name = (p.name || '').toLowerCase();\n    if (i === 0 && name.includes('tonight')) {\n      dayPeriods.push(p);\n    } else if (p.isDaytime || i === 0) {\n      dayPeriods.push(p);\n    }\n    if (dayPeriods.length >= pointsData.days) break;\n  }\n  filteredPeriods = dayPeriods;\n}\n\n// Format periods for voice output\nconst voiceParts = filteredPeriods.map(p => {\n  const name = p.name || 'Unknown';\n  const temp = p.temperature || 'unknown';\n  const forecast = p.shortForecast || 'no details';\n  const wind = p.windSpeed || '';\n  \n  let part = `${name}: ${forecast}, ${temp} degrees`;\n  if (wind && !wind.toLowerCase().includes('calm') && wind !== '0 mph') {\n    part += `, wind ${wind}`;\n  }\n  return part;\n});\n\nconst locationStr = pointsData.state ? `${pointsData.city}, ${pointsData.state}` : pointsData.city;\nconst message = `${locationStr}. ${voiceParts.join('. ')}.`;\n\nreturn {\n  error: false,\n  message,\n  location: pointsData.city,\n  state: pointsData.state,\n  forecasts: filteredPeriods.map(p => ({\n    name: p.name,\n    temperature: p.temperature,\n    temperatureUnit: p.temperatureUnit || 'F',\n    shortForecast: p.shortForecast,\n    detailedForecast: p.detailedForecast,\n    windSpeed: p.windSpeed,\n    windDirection: p.windDirection,\n    isDaytime: p.isDaytime\n  }))\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        176
+      ],
+      "id": "weather-format-forecast-001",
+      "name": "Format Forecast"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const stationsData = $input.item.json;\nconst pointsData = $('Extract Points Data').item.json;\n\nif (!stationsData.features || stationsData.features.length === 0) {\n  return {\n    error: true,\n    message: `Sorry, no observation stations found for ${pointsData.city}.`\n  };\n}\n\n// Get first station\nconst stationId = stationsData.features[0].properties.stationIdentifier;\nconst observationUrl = `https://api.weather.gov/stations/${stationId}/observations/latest`;\n\nreturn {\n  stationId,\n  observationUrl,\n  city: pointsData.city,\n  state: pointsData.state\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        464
+      ],
+      "id": "weather-extract-station-001",
+      "name": "Extract Station"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.observationUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/geo+json"
+            },
+            {
+              "name": "User-Agent",
+              "value": "n8n-weather-workflow/1.0 (CAAL Voice Assistant)"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2420,
+        464
+      ],
+      "id": "weather-get-observation-001",
+      "name": "Get Current Observation",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const obsData = $input.item.json;\nconst stationData = $('Extract Station').item.json;\n\nif (!obsData.properties) {\n  return {\n    error: true,\n    message: `Sorry, no current weather data available for ${stationData.city}.`\n  };\n}\n\nconst props = obsData.properties;\n\n// Convert Celsius to Fahrenheit\nconst tempC = props.temperature?.value;\nconst tempF = tempC != null ? Math.round((tempC * 9/5) + 32) : null;\n\nconst condition = props.textDescription || 'conditions not reported';\nconst windSpeedKmh = props.windSpeed?.value;\nconst windSpeedMph = windSpeedKmh != null ? Math.round(windSpeedKmh * 0.621371) : null;\nconst windDir = props.windDirection?.value;\nconst humidity = props.relativeHumidity?.value;\n\nif (tempF == null) {\n  return {\n    error: true,\n    message: `Sorry, current temperature not available for ${stationData.city}.`\n  };\n}\n\nconst locationStr = stationData.state ? `${stationData.city}, ${stationData.state}` : stationData.city;\n\nlet parts = [`Currently ${tempF} degrees in ${locationStr}, ${condition.toLowerCase()}`];\n\nif (windSpeedMph != null && windSpeedMph > 0 && windDir != null) {\n  const windDirDeg = Math.round(windDir);\n  const directions = ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'];\n  const dirIndex = Math.round(windDirDeg / 45) % 8;\n  const windDirName = directions[dirIndex];\n  parts.push(`wind ${windDirName} at ${windSpeedMph} mph`);\n}\n\nif (humidity != null) {\n  parts.push(`humidity ${Math.round(humidity)} percent`);\n}\n\nreturn {\n  error: false,\n  message: parts.join(', ') + '.',\n  location: stationData.city,\n  state: stationData.state,\n  current: {\n    temp: tempF,\n    tempUnit: 'F',\n    condition,\n    windSpeed: windSpeedMph,\n    windDirection: windDir,\n    humidity: humidity ? Math.round(humidity) : null\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        464
+      ],
+      "id": "weather-format-current-001",
+      "name": "Format Current"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const action = $('Extract Points Data').item.json?.action || 'unknown';\n\nreturn {\n  error: true,\n  message: `Sorry, I don't know how to handle \"${action}\" requests yet.`\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        656
+      ],
+      "id": "weather-format-error-001",
+      "name": "Format Unknown Action"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2860,
+        320
+      ],
+      "id": "weather-respond-001",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** weather-us\n**Description:** Gets weather forecasts and current conditions for US cities using NOAA Weather.gov official data.\n**version:** v1.0.0\n**id:** weather_us_noaa_v1\n**link:** TBD - Register at https://github.com/CoreWorxLab/caal-tools\n\n### How it works\n1. Receives city/state location name\n2. Geocodes location to lat/lon\n3. Calls weather.gov /points API\n4. Retrieves forecast or current conditions\n5. Returns brief voice-friendly response\n\n### (Do not delete this sticky)",
+        "height": 320,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -784,
+        -288
+      ],
+      "typeVersion": 1,
+      "id": "weather-note-001",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Input": {
+      "main": [
+        [
+          {
+            "node": "Geocode Location",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geocode Location": {
+      "main": [
+        [
+          {
+            "node": "Parse Geocode",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Geocode": {
+      "main": [
+        [
+          {
+            "node": "If Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Weather Points",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Weather Points": {
+      "main": [
+        [
+          {
+            "node": "Extract Points Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Points Data": {
+      "main": [
+        [
+          {
+            "node": "If Error2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error2": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Switch Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Action": {
+      "main": [
+        [
+          {
+            "node": "Get Forecast",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Observation Stations",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Unknown Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Forecast": {
+      "main": [
+        [
+          {
+            "node": "Format Forecast",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Observation Stations": {
+      "main": [
+        [
+          {
+            "node": "Extract Station",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Forecast": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Station": {
+      "main": [
+        [
+          {
+            "node": "Get Current Observation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Current Observation": {
+      "main": [
+        [
+          {
+            "node": "Format Current",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Current": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Unknown Action": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}

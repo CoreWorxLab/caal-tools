@@ -1,0 +1,62 @@
+{
+  "id": "weather_us_noaa_v1_2026",
+  "name": "weather-us",
+  "friendlyName": "Weather USA",
+  "version": "1.0.0",
+  "description": "Gets weather forecasts and current conditions for US cities using NOAA Weather.gov official data. Supports voice queries with automatic location geocoding via OpenStreetMap Nominatim.",
+  "category": "utilities",
+  "toolSuite": true,
+  "actions": [
+    "forecast",
+    "current"
+  ],
+  "icon": "us-weather-icon.svg",
+  "voice_triggers": [
+    "What's the weather in Chicago?",
+    "Austin forecast for next week",
+    "What's the current weather in Seattle?",
+    "Portland weather tomorrow",
+    "Miami forecast for Wednesday"
+  ],
+  "required_services": [
+    {
+      "name": "NOAA Weather.gov API",
+      "type": "external",
+      "cost": "free",
+      "auth": "none"
+    },
+    {
+      "name": "OpenStreetMap Nominatim",
+      "type": "external",
+      "cost": "free",
+      "auth": "none"
+    }
+  ],
+  "required_credentials": [],
+  "required_variables": [],
+  "author": {
+    "github": "shad"
+  },
+  "tier": "community",
+  "tags": [
+    "weather",
+    "utilities",
+    "us",
+    "noaa",
+    "forecast",
+    "geocoding",
+    "voice"
+  ],
+  "dependencies": [],
+  "features": [
+    "Multi-day forecasts (1-7 days)",
+    "Current weather conditions",
+    "Automatic location geocoding",
+    "Voice-optimized responses",
+    "Supports multiple location formats",
+    "No API keys required"
+  ],
+  "coverage": "Continental United States",
+  "created": "2026-02-09",
+  "updated": "2026-02-09"
+}

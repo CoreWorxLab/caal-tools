@@ -1,0 +1,130 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="circleClip">
+      <circle cx="256" cy="256" r="240"/>
+    </clipPath>
+
+    <!-- Star symbol -->
+    <symbol id="star" viewBox="0 0 100 100">
+      <polygon points="
+        50,5
+        61,38
+        95,38
+        67,58
+        78,91
+        50,71
+        22,91
+        33,58
+        5,38
+        39,38"/>
+    </symbol>
+  </defs>
+
+  <!-- Outer Base -->
+  <circle cx="256" cy="256" r="240" fill="#0A3161"/>
+
+  <!-- Flag Background -->
+  <g clip-path="url(#circleClip)" opacity="0.5">
+    <rect width="512" height="512" fill="#FFFFFF"/>
+
+    <!-- Red Stripes -->
+    <g fill="#B31942">
+      <rect y="0" width="512" height="40"/>
+      <rect y="80" width="512" height="40"/>
+      <rect y="160" width="512" height="40"/>
+      <rect y="240" width="512" height="40"/>
+      <rect y="320" width="512" height="40"/>
+      <rect y="400" width="512" height="40"/>
+    </g>
+
+    <!-- Blue Canton -->
+    <rect x="0" y="0" width="260" height="220" fill="#0A3161"/>
+
+    <!-- Stars (dense + edge-filled) -->
+    <g fill="#FFFFFF">
+      <!-- rows with 7 stars -->
+      <use href="#star" x="4"   y="6"   width="28" height="28"/>
+      <use href="#star" x="40"  y="6"   width="28" height="28"/>
+      <use href="#star" x="76"  y="6"   width="28" height="28"/>
+      <use href="#star" x="112" y="6"   width="28" height="28"/>
+      <use href="#star" x="148" y="6"   width="28" height="28"/>
+      <use href="#star" x="184" y="6"   width="28" height="28"/>
+      <use href="#star" x="220" y="6"   width="28" height="28"/>
+
+      <use href="#star" x="4"   y="70"  width="28" height="28"/>
+      <use href="#star" x="40"  y="70"  width="28" height="28"/>
+      <use href="#star" x="76"  y="70"  width="28" height="28"/>
+      <use href="#star" x="112" y="70"  width="28" height="28"/>
+      <use href="#star" x="148" y="70"  width="28" height="28"/>
+      <use href="#star" x="184" y="70"  width="28" height="28"/>
+      <use href="#star" x="220" y="70"  width="28" height="28"/>
+
+      <use href="#star" x="4"   y="134" width="28" height="28"/>
+      <use href="#star" x="40"  y="134" width="28" height="28"/>
+      <use href="#star" x="76"  y="134" width="28" height="28"/>
+      <use href="#star" x="112" y="134" width="28" height="28"/>
+      <use href="#star" x="148" y="134" width="28" height="28"/>
+      <use href="#star" x="184" y="134" width="28" height="28"/>
+      <use href="#star" x="220" y="134" width="28" height="28"/>
+
+      <!-- offset rows with 6 stars -->
+      <use href="#star" x="22"  y="38"  width="28" height="28"/>
+      <use href="#star" x="58"  y="38"  width="28" height="28"/>
+      <use href="#star" x="94"  y="38"  width="28" height="28"/>
+      <use href="#star" x="130" y="38"  width="28" height="28"/>
+      <use href="#star" x="166" y="38"  width="28" height="28"/>
+      <use href="#star" x="202" y="38"  width="28" height="28"/>
+
+      <use href="#star" x="22"  y="102" width="28" height="28"/>
+      <use href="#star" x="58"  y="102" width="28" height="28"/>
+      <use href="#star" x="94"  y="102" width="28" height="28"/>
+      <use href="#star" x="130" y="102" width="28" height="28"/>
+      <use href="#star" x="166" y="102" width="28" height="28"/>
+      <use href="#star" x="202" y="102" width="28" height="28"/>
+
+      <use href="#star" x="22"  y="166" width="28" height="28"/>
+      <use href="#star" x="58"  y="166" width="28" height="28"/>
+      <use href="#star" x="94"  y="166" width="28" height="28"/>
+      <use href="#star" x="130" y="166" width="28" height="28"/>
+      <use href="#star" x="166" y="166" width="28" height="28"/>
+      <use href="#star" x="202" y="166" width="28" height="28"/>
+    </g>
+  </g>
+
+  <!-- Sun -->
+  <circle cx="330" cy="195" r="65"
+          fill="#FFD700"
+          stroke="#0A3161"
+          stroke-width="4"/>
+
+  <!-- Cloud -->
+  <path d="
+    M155 310
+    C155 265, 205 240, 245 260
+    C265 220, 335 230, 350 270
+    C395 270, 415 310, 385 340
+    H175
+    C145 340, 130 320, 155 310 Z"
+    fill="#FFFFFF"
+    stroke="#0A3161"
+    stroke-width="4"/>
+
+  <!-- Lightning -->
+  <polygon points="
+    265,340
+    230,420
+    275,420
+    235,480
+    320,385
+    275,385
+    305,340"
+    fill="#FFD700"
+    stroke="#0A3161"
+    stroke-width="4"/>
+
+  <!-- Outer Ring -->
+  <circle cx="256" cy="256" r="240"
+          fill="none"
+          stroke="#FFFFFF"
+          stroke-width="10"/>
+</svg>
