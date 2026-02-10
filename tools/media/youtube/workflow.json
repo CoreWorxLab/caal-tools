@@ -1,0 +1,2211 @@
+{
+  "name": "youtube",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "youtube",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2016,
+        1248
+      ],
+      "id": "ed0da91e-96e1-45f9-af85-d7463e18b16e",
+      "name": "Webhook",
+      "webhookId": "3b763628-574f-4449-acd1-24210103dfe3",
+      "notes": "# YouTube API Automation Tool\n\n## REQUIRED (always include):\n  **action** (string) \u2014 must be exactly one of: `search`, `get`, `subscribe`, `unsubscribe`, `rate`. Do not invent other values.\n\n---\n\n## SEARCH OPERATIONS\n\n**action: \"search\"**\n\nSearch operations return basic information only (IDs, titles, channel names). For detailed statistics, use `get` operations afterward.\n\n  **operation: \"channel_by_query\"**\n    query (string, required) \u2014 free-text search for channels (e.g. \"pewdiepie\", \"mr beast\")\n    \n    Returns: channel ID, title, thumbnail. Does NOT include subscriber count or statistics.\n    \n    WHEN TO USE: When asked to find a channel by name or description. Examples: \"Find PewDiePie's channel\", \"Search for cooking channels\"\n\n  **operation: \"videos_by_query\"**\n    query (string, required) \u2014 free-text search for videos\n    maxResults (number, optional) \u2014 1-10 results, default: 5\n    \n    Returns: video IDs, titles, channel names. Does NOT include view counts, like counts, or detailed stats.\n    \n    WHEN TO USE: When asked to find videos by topic or keyword. Examples: \"Search for Python tutorials\", \"Find cat videos\"\n\n  **operation: \"playlists_by_query\"**\n    query (string, required) \u2014 free-text search for playlists\n    maxResults (number, optional) \u2014 1-10 results, default: 5\n    \n    Returns: playlist IDs, titles, channel names. Does NOT include video counts or statistics.\n    \n    WHEN TO USE: When asked to find playlists by topic. Examples: \"Find workout playlists\", \"Search for study music playlists\"\n\n  **operation: \"my_videos\"**\n    maxResults (number, optional) \u2014 1-10 results, default: 5\n    \n    Returns: your uploaded video IDs and titles. Does NOT include view counts or engagement stats.\n    \n    WHEN TO USE: When asked about the user's own uploaded videos. Examples: \"Show my videos\", \"What have I uploaded?\"\n\n---\n\n## GET OPERATIONS\n\n**action: \"get\"**\n\nGet operations return comprehensive details including all statistics (subscribers, views, likes, comments, etc.), descriptions, thumbnails, profile pictures, verification status, and connection info.\n\n  **operation: \"channel_by_id\"**\n    channel_id (string, required) \u2014 the YouTube channel ID\n    \n    Returns: full channel profile including subscriber count, video count, view count, description, thumbnails, handle, custom URL, verification status\n    \n    WHEN TO USE: When you have a channel ID and need detailed statistics. Examples: \"How many subscribers does this channel have?\", \"Is this channel verified?\"\n\n  **operation: \"channel_by_handle\"**\n    handle (string, required) \u2014 the channel handle WITHOUT the @ symbol (e.g. \"pewdiepie\" not \"@pewdiepie\")\n    \n    Returns: full channel profile with all statistics\n    \n    WHEN TO USE: When you know the exact channel handle. Examples: \"Get details for @MrBeast\", \"How many subscribers does @mkbhd have?\"\n\n  **operation: \"my_channel\"**\n    (no other fields needed)\n    \n    Returns: the authenticated user's own channel profile with all statistics\n    \n    WHEN TO USE: When asked about the user's own channel. Examples: \"How many subscribers do I have?\", \"What's my channel description?\"\n\n  **operation: \"video_by_id\"**\n    video_id (string, required) \u2014 the YouTube video ID\n    \n    Returns: comprehensive video details including view count, like count, comment count, description, thumbnails, duration, upload date, tags, category\n    \n    WHEN TO USE: When you have a video ID and need detailed statistics or metadata. Examples: \"How many views does this video have?\", \"What's the like/dislike ratio?\", \"When was this uploaded?\"\n\n  **operation: \"video_rating\"**\n    video_id (string, required) \u2014 the YouTube video ID\n    \n    Returns: your current rating on the video (like/dislike/none)\n    \n    WHEN TO USE: When asked if the user has liked or rated a specific video. Examples: \"Did I like this video?\", \"Have I rated this?\"\n\n  **operation: \"most_recent_video\"**\n    channel_id (string, required) \u2014 the YouTube channel ID\n    \n    Returns: the channel's latest uploaded video with full details and statistics\n    \n    WHEN TO USE: When asked about a channel's most recent upload. Examples: \"What's PewDiePie's latest video?\", \"Show the newest video from this channel\"\n\n  **operation: \"top_comments\"**\n    video_id (string, required) \u2014 the YouTube video ID\n    maxResults (number, optional) \u2014 1-10 results, default: 5\n    \n    Returns: top comments with author names, text, like counts, reply counts, publish dates\n    \n    WHEN TO USE: When asked about popular or top comments on a video. Examples: \"What are the top comments?\", \"Show me the most liked comments\"\n\n  **operation: \"most_recent_comments\"**\n    video_id (string, required) \u2014 the YouTube video ID\n    maxResults (number, optional) \u2014 1-10 results, default: 2\n    \n    Returns: most recent comments with author names, text, like counts, reply counts, publish dates\n    \n    WHEN TO USE: When asked about recent or new comments. Examples: \"What are people saying recently?\", \"Show me the latest comments\"\n\n  **operation: \"subscription_by_channel_id\"**\n    channel_id (string, required) \u2014 the YouTube channel ID\n    \n    Returns: subscription details including subscription ID, subscribe date, channel info. Returns null if not subscribed.\n    \n    WHEN TO USE: When checking if the user is subscribed to a specific channel. Examples: \"Am I subscribed to MrBeast?\", \"Do I follow this channel?\"\n\n  **operation: \"my_subscriptions\"**\n    maxResults (number, optional) \u2014 1-50 results, default: 5\n    \n    Returns: list of channels you're subscribed to with channel IDs, titles, thumbnails\n    \n    WHEN TO USE: When asked about the user's subscriptions. Examples: \"Who am I subscribed to?\", \"Show my subscriptions\"\n\n---\n\n## SUBSCRIPTION MANAGEMENT\n\n**action: \"subscribe\"**\n  channel_id (string, required) \u2014 the YouTube channel ID to subscribe to\n  \n  (operation field not required)\n  \n  WHEN TO USE: When asked to subscribe to a channel. Examples: \"Subscribe to PewDiePie\", \"Follow this channel\"\n\n**action: \"unsubscribe\"**\n  channel_id (string, required) \u2014 the YouTube channel ID to unsubscribe from\n  \n  (operation field not required)\n  \n  Note: Internally retrieves subscription_id from channel_id before unsubscribing\n  \n  WHEN TO USE: When asked to unsubscribe from a channel. Examples: \"Unsubscribe from this channel\", \"Unfollow MrBeast\"\n\n---\n\n## VIDEO RATING\n\n**action: \"rate\"**\n  video_id (string, required) \u2014 the YouTube video ID to rate\n  rating (string, optional) \u2014 must be exactly `like`, `dislike`, or `none`. Default: `none`\n  \n  (operation field not required)\n  \n  WHEN TO USE: When asked to like, dislike, or remove rating from a video. Examples: \"Like this video\", \"Dislike this video\", \"Remove my rating\"\n\n---\n\n## RULES:\n  - All IDs are strings. Always wrap them in quotes, never send as numbers.\n  - **channel_id** is always a YouTube channel ID (e.g. \"UCX6OQ3DkcsbYNE6H8uQQuVA\"). Never a handle, never a channel name.\n  - **video_id** is always a YouTube video ID (e.g. \"dQw4w9WgXcQ\"). Never a URL, never video title.\n  - **handle** must NOT include the @ symbol (use \"pewdiepie\" not \"@pewdiepie\").\n  - Only include fields that are listed for the operation you chose. Do not send extra fields.\n  - If you do not have a required ID, do NOT guess or fabricate one. Use search first to retrieve it, then use the returned ID in a follow-up request.\n  - **CRITICAL**: Search operations return minimal info. Always follow up with get operations when statistics are needed.\n\n---\n\n## TOOL CHAINING EXAMPLES:\n\n  **Q: \"Subscribe to PewDiePie\"**\n  \u2192 Step 1: Use search with operation: \"channel_by_query\", query: \"pewdiepie\"\n  \u2192 Step 2: Use subscribe with the returned channel_id\n\n  **Q: \"How many subscribers does MrBeast have?\"**\n  \u2192 Step 1: Use search with operation: \"channel_by_query\", query: \"mrbeast\"\n  \u2192 Step 2: Use get with operation: \"channel_by_id\" and the returned channel_id\n\n  **Q: \"Am I subscribed to MKBHD?\"**\n  \u2192 Step 1: Use get with operation: \"channel_by_handle\", handle: \"mkbhd\"\n  \u2192 Step 2: Use get with operation: \"subscription_by_channel_id\" and the returned channel_id\n\n  **Q: \"Like the latest video from Veritasium\"**\n  \u2192 Step 1: Use search with operation: \"channel_by_query\", query: \"veritasium\"\n  \u2192 Step 2: Use get with operation: \"most_recent_video\" and the returned channel_id\n  \u2192 Step 3: Use rate with the returned video_id and rating: \"like\"\n\n  **Q: \"How many views does PewDiePie's latest video have?\"**\n  \u2192 Step 1: Use search with operation: \"channel_by_query\", query: \"pewdiepie\"\n  \u2192 Step 2: Use get with operation: \"most_recent_video\" and the returned channel_id\n  \u2192 (statistics are included in most_recent_video response)\n\n  **Q: \"Search for Python tutorials and like the most popular one\"**\n  \u2192 Step 1: Use search with operation: \"videos_by_query\", query: \"python tutorial\"\n  \u2192 Step 2: Use get with operation: \"video_by_id\" for each result to get view counts\n  \u2192 Step 3: Use rate with the highest-viewed video_id and rating: \"like\"\n\n  **Q: \"Show me my subscriber count\"**\n  \u2192 Use get with operation: \"my_channel\"\n\n  **Q: \"What are the top comments on video dQw4w9WgXcQ?\"**\n  \u2192 Use get with operation: \"top_comments\", video_id: \"dQw4w9WgXcQ\"\n\n  **Q: \"Unsubscribe from all channels with less than 1000 subscribers\"**\n  \u2192 Step 1: Use get with operation: \"my_subscriptions\", maxResults: 50\n  \u2192 Step 2: Use get with operation: \"channel_by_id\" for each channel_id to get subscriber counts\n  \u2192 Step 3: Use unsubscribe for each channel_id below threshold"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.googleapis.com/youtube/v3/videos/rate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "youTubeOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ $json.video_id }}"
+            },
+            {
+              "name": "rating",
+              "value": "={{ $json.rating }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        3152
+      ],
+      "id": "a614e3b5-107e-4dde-b30c-997b74135147",
+      "name": "Rate Video",
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": null,
+          "name": "${YOUTUBEOAUTH2API_CREDENTIAL}"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/videos/getRating",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "youTubeOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "Z8kjiKSIVTo"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        1904
+      ],
+      "id": "8b46940f-db58-415d-972a-e829d7fa22cc",
+      "name": "Get Video Rating",
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": null,
+          "name": "${YOUTUBEOAUTH2API_CREDENTIAL}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "video",
+        "limit": 1,
+        "filters": {
+          "channelId": "={{ $json.channel_id }}"
+        },
+        "options": {
+          "order": "date"
+        }
+      },
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [
+        -896,
+        2048
+      ],
+      "id": "a3d2418e-34b0-4d70-86a5-265c077fa49e",
+      "name": "Get Recent Video",
+      "alwaysOutputData": true,
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": null,
+          "name": "${YOUTUBEOAUTH2API_CREDENTIAL}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/commentThreads",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "youTubeOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "videoId",
+              "value": "={{ $json.video_id }}"
+            },
+            {
+              "name": "part",
+              "value": "snippet"
+            },
+            {
+              "name": "maxResults",
+              "value": "={{ $json.maxResults }}"
+            },
+            {
+              "name": "order",
+              "value": "relevance"
+            },
+            {
+              "name": "textFormat",
+              "value": "plainText"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        1040
+      ],
+      "id": "c09c4007-4c16-44c1-b818-39c7b4a311d4",
+      "name": "Get Top Comments",
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": null,
+          "name": "${YOUTUBEOAUTH2API_CREDENTIAL}"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/commentThreads",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "youTubeOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "videoId",
+              "value": "Z8kjiKSIVTo"
+            },
+            {
+              "name": "part",
+              "value": "snippet"
+            },
+            {
+              "name": "maxResults",
+              "value": "3"
+            },
+            {
+              "name": "textFormat",
+              "value": "plainText"
+            },
+            {
+              "name": "order",
+              "value": "time"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        768
+      ],
+      "id": "c41a0c6b-9289-451b-ab08-2e2914f709f9",
+      "name": "Get Most Recent Comments",
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": null,
+          "name": "${YOUTUBEOAUTH2API_CREDENTIAL}"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/channels",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "youTubeOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "part",
+              "value": "snippet,statistics"
+            },
+            {
+              "name": "forHandle",
+              "value": "={{ $json.handle }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -896,
+        1568
+      ],
+      "id": "01a92c58-547a-4b09-b68e-cb7650ad240f",
+      "name": "Get Channel by Handle",
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": null,
+          "name": "${YOUTUBEOAUTH2API_CREDENTIAL}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/search",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "youTubeOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "part",
+              "value": "snippet"
+            },
+            {
+              "name": "maxResults",
+              "value": "1"
+            },
+            {
+              "name": "type",
+              "value": "channel"
+            },
+            {
+              "name": "q",
+              "value": "={{ $json.query }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "8309bdc1-5ffa-488a-a388-6746c92f3b4b",
+      "name": "Search Channel by Query",
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": null,
+          "name": "${YOUTUBEOAUTH2API_CREDENTIAL}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/channels",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "youTubeOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "part",
+              "value": "snippet,statistics"
+            },
+            {
+              "name": "id",
+              "value": "={{ $json.channel_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -896,
+        1200
+      ],
+      "id": "2731a09a-8625-43c6-b4ee-4bd1d4feea56",
+      "name": "Get Channel by ID",
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": null,
+          "name": "${YOUTUBEOAUTH2API_CREDENTIAL}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/channels",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "youTubeOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "part",
+              "value": "snippet,statistics"
+            },
+            {
+              "name": "mine",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -896,
+        1760
+      ],
+      "id": "65cb3e74-69af-4220-b242-ed658181606d",
+      "name": "Get my Channel",
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": null,
+          "name": "${YOUTUBEOAUTH2API_CREDENTIAL}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/videos",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "youTubeOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "part",
+              "value": "snippet,statistics"
+            },
+            {
+              "name": "id",
+              "value": "={{ $json.video_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -448,
+        2112
+      ],
+      "id": "c4d70fc2-7356-4aeb-b710-31009f42aa10",
+      "name": "Get Video by ID",
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": null,
+          "name": "${YOUTUBEOAUTH2API_CREDENTIAL}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/search",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "youTubeOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "part",
+              "value": "snippet"
+            },
+            {
+              "name": "maxResults",
+              "value": "={{ $json.maxResults }}"
+            },
+            {
+              "name": "type",
+              "value": "video"
+            },
+            {
+              "name": "q",
+              "value": "={{ $json.query }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        192
+      ],
+      "id": "d4384146-3d31-46b3-b65f-17859599fd8f",
+      "name": "Search Videos by Query",
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": null,
+          "name": "${YOUTUBEOAUTH2API_CREDENTIAL}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/search",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "youTubeOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "part",
+              "value": "snippet"
+            },
+            {
+              "name": "maxResults",
+              "value": "={{ $json.maxResults }}"
+            },
+            {
+              "name": "type",
+              "value": "playlist"
+            },
+            {
+              "name": "q",
+              "value": "={{ $json.query }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        384
+      ],
+      "id": "b2bb8bff-0b2f-4d99-a187-21beac23cc29",
+      "name": "Search Playlists by Query",
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": null,
+          "name": "${YOUTUBEOAUTH2API_CREDENTIAL}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/search",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "youTubeOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "part",
+              "value": "snippet"
+            },
+            {
+              "name": "maxResults",
+              "value": "={{ $json.maxResults }}"
+            },
+            {
+              "name": "type",
+              "value": "video"
+            },
+            {
+              "name": "forMine",
+              "value": "true"
+            },
+            {
+              "name": "order",
+              "value": "date"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        576
+      ],
+      "id": "5d3efebb-2cef-4eb3-9e29-40732e3318af",
+      "name": "Search my Videos",
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": null,
+          "name": "${YOUTUBEOAUTH2API_CREDENTIAL}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// YouTube Webhook Input Validation\nconst body = $input.item.json.body || {};\n\n// Required fields\nconst action = body.action;\nlet operation = body.operation;\n\n// Validation errors array\nconst errors = [];\n\n// Validate action exists\nif (!action) {\n  errors.push(\"Missing required field: 'action'\");\n}\n\n// Validate action is one of the allowed values\nconst validActions = ['search', 'get', 'subscribe', 'unsubscribe', 'rate'];\nif (action && !validActions.includes(action)) {\n  errors.push(`Invalid action: '${action}'. Must be one of: ${validActions.join(', ')}`);\n}\n\n// Auto-correct: operations for single-operation actions\nif (action === 'rate' && !operation) {\n  operation = 'video';\n}\nif (action === 'subscribe' && !operation) {\n  operation = 'channel';\n}\nif (action === 'unsubscribe' && !operation) {\n  operation = 'channel';\n}\n\n// Validate operation exists for actions that require it\nconst actionsRequiringOperation = ['search', 'get'];\nif (actionsRequiringOperation.includes(action) && !operation) {\n  errors.push(\"Missing required field: 'operation'\");\n}\n\n// maxResults validation, clamping, and defaults\nlet maxResults = body.maxResults;\nconst operationsWithMaxResults = {\n  'videos_by_query': { min: 1, max: 10, default: 5 },\n  'playlists_by_query': { min: 1, max: 10, default: 5 },\n  'my_videos': { min: 1, max: 10, default: 5 },\n  'top_comments': { min: 1, max: 10, default: 5 },\n  'most_recent_comments': { min: 1, max: 10, default: 2 },\n  'my_subscriptions': { min: 1, max: 50, default: 5 }\n};\n\nif (operation && operationsWithMaxResults[operation]) {\n  const config = operationsWithMaxResults[operation];\n  if (maxResults !== undefined) {\n    // Validate and clamp maxResults\n    maxResults = parseInt(maxResults);\n    if (isNaN(maxResults)) {\n      // If invalid number, use default\n      maxResults = config.default;\n    } else {\n      // Clamp to operation-specific range\n      maxResults = Math.max(config.min, Math.min(config.max, maxResults));\n    }\n  } else {\n    // Set default if not provided\n    maxResults = config.default;\n  }\n}\n\n// Operation-specific validation\nif (action === 'search') {\n  const validSearchOps = ['channel_by_query', 'videos_by_query', 'playlists_by_query', 'my_videos'];\n  if (!validSearchOps.includes(operation)) {\n    errors.push(`Invalid search operation: '${operation}'. Must be one of: ${validSearchOps.join(', ')}`);\n  }\n  \n  // Query required for most search operations\n  if (['channel_by_query', 'videos_by_query', 'playlists_by_query'].includes(operation) && !body.query) {\n    errors.push(`Missing required field 'query' for operation '${operation}'`);\n  }\n}\n\nif (action === 'get') {\n  const validGetOps = ['channel_by_id', 'channel_by_handle', 'my_channel', 'video_by_id', 'video_rating', 'most_recent_video', 'top_comments', 'most_recent_comments', 'subscription_by_channel_id', 'my_subscriptions'];\n  if (!validGetOps.includes(operation)) {\n    errors.push(`Invalid get operation: '${operation}'. Must be one of: ${validGetOps.join(', ')}`);\n  }\n  \n  // ID/handle validation for specific operations\n  if (operation === 'channel_by_id' && !body.channel_id) {\n    errors.push(\"Missing required field 'channel_id' for operation 'channel_by_id'\");\n  }\n  if (operation === 'channel_by_handle' && !body.handle) {\n    errors.push(\"Missing required field 'handle' for operation 'channel_by_handle'\");\n  }\n  if (['video_by_id', 'video_rating'].includes(operation) && !body.video_id) {\n    errors.push(`Missing required field 'video_id' for operation '${operation}'`);\n  }\n  if (operation === 'most_recent_video' && !body.channel_id) {\n    errors.push(\"Missing required field 'channel_id' for operation 'most_recent_video'\");\n  }\n  if (['top_comments', 'most_recent_comments'].includes(operation) && !body.video_id) {\n    errors.push(`Missing required field 'video_id' for operation '${operation}'`);\n  }\n  if (operation === 'subscription_by_channel_id' && !body.channel_id) {\n    errors.push(\"Missing required field 'channel_id' for operation 'subscription_by_channel_id'\");\n  }\n}\n\nif (action === 'subscribe') {\n  if (!body.channel_id) {\n    errors.push(\"Missing required field 'channel_id' for subscribe action\");\n  }\n}\n\nif (action === 'unsubscribe') {\n  if (!body.channel_id) {\n    errors.push(\"Missing required field 'channel_id' for unsubscribe action\");\n  }\n}\n\nif (action === 'rate') {\n  if (!body.video_id) {\n    errors.push(\"Missing required field 'video_id' for rate action\");\n  }\n  \n  // Auto-correct: default rating to 'none' if missing\n  let rating = body.rating;\n  if (!rating) {\n    rating = 'none';\n  }\n  \n  // Validate rating value\n  if (!['like', 'dislike', 'none'].includes(rating)) {\n    errors.push(\"Field 'rating' must be one of: like, dislike, none\");\n  }\n}\n\n// If there are errors, return them in a structured way\nif (errors.length > 0) {\n  return {\n    json: {\n      error: true,\n      message: 'I could not complete that request as your input is invalid.',\n      details: errors\n    }\n  };\n}\n\n// If validation passes, return the body with action and operation for routing\nconst validatedData = {\n  error: false,\n  action: action,\n  operation: operation,\n  ...body\n};\n\n// Add corrected/clamped maxResults to output if it was set\nif (maxResults !== undefined) {\n  if (operation === \"most_recent_comments\") {\n    maxResults = Number(maxResults) + 1;\n  }\n  validatedData.maxResults = maxResults;\n}\n\n// Add default rating to output for rate operations if it was missing\nif (action === 'rate' && !body.rating) {\n  validatedData.rating = 'none';\n}\n\nreturn {\n  json: validatedData\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1792,
+        1248
+      ],
+      "id": "28f85a1d-a976-4fb9-80f1-570a8c014176",
+      "name": "Validate Input"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d923320d-320e-4eff-988b-79cd7dbb4f09",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1568,
+        1248
+      ],
+      "id": "a5a07fe5-f998-475b-970c-cead5da16954",
+      "name": "Check Errors"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.googleapis.com/youtube/v3/subscriptions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "youTubeOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "part",
+              "value": "snippet"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"snippet\": {\n    \"resourceId\": {\n      \"channelId\": \"{{ $json.channel_id }}\"\n    }\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        2816
+      ],
+      "id": "1bb54a37-4396-4c9e-9e43-de97642b15d5",
+      "name": "Subscribe to Channel",
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": null,
+          "name": "${YOUTUBEOAUTH2API_CREDENTIAL}"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "https://www.googleapis.com/youtube/v3/subscriptions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "youTubeOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ $json.subscription_id }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        2624
+      ],
+      "id": "48bd72e1-94d1-412b-be70-88186db1a77d",
+      "name": "Unsubscribe from Channel",
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": null,
+          "name": "${YOUTUBEOAUTH2API_CREDENTIAL}"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/subscriptions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "youTubeOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "forChannelId",
+              "value": "={{ $json.channel_id }}"
+            },
+            {
+              "name": "part",
+              "value": "snippet,id"
+            },
+            {
+              "name": "mine",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -896,
+        2480
+      ],
+      "id": "f363df0e-2cbf-4b3a-9e64-9186f11a5d09",
+      "name": "Get Subscription by Channel ID",
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": null,
+          "name": "${YOUTUBEOAUTH2API_CREDENTIAL}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/subscriptions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "youTubeOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "maxResults",
+              "value": "={{ $json.maxResults }}"
+            },
+            {
+              "name": "part",
+              "value": "snippet"
+            },
+            {
+              "name": "mine",
+              "value": "true"
+            },
+            {
+              "name": "order",
+              "value": "relevance"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        1424
+      ],
+      "id": "af2167e1-e6ba-4a84-8f25-d9eff3bade45",
+      "name": "Get my Subscriptions",
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": null,
+          "name": "${YOUTUBEOAUTH2API_CREDENTIAL}"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "search",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "27d9629e-ce25-4d06-a8b5-251ff479a210"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "search"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "4b7facef-dd6d-40ec-8ffd-1bfb15fec1b3",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "get",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "get"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "f63f8e11-0428-436c-a0f0-05fd8164c55b",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "subscribe",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "subscribe"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "01a12277-7e04-412d-a843-fbae2344f046",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "unsubscribe",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "unsubscribe"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "0348d5de-773d-4a9a-9445-2920ba89cb84",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "rate",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "rate"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -1344,
+        2624
+      ],
+      "id": "873b6bac-ff0f-4f99-b5b6-ae5054b94ad5",
+      "name": "Action Switch"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "channel_by_query",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "68a5cb6b-7497-4267-8475-192bc3111dd0"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "channel_by_query"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "66644842-b7e5-4f8e-aeb5-e7d738bb00d8",
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "videos_by_query",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "videos_by_query"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "66565673-9d5a-4974-9cf2-c3f9dbebb6a1",
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "playlists_by_query",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "playlists_by_query"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "3c07ee1e-2cf8-4ee1-9279-79e983fe60a7",
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "my_videos",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "my_videos"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -224,
+        208
+      ],
+      "id": "43d12903-b9d3-4a1c-b4b2-795bf3bcebf8",
+      "name": "Search Switch"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "channel_by_id",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "e1210c18-872c-409c-9c45-2966d0130427"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "channel_by_id"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "a5403f3f-5cdf-48f5-8d23-a03b91ed0507",
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "channel_by_handle",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "channel_by_handle"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "03ee0c1d-5c91-48d5-abb1-769b07bae467",
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "my_channel",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "my_channel"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "91233876-5860-4383-ae84-1e4e86bf036a",
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "video_by_id",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "video_by_id"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "55a6ed10-d500-4b13-9b9a-bfdd42328214",
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "video_rating",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "video_rating"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "e7956bb7-a581-4e11-a3a5-a18a225b1d63",
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "most_recent_video",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "most_recent_video"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "ab547556-9f86-4d16-9a0c-95791d3ad1c3",
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "top_comments",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "top_comments"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "cc9cd5b3-0ede-48b0-a9d3-817737a186bd",
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "most_recent_comments",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "most_recent_comments"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "10f6a9f4-efe0-41e6-8803-9c5e28d50bb4",
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "subscription_by_channel_id",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "subscription_by_channel_id"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "36f0f33b-bc82-472a-8044-039d4809f662",
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "my_subscriptions",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "my_subscriptions"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -1120,
+        1536
+      ],
+      "id": "a5db0491-f06e-4206-9a2d-834684cce24e",
+      "name": "Get Switch"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d6115a63-9c86-4a12-a762-ea46aef759d9",
+              "leftValue": "={{ $('Validate Input').item.json.action }}",
+              "rightValue": "unsubscribe",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -224,
+        2544
+      ],
+      "id": "39eb3c53-bdec-49bd-a2a5-c53d07e947b7",
+      "name": "Is unsubscribe"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const data = $input.item.json;\n\n// Normalize subscription object\nlet sub = null;\n\nif (Array.isArray(data.items)) {\n  if (data.items.length === 0) {\n    // No subscription found (already unsubscribed, race condition, etc.)\n    return {\n      message: \"You are currently not subscribed to the specified channel.\",\n      subscription_id: null,\n      channel_name: null,\n      channel_id: $('Validate Input').item.json.channel_id,\n      error: true\n    };\n  }\n  sub = data.items[0];\n} else if (data?.id) {\n  sub = data;\n}\n\n// Final safety check\nif (!sub) {\n  return {\n    message: \"You are currently not subscribed to the specified channel.\",\n    subscription_id: null,\n    channel_name: null,\n    channel_id: $('Validate Input').item.json.channel_id,\n    error: true\n  };\n}\n\nreturn {\n  message: `You are subscribed to ${$json.items[0].snippet.title}. I've retrieved the subscription ID.`,\n  subscription_id: sub.id,\n  channel_name: sub.snippet?.title ?? null,\n  channel_id: $('Validate Input').item.json.channel_id,\n  error: false\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -672,
+        2480
+      ],
+      "id": "83de9f37-3a54-4461-8b35-ce47b70cf142",
+      "name": "Format Subscription"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7c844a50-6324-483f-9d84-78f413abcc26",
+              "leftValue": "={{ $json.subscription_id }}",
+              "rightValue": "=null",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -448,
+        2480
+      ],
+      "id": "053d685d-5c26-44f0-84c8-bbf1eec24ccb",
+      "name": "Does subscription exist"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const data = $input.item.json;\n\nconst channel_name = data.snippet?.title;\n\nconst message = \"I've subscribed to \" + channel_name;\n\nreturn {\n  message,\n  subscription_id: data.id ?? null,\n  channel_name,\n  channel_id: $('Validate Input').item.json.channel_id,\n  error: false\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        2832
+      ],
+      "id": "68a35a67-9265-48a8-affe-0097b0e6535d",
+      "name": "Format New Subscription"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        448,
+        1632
+      ],
+      "id": "ae8f17bf-b30b-4717-b178-6c9d0779f12c",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return {\n  message: `Alright, I've unsubscribed from ${$('Format Subscription').item.json.channel_name}.`,\n  error: false\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        2640
+      ],
+      "id": "ff692707-facb-4223-b950-3ceabd33b6f1",
+      "name": "Format Unsubscription"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return {\n  message: $json.error.message,\n  error: true\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        3216
+      ],
+      "id": "f5ce2237-d23d-42cc-b0d8-f7b8beab2106",
+      "name": "Rate Error"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const rating = $('Validate Input').item.json.rating\n\nlet message;\nif (rating === \"like\") {\n  message = \"Alright, I've liked the video.\"\n} else if (rating === \"dislike\") {\n  message = \"Alright, I've disliked the video.\"\n} else {\n  message = \"Alright, I've removed any existing like or dislike from the video.\"\n}\n\nreturn {\n  message,\n  error: false\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        3024
+      ],
+      "id": "66fbd25f-e9d3-4bd5-9794-c950aeafcee5",
+      "name": "Format Rate"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const operation = $(\"Validate Input\").item.json.operation;\n\nif ($json.pageInfo.totalResults === 0) {\n  return {\n    error: true,\n    message: `Sorry, I could not find any channels using the given ${\n      operation === \"channel_by_handle\" ? \"handle\" : \"channel ID\"\n    }.`\n  };\n}\n\nconst createdAt = new Date($json.items[0].snippet.publishedAt);\nconst creation_date = createdAt.toLocaleDateString('en-GB', {\n  day: 'numeric',\n  month: 'long',\n  year: 'numeric'\n});\n\nfunction formatCount(n) {\n  if (n >= 1_000_000_000) return `${Math.round(n / 1_000_000_000)} billion`;\n  if (n >= 1_000_000) return `${Math.round(n / 1_000_000)} million`;\n  if (n >= 1_000) return `${Math.round(n / 1_000)} thousand`;\n  return `${Math.round(n)}`;\n}\n\nconst channel_name = $json.items[0].snippet.title;\nconst channel_id = $json.items[0].id;\nconst handle = $json.items[0].snippet.customUrl;\nconst profile_pic_url = $json.items[0].snippet.thumbnails.high.url;\nconst total_views = formatCount($json.items[0].statistics.viewCount);\nconst subscribers = formatCount($json.items[0].statistics.subscriberCount);\nconst total_videos = formatCount($json.items[0].statistics.videoCount);\n\nconst message =\n  `${channel_name} was created on ${creation_date}, ` +\n  `and has ${subscribers} subscribers and ` +\n  `${total_videos} videos ` +\n  `with over ${total_views} total views.`;\n\n\nreturn {\n  message,\n  channel_name,\n  channel_id,\n  handle,\n  creation_date,\n  profile_pic_url,\n  total_views,\n  subscribers,\n  total_videos,\n  error: false\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -672,
+        1200
+      ],
+      "id": "2668b137-ad2f-43d7-a4ea-47ea9e4896df",
+      "name": "Format Get Channel"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "if ($json.pageInfo.totalResults === 0) {\n  return {\n    error: true,\n    message: \"Sorry, I could not find any videos by the given video ID\"\n  };\n}\n\nconst publishedAt = new Date($json.items[0].snippet.publishedAt);\nconst publish_date = publishedAt.toLocaleDateString('en-GB', {\n  day: 'numeric',\n  month: 'long',\n  year: 'numeric'\n});\n\nconst video_title = $json.items[0].snippet.title;\nconst video_id = $json.items[0].id;\nconst description = $json.items[0].snippet.description;\nconst channel_name = $json.items[0].snippet.channelTitle;\nconst channel_id = $json.items[0].snippet.channelId;\nconst thumbnail = $json.items[0].snippet.thumbnails.maxres.url;\nconst views = $json.items[0].statistics.viewCount;\nconst likes = $json.items[0].statistics.likeCount;\nconst dislikes = $json.items[0].statistics.dislikeCount;\nconst comments = $json.items[0].statistics.commentCount;\n\nconst operation = $('Validate Input').item.json.operation;\nconst message =\n  operation === 'most_recent_video'\n    ? `The most recent video by ${channel_name} is titled \"${video_title}\", ` +\n      `published on ${publish_date}. It has ${views} views, ${likes} likes, ` +\n      `${dislikes} dislikes, and ${comments} comments.`\n    : `The video titled \"${video_title}\" by ${channel_name} was published on ` +\n      `${publish_date}. It has ${views} views, ${likes} likes, ` +\n      `${dislikes} dislikes, and ${comments} comments.`;\n\n\nreturn {\n  message,\n  video_title,\n  video_id,\n  description,\n  channel_name,\n  channel_id,\n  publish_date,\n  thumbnail,\n  views,\n  likes,\n  dislikes,\n  comments,\n  error: false\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        2112
+      ],
+      "id": "d96e9e40-45a8-43c1-a6f6-de7966855524",
+      "name": "Format Get Video by ID"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Empty response (e.g. invalid video ID)\nif (Object.keys($json.items).length === 0) {\n  return {\n    error: true,\n    message: \"Sorry, I couldn\u2019t find a rating for that video. The video ID may be invalid.\"\n  };\n}\n\nconst data = $json.items[0];\n\nlet message;\nswitch (data.rating) {\n  case \"like\":\n    message = \"This video has been liked.\";\n    break;\n  case \"dislike\":\n    message = \"This video has been disliked.\";\n    break;\n  case \"none\":\n    message = \"This video has not been rated yet.\";\n    break;\n  default:\n    message = \"Sorry, I couldn\u2019t determine the rating for this video.\";\n}\n\nreturn {\n  message,\n  error: false,\n  rating: data.rating,\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        1904
+      ],
+      "id": "8327721c-9a17-4533-ab45-586b7b3958f0",
+      "name": "Format Get Video Rating"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return {\n  video_id: $json.id.videoId\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -672,
+        2048
+      ],
+      "id": "9664c057-9f48-48d1-9d26-2d4d764f75fd",
+      "name": "Forward to Get Video by ID"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Empty response\nif ($json.pageInfo.totalResults === 0) {\n  return {\n    error: false,\n    message: \"You are not subscribed to any channels.\"\n  };\n}\n\n// Extract channel names and IDs\nconst channels = $json.items.map(item => ({\n  channel_name: item.snippet.title,\n  channel_id: item.snippet.resourceId.channelId\n}));\n\nconst total_subscriptions = $json.pageInfo.totalResults;\n\n// Voice-friendly message with ONLY channel names\nconst channelNames = channels.map(c => c.channel_name);\n\nconst message =\n  channelNames.length === 1\n    ? `You are subscribed to ${total_subscriptions} channels, including ${channelNames[0]}.`\n    : `You are subscribed to ${total_subscriptions} channels, including ${channelNames.slice(0, -1).join(\", \")}, and ${channelNames.at(-1)}.`;\n\nreturn {\n  message,\n  total_subscriptions,\n  channels,\n  error: false,\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        1344
+      ],
+      "id": "21711514-e604-4f5e-a022-79b06cd3f01c",
+      "name": "Format Get Subscriptions"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const operation = $(\"Validate Input\").item.json.operation;\n\n// Early exit: no comments\nif ($json.pageInfo.totalResults === 0) {\n  return {\n    error: false,\n    message: \"This video has no comments yet.\"\n  };\n}\n\n// Helper to parse ISO date and format for voice\nfunction parseISODate(iso) {\n  return new Date(iso);\n}\n\nfunction toVoiceFriendlyDate(date) {\n  return date.toLocaleDateString(\"en-GB\", {\n    day: \"numeric\",\n    month: \"long\",\n    year: \"numeric\"\n  });\n}\n\n// Map all comments with parsed date\nconst rawComments = $json.items.map(item => {\n  const snippet = item.snippet.topLevelComment.snippet;\n  const publishedDate = parseISODate(snippet.publishedAt);\n\n  return {\n    author: snippet.authorDisplayName,\n    text: snippet.textDisplay,\n    comment_id: item.id,\n    likes: snippet.likeCount,\n    replies: snippet.totalReplyCount,\n    published_at: publishedDate,\n    published_date_voice: toVoiceFriendlyDate(publishedDate)\n  };\n});\n\nlet selectedComments;\n\nif (operation === \"most_recent_comment\") {\n  // Sort by datetime descending, pick all returned (could be 1+)\n  selectedComments = rawComments.sort((a, b) => b.published_at - a.published_at);\n} else {\n  // top_comments: keep original order\n  selectedComments = rawComments;\n}\n\n// Construct voice-friendly message including text\nlet message;\nif (selectedComments.length === 0) {\n  message = \"No comments available to read.\";\n} else {\n  const parts = selectedComments.map(c => \n    `${c.author} said on ${c.published_date_voice}: \"${c.text}\"`\n  );\n  message = operation === \"most_recent_comment\"\n    ? `Here are the most recent comments: ${parts.join(\", \")}`\n    : `Here are the top comments: ${parts.join(\", \")}`;\n}\n\nreturn {\n  error: false,\n  message,\n  comments: selectedComments\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        848
+      ],
+      "id": "1d5e4e19-20a3-49da-b5a5-223bdf01ec85",
+      "name": "Format Get Comments"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return {\n  message: $json.error.message,\n  description: $json.error.description,\n  error: true\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        1056
+      ],
+      "id": "79398177-ade2-452a-a6cd-e1500f518a10",
+      "name": "Generic YouTube API Error"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Early exit: no results\nif ($json.pageInfo.totalResults === 0) {\n  return {\n    error: true,\n    message: \"I couldn't find any results for this query.\"\n  };\n}\n\nconst createdAt = new Date($json.items[0].snippet.publishedAt);\nconst creation_date = createdAt.toLocaleDateString('en-GB', {\n  day: 'numeric',\n  month: 'long',\n  year: 'numeric'\n});\n\nreturn {\n  message: `I found a channel named ${$json.items[0].snippet.title}.`,\n  channel_id: $json.items[0].id.channelId,\n  creation_date,\n  error: false\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "b7a5d2ee-289b-4e47-9170-18ed2f496f0a",
+      "name": "Format Search Channel"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Early exit: no results\nif ($json.pageInfo.totalResults === 0) {\n  return {\n    error: true,\n    message: \"I couldn't find any results for this query.\"\n  };\n}\n\n// Helper to parse ISO date and format for voice\nfunction parseISODate(iso) {\n  return new Date(iso);\n}\n\nfunction toVoiceFriendlyDate(date) {\n  return date.toLocaleDateString(\"en-GB\", {\n    day: \"numeric\",\n    month: \"long\",\n    year: \"numeric\"\n  });\n}\n\n// Map over all search items\nconst videos = $json.items.map(item => {\n  const snippet = item.snippet;\n  const publishedDate = parseISODate(snippet.publishedAt);\n\n  return {\n    video_title: snippet.title,\n    video_id: item.id.videoId,\n    publish_date: toVoiceFriendlyDate(publishedDate),\n    channel_name: snippet.channelTitle,\n    channel_id: snippet.channelId\n  };\n});\n\n// Voice-friendly message including only title + channel\nconst messageParts = videos.map(v => `\"${v.video_title}\" by ${v.channel_name}`);\nconst message =\n  messageParts.length === 1\n    ? `I found a video called ${messageParts[0]}.`\n    : `I found ${videos.length} videos: ${messageParts.join(\", \")}.`;\n\n// Return everything\nreturn {\n  message,\n  videos,\n  error: false\n};\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        224
+      ],
+      "id": "ce567dac-4dfb-416d-915d-b7db7afc8b00",
+      "name": "Format Search Videos"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Early exit: no results\nif ($json.pageInfo.totalResults === 0) {\n  return {\n    error: true,\n    message: \"I couldn't find any results for this query.\"\n  };\n}\n\n// Helper to parse ISO date and format for voice\nfunction parseISODate(iso) {\n  return new Date(iso);\n}\n\nfunction toVoiceFriendlyDate(date) {\n  return date.toLocaleDateString(\"en-GB\", {\n    day: \"numeric\",\n    month: \"long\",\n    year: \"numeric\"\n  });\n}\n\n// Map over all search items\nconst playlists = $json.items.map(item => {\n  const snippet = item.snippet;\n  const publishedDate = parseISODate(snippet.publishedAt);\n\n  return {\n    playlist_title: snippet.title,\n    playlist_id: item.id.playlistId,\n    publish_date: toVoiceFriendlyDate(publishedDate),\n    channel_name: snippet.channelTitle,\n    channel_id: snippet.channelId\n  };\n});\n\n// Voice-friendly message including only title + channel\nconst messageParts = playlists.map(v => `\"${v.playlist_title}\" by ${v.channel_name}`);\nconst message =\n  messageParts.length === 1\n    ? `I found a playlist called ${messageParts[0]}.`\n    : `I found ${playlists.length} playlists: ${messageParts.join(\", \")}.`;\n\n// Return everything\nreturn {\n  message,\n  playlists,\n  error: false\n};\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        416
+      ],
+      "id": "d18dd68c-1dfe-4ec5-9acc-87984b8eeddf",
+      "name": "Format Search Playlists"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** youtube\n**Description:** Manage YouTube with comprehensive search, channel/video information retrieval, subscription management, and video rating capabilities.\n**version:** v1.0.0\n**id:** ymrWW0bBJCq_d-KSgbJFlw\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/media/youtube)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -784,
+        -288
+      ],
+      "typeVersion": 1,
+      "id": "1e3ed095-afc0-40db-81ed-9a49ab5849c0",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Check Errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Errors": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Action Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Action Switch": {
+      "main": [
+        [
+          {
+            "node": "Search Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Subscribe to Channel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Subscription by Channel ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Rate Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Subscription by Channel ID": {
+      "main": [
+        [
+          {
+            "node": "Format Subscription",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is unsubscribe": {
+      "main": [
+        [
+          {
+            "node": "Unsubscribe from Channel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Subscription": {
+      "main": [
+        [
+          {
+            "node": "Does subscription exist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Subscribe to Channel": {
+      "main": [
+        [
+          {
+            "node": "Format New Subscription",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generic YouTube API Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Does subscription exist": {
+      "main": [
+        [
+          {
+            "node": "Is unsubscribe",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format New Subscription": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unsubscribe from Channel": {
+      "main": [
+        [
+          {
+            "node": "Format Unsubscription",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generic YouTube API Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Unsubscription": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate Video": {
+      "main": [
+        [
+          {
+            "node": "Format Rate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Rate Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Rate": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Switch": {
+      "main": [
+        [
+          {
+            "node": "Get Channel by ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Channel by Handle",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get my Channel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Video by ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Video Rating",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Recent Video",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Top Comments",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Most Recent Comments",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Subscription by Channel ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get my Subscriptions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Channel by Handle": {
+      "main": [
+        [
+          {
+            "node": "Format Get Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Channel by ID": {
+      "main": [
+        [
+          {
+            "node": "Format Get Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get my Channel": {
+      "main": [
+        [
+          {
+            "node": "Format Get Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Get Channel": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Recent Video": {
+      "main": [
+        [
+          {
+            "node": "Forward to Get Video by ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Video by ID": {
+      "main": [
+        [
+          {
+            "node": "Format Get Video by ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Get Video by ID": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Video Rating": {
+      "main": [
+        [
+          {
+            "node": "Format Get Video Rating",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Forward to Get Video by ID": {
+      "main": [
+        [
+          {
+            "node": "Get Video by ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Get Video Rating": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get my Subscriptions": {
+      "main": [
+        [
+          {
+            "node": "Format Get Subscriptions",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generic YouTube API Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Get Subscriptions": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Top Comments": {
+      "main": [
+        [
+          {
+            "node": "Format Get Comments",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generic YouTube API Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generic YouTube API Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Most Recent Comments": {
+      "main": [
+        [
+          {
+            "node": "Format Get Comments",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generic YouTube API Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Get Comments": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Switch": {
+      "main": [
+        [
+          {
+            "node": "Search Channel by Query",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Search Videos by Query",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Search Playlists by Query",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Search my Videos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Channel by Query": {
+      "main": [
+        [
+          {
+            "node": "Format Search Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Search Channel": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Videos by Query": {
+      "main": [
+        [
+          {
+            "node": "Format Search Videos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Search Videos": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Playlists by Query": {
+      "main": [
+        [
+          {
+            "node": "Format Search Playlists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Search Playlists": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search my Videos": {
+      "main": [
+        [
+          {
+            "node": "Format Search Videos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}

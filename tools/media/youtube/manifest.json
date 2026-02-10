@@ -1,0 +1,43 @@
+{
+  "id": "ymrWW0bBJCq_d-KSgbJFlw",
+  "name": "youtube",
+  "friendlyName": "YouTube",
+  "version": "1.0.0",
+  "description": "Manage YouTube with comprehensive search, channel/video information retrieval, subscription management, and video rating capabilities.",
+  "category": "media",
+  "toolSuite": true,
+  "actions": [
+    "search",
+    "get",
+    "subscribe",
+    "unsubscribe",
+    "rate"
+  ],
+  "icon": "youtube.svg",
+  "voice_triggers": [
+    "Search for Python tutorials on YouTube",
+    "How many subscribers does MrBeast have?"
+  ],
+  "required_services": [
+    "youtube"
+  ],
+  "required_credentials": [
+    {
+      "credential_type": "youTubeOAuth2Api",
+      "name": "YOUTUBEOAUTH2API_CREDENTIAL",
+      "description": "n8n credential type: youTubeOAuth2Api"
+    }
+  ],
+  "required_variables": [],
+  "author": {
+    "github": "AbdulShahzeb"
+  },
+  "tier": "community",
+  "tags": [
+    "media",
+    "youtube"
+  ],
+  "dependencies": [],
+  "created": "2026-02-09",
+  "updated": "2026-02-09"
+}
