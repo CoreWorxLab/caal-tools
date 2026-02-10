@@ -2,13 +2,6 @@
 
 Community-driven voice tools for [CAAL](https://github.com/CoreWorxLab/caal) - the voice assistant that actually does things. Part of the [CAAL Tool API](https://github.com/CoreWorxLab/caal/wiki/CAAL-Tool-API).
 
----
-
-> **🚧 Under Active Development**
-> This registry is under active development. Core functionality works, but not all bugs have been worked out. Expect rough edges. Contributions and bug reports welcome!
-
----
-
 ## What is this?
 
 This registry contains **voice-first n8n workflows** that extend CAAL's capabilities. Unlike generic n8n templates, these are optimized for:
