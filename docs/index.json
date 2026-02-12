@@ -126,6 +126,29 @@
     "updated": "2026-01-26"
   },
   {
+    "id": "hd201lGfOs9FBWjBcP2upw",
+    "name": "flight-tracker",
+    "friendlyName": "Flight Tracker",
+    "version": "1.0.0",
+    "description": "Track real-time flight status, airport departures, and arrivals via AviationStack API.",
+    "category": "utilities",
+    "path": "tools/utilities/flight-tracker",
+    "icon": "airplane-airplane-mode-general-svgrepo-com.svg",
+    "voice_triggers": [
+      "Where is flight QF1?",
+      "What flights are departing from Sydney?",
+      "Is my flight on time?",
+      "Show me flight arrivals today at YVR."
+    ],
+    "required_services": [],
+    "tier": "coreworxlab",
+    "author": "cmac86",
+    "tags": [
+      "utilities"
+    ],
+    "updated": "2026-02-12"
+  },
+  {
     "id": "7FUfsUz1RkqcEdvm_Vglnw",
     "name": "gmail",
     "friendlyName": "Gmail",
