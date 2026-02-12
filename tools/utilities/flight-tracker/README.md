@@ -1,5 +1,3 @@
-Now I'll generate the comprehensive README.md:
-
 # Flight Tracker
 
 Track real-time flight status, airport departures, and arrivals using the AviationStack API. This tool provides live flight information including delays, gates, terminals, and estimated arrival times for any commercial flight worldwide.
