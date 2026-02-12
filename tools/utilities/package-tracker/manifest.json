@@ -1,0 +1,34 @@
+{
+  "id": "G_MQWzXfXW6oW0wI26iDdA",
+  "name": "package-tracker",
+  "friendlyName": "Package Tracker",
+  "version": "1.0.0",
+  "description": "Tracks packages by tracking number with automatic carrier detection across 2000+ carriers worldwide.",
+  "category": "utilities",
+  "toolSuite": false,
+  "actions": [],
+  "icon": "package-delivery-svgrepo-com.svg",
+  "voice_triggers": [
+    "Track my package",
+    "Where is my order"
+  ],
+  "required_services": [],
+  "required_credentials": [
+    {
+      "credential_type": "httpHeaderAuth",
+      "name": "HTTPHEADERAUTH_CREDENTIAL",
+      "description": "n8n credential type: httpHeaderAuth"
+    }
+  ],
+  "required_variables": [],
+  "author": {
+    "github": "cmac86"
+  },
+  "tier": "coreworxlab",
+  "tags": [
+    "utilities"
+  ],
+  "dependencies": [],
+  "created": "2026-02-12",
+  "updated": "2026-02-12"
+}

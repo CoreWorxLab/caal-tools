@@ -1,0 +1,304 @@
+{
+  "name": "package_tracker",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "package_tracker",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -400,
+        608
+      ],
+      "id": "9fb620de-b242-4127-9a58-520be35b2b7a",
+      "name": "Webhook",
+      "webhookId": "package-tracker-webhook-id",
+      "notes": "Package tracking tool - track any package by tracking number with automatic carrier detection. Supports 2000+ carriers worldwide including UPS, FedEx, USPS, DHL, Australia Post, Royal Mail, Canada Post, and more.\n\nParameters:\n- tracking_number (required): the package tracking number. Examples: \"1Z999AA10123456784\" (UPS), \"9400111899223856226452\" (USPS), \"7489999223\" (FedEx)\n\nNo other parameters needed. The carrier is automatically detected from the tracking number.\n\nReturns: current status (delivered, in transit, picked up, etc.), carrier name, latest tracking event with location and time, and recent tracking history.\n\nExamples: 'track my package 1Z999AA10123456784', 'where is my package', 'has my order arrived', 'check tracking number 9400111899223856226452', 'what is the status of my delivery'"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const body = $input.item.json.body || $input.item.json;\n\nconst tracking_number = (body.tracking_number || body.trackingNumber || '').toString().trim();\n\nif (!tracking_number) {\n  return {\n    error: true,\n    message: 'I need a tracking number to look up your package.'\n  };\n}\n\nif (!/^[A-Za-z0-9\\-]{6,50}$/.test(tracking_number)) {\n  return {\n    error: true,\n    message: `\"${tracking_number}\" doesn't look like a valid tracking number.`\n  };\n}\n\nreturn {\n  error: false,\n  tracking_number\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        608
+      ],
+      "id": "85c77baf-d336-4f9b-b986-05391bdb034e",
+      "name": "Validate Input"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "check-validation-error",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        48,
+        608
+      ],
+      "id": "27c505c4-3c64-45a2-8e0e-dcf67bb9753c",
+      "name": "Check Errors"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.17track.net/track/v2.2/register",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify([{number: $('Validate Input').item.json.tracking_number, carrier: 0}]) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        272,
+        608
+      ],
+      "id": "123f624b-a00c-4f9d-bcf2-95df5fe685db",
+      "name": "Register Package",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${HTTPHEADERAUTH_CREDENTIAL}"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.17track.net/track/v2.2/gettrackinfo",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify([{number: $('Validate Input').item.json.tracking_number, carrier: 0}]) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        496,
+        608
+      ],
+      "id": "55827810-3630-450e-9ef1-a023f412389b",
+      "name": "Track Package",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${HTTPHEADERAUTH_CREDENTIAL}"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "try {\n  const data = $input.item.json;\n  const trackingNumber = $('Validate Input').item.json.tracking_number;\n\n  if (data.code !== 0) {\n    return { error: true, message: 'Sorry, the package tracking service returned an error.' };\n  }\n\n  const rejected = data.data?.rejected;\n  if (rejected && rejected.length > 0) {\n    const reason = (rejected[0]?.error?.message || '').toLowerCase();\n    if (reason.includes('no tracking info') || reason.includes('not been tracked') || reason.includes('no tracking information')) {\n      return { error: false, message: `I've registered tracking number ${trackingNumber} but there's no tracking info yet. The carrier may not have scanned it. Try again later.`, tracking: { tracking_number: trackingNumber, status: 'Registered', carrier: 'pending detection', events: [] } };\n    }\n    return { error: true, message: \"Sorry, I couldn't find tracking info for that number. Double-check the tracking number.\" };\n  }\n\n  const accepted = data.data?.accepted;\n  if (!accepted || accepted.length === 0) {\n    return { error: false, message: `I've registered tracking number ${trackingNumber} but there's no tracking info available yet. Try again later.`, tracking: { tracking_number: trackingNumber, status: 'Registered', carrier: 'pending detection', events: [] } };\n  }\n\n  const pkg = accepted[0];\n  const trackInfo = pkg.track_info;\n  const rawStatus = trackInfo?.latest_status?.status || 'Unknown';\n  const latestEvent = trackInfo?.latest_event;\n\n  const providers = trackInfo?.tracking?.providers || [];\n  const mainProvider = providers[0];\n  const events = mainProvider?.events || [];\n\n  const carrierName = mainProvider?.provider?.name || 'your carrier';\n  const localCarrier = trackInfo?.misc_info?.local_provider || null;\n  const destination = trackInfo?.shipping_info?.recipient_address?.country || '';\n\n  const statusMap = {\n    'NotFound': 'not found yet. It may take a day for tracking to appear',\n    'InTransit': 'in transit',\n    'Delivered': 'delivered',\n    'PickedUp': 'picked up',\n    'Expired': 'expired',\n    'Undelivered': 'undeliverable. There may be a delivery issue',\n    'Alert': 'flagged with an alert',\n    'InfoReceived': 'registered. The carrier has the shipment info but hasn\\'t picked it up yet'\n  };\n  const friendlyStatus = statusMap[rawStatus] || rawStatus.toLowerCase();\n\n  let message = `Your ${carrierName} package is ${friendlyStatus}.`;\n\n  if (latestEvent?.description) {\n    message += ` Last update: ${latestEvent.description}`;\n    if (latestEvent.location) message += ` in ${latestEvent.location}`;\n    message += '.';\n  }\n\n  if (localCarrier) {\n    message += ` Local delivery by ${localCarrier}.`;\n  }\n\n  const daysInTransit = trackInfo?.time_metrics?.days_of_transit;\n  if (daysInTransit) {\n    message += ` ${daysInTransit} days in transit.`;\n  }\n\n  if (trackInfo?.time_metrics?.estimated_delivery_date?.from) {\n    message += ` Estimated delivery: ${trackInfo.time_metrics.estimated_delivery_date.from}.`;\n  }\n\n  return {\n    message,\n    tracking: {\n      tracking_number: pkg.number,\n      carrier: carrierName,\n      carrier_code: pkg.carrier,\n      local_carrier: localCarrier,\n      status: rawStatus,\n      destination,\n      days_in_transit: daysInTransit,\n      latest_event: latestEvent,\n      events: events.slice(0, 10).map(e => ({\n        description: e.description,\n        location: e.location,\n        time: e.time_iso\n      }))\n    }\n  };\n} catch (error) {\n  return { message: \"Sorry, I couldn't process the tracking data.\", error: true };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        400
+      ],
+      "id": "29442d47-b4a2-4eed-a1cb-3a971c4523dd",
+      "name": "Format Response"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const errorData = $input.item.json;\nlet errorMsg = errorData.message || errorData.error?.message || JSON.stringify(errorData.error) || 'Unknown error';\n\nif (errorMsg.includes('401') || errorMsg.includes('Unauthorized') || errorMsg.includes('invalid')) {\n  errorMsg = 'Authentication failed. Check the 17track API key in n8n.';\n} else if (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ETIMEDOUT')) {\n  errorMsg = 'Cannot connect to the package tracking service.';\n} else if (errorMsg.includes('429') || errorMsg.includes('rate') || errorMsg.includes('limit')) {\n  errorMsg = 'API request limit reached. The free tier allows 100 trackings per month.';\n}\n\nreturn { message: `Error: ${errorMsg}`, error: true };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        800
+      ],
+      "id": "c5e613fa-428a-4aef-bf59-35de981c6a8f",
+      "name": "Format API Error"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        944,
+        608
+      ],
+      "id": "06316291-8f96-40e6-a302-cdb703ba3b14",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** package-tracker\n**Description:** Package tracking with automatic carrier detection via 17track.\n**version:** v1.0.0\n**id:** pk8T3mNnP5yR9uZxKqIeDw\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/utilities/package-tracker)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        0,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "86e065f0-494e-41ae-a46e-b0d288d0b368",
+      "name": "Registry Tracking"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** package-tracker\n**Description:** Tracks packages by tracking number with automatic carrier detection across 2000+ carriers worldwide.\n**version:** v1.0.0\n**id:** G_MQWzXfXW6oW0wI26iDdA\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/utilities/package-tracker)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -784,
+        -288
+      ],
+      "typeVersion": 1,
+      "id": "e9a48300-3379-4422-bac8-e0fd69ffab82",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Check Errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Errors": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Register Package",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Register Package": {
+      "main": [
+        [
+          {
+            "node": "Track Package",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format API Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Track Package": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format API Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format API Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true
+  }
+}
