@@ -14,7 +14,9 @@
   "icon": "airplane-airplane-mode-general-svgrepo-com.svg",
   "voice_triggers": [
     "Where is flight QF1?",
-    "What flights are departing from Sydney?"
+    "What flights are departing from Sydney?",
+    "Is my flight on time?",
+    "Show me flight arrivals today at YVR."
   ],
   "required_services": [],
   "required_credentials": [
