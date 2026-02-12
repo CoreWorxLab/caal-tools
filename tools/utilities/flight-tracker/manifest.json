@@ -1,0 +1,40 @@
+{
+  "id": "hd201lGfOs9FBWjBcP2upw",
+  "name": "flight-tracker",
+  "friendlyName": "Flight Tracker",
+  "version": "1.0.0",
+  "description": "Track real-time flight status, airport departures, and arrivals via AviationStack API.",
+  "category": "utilities",
+  "toolSuite": true,
+  "actions": [
+    "track",
+    "departures",
+    "arrivals"
+  ],
+  "icon": "airplane-airplane-mode-general-svgrepo-com.svg",
+  "voice_triggers": [
+    "Where is flight QF1?",
+    "What flights are departing from Sydney?",
+    "Is my flight on time?",
+    "Show me flight arrivals today at YVR."
+  ],
+  "required_services": [],
+  "required_credentials": [
+    {
+      "credential_type": "httpQueryAuth",
+      "name": "HTTPQUERYAUTH_CREDENTIAL",
+      "description": "n8n credential type: httpQueryAuth"
+    }
+  ],
+  "required_variables": [],
+  "author": {
+    "github": "cmac86"
+  },
+  "tier": "coreworxlab",
+  "tags": [
+    "utilities"
+  ],
+  "dependencies": [],
+  "created": "2026-02-12",
+  "updated": "2026-02-12"
+}

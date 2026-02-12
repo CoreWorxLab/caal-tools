@@ -1,0 +1,538 @@
+{
+  "name": "flight_tracker",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "flight_tracker",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -400,
+        800
+      ],
+      "id": "45e4b2cc-3893-4995-ace4-adefac82b773",
+      "name": "Webhook",
+      "webhookId": "flight-tracker-webhook-id",
+      "notes": "Flight tracking tool - real-time flight status, airport departures and arrivals via AviationStack.\n\nREQUIRED (always include):\n  action (string) \u2014 must be exactly one of the values listed below.\n\n--- FLIGHT TRACKING ---\n\n  action: \"track\"\n    flight_iata (string, required) \u2014 IATA flight code like \"QF1\", \"UA123\", \"EK456\". Airline code + flight number, no spaces.\n\n    Returns: flight status (scheduled, active, landed, cancelled, diverted), departure and arrival airports, scheduled and estimated times, delays in minutes, gate, terminal.\n\n    WHEN TO USE: When asked about a specific flight's status, delays, gate, or ETA. Examples: \"Where is flight QF1?\", \"Is UA123 on time?\", \"What gate is my flight at?\", \"Has EK456 landed?\"\n\n--- AIRPORT DEPARTURES ---\n\n  action: \"departures\"\n    airport_iata (string, required) \u2014 3-letter IATA airport code like \"SYD\", \"LAX\", \"LHR\".\n    limit (number, optional, default 5) \u2014 number of flights to return, 1-10.\n\n    Returns: list of departing flights with airline, flight number, destination, scheduled time, status, delay, gate, terminal.\n\n    WHEN TO USE: When asked about flights leaving an airport. Examples: \"What's departing from SYD?\", \"Show me LAX departures\", \"Any flights leaving Heathrow?\"\n\n--- AIRPORT ARRIVALS ---\n\n  action: \"arrivals\"\n    airport_iata (string, required) \u2014 3-letter IATA airport code like \"SYD\", \"LAX\", \"LHR\".\n    limit (number, optional, default 5) \u2014 number of flights to return, 1-10.\n\n    Returns: list of arriving flights with airline, flight number, origin, scheduled time, status, delay, gate, terminal.\n\n    WHEN TO USE: When asked about flights arriving at an airport. Examples: \"What's arriving at LAX?\", \"Arrivals at Melbourne?\", \"Any flights landing at JFK?\"\n\nRULES:\n  - flight_iata is airline code + flight number with no space (\"QF1\" not \"QF 1\").\n  - airport_iata is always a 3-letter IATA code (\"SYD\", \"LAX\", \"LHR\").\n  - Only include fields listed for the chosen action. Do not send extra fields.\n\nEXAMPLES:\n  Q: \"Where is flight QF1?\"\n  \u2192 Use track with flight_iata: \"QF1\"\n\n  Q: \"Is my flight UA123 on time?\"\n  \u2192 Use track with flight_iata: \"UA123\"\n\n  Q: \"What gate is flight EK456 at?\"\n  \u2192 Use track with flight_iata: \"EK456\"\n\n  Q: \"What flights are departing from Sydney?\"\n  \u2192 Use departures with airport_iata: \"SYD\"\n\n  Q: \"Show me arrivals at LAX\"\n  \u2192 Use arrivals with airport_iata: \"LAX\"\n\n  Q: \"Any delays at Heathrow departures?\"\n  \u2192 Use departures with airport_iata: \"LHR\""
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const body = $input.item.json.body || $input.item.json;\n\nconst action = (body.action || '').toLowerCase().trim();\nconst flight_iata = (body.flight_iata || '').toString().toUpperCase().trim().replace(/\\s+/g, '');\nconst airport_iata = (body.airport_iata || '').toString().toUpperCase().trim().replace(/\\s+/g, '');\nconst limit = Math.min(Math.max(parseInt(body.limit) || 5, 1), 10);\n\nconst validActions = ['track', 'departures', 'arrivals'];\n\nif (!action || !validActions.includes(action)) {\n  return {\n    error: true,\n    message: `Sorry, \"${action || 'none'}\" is not a valid action. Try track, departures, or arrivals.`\n  };\n}\n\nconst fieldRules = {\n  track: () => !flight_iata && 'flight_iata',\n  departures: () => !airport_iata && 'airport_iata',\n  arrivals: () => !airport_iata && 'airport_iata'\n};\n\nconst missingField = fieldRules[action]();\nif (missingField) {\n  return {\n    error: true,\n    message: `The \"${action}\" action requires \"${missingField}\".`\n  };\n}\n\nif (flight_iata && !/^[A-Z0-9]{2,8}$/.test(flight_iata)) {\n  return {\n    error: true,\n    message: `Invalid flight code \"${flight_iata}\". Expected format like QF1, UA123, or EK456.`\n  };\n}\n\nif (airport_iata && !/^[A-Z]{3,4}$/.test(airport_iata)) {\n  return {\n    error: true,\n    message: `Invalid airport code \"${airport_iata}\". Expected a 3-letter code like SYD, LAX, or LHR.`\n  };\n}\n\nreturn {\n  error: false,\n  action,\n  flight_iata,\n  airport_iata,\n  limit\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        800
+      ],
+      "id": "40a90e30-bc8f-4dc3-a3be-89212af0a9c4",
+      "name": "Validate Input"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "check-validation-error",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        48,
+        800
+      ],
+      "id": "c15b3467-db26-4da6-bca4-9b29e2344674",
+      "name": "Check Errors"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "action-track",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "track",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "track"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "action-departures",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "departures",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "departures"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "action-arrivals",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "arrivals",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "arrivals"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        272,
+        800
+      ],
+      "id": "225ca80e-0fd6-420c-b5d8-bf40e7d08178",
+      "name": "Action Switch"
+    },
+    {
+      "parameters": {
+        "url": "http://api.aviationstack.com/v1/flights",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "flight_iata",
+              "value": "={{ $json.flight_iata }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        496,
+        400
+      ],
+      "id": "70c49afe-1a6d-4196-87e3-2a9ea67ac550",
+      "name": "Track Flight",
+      "credentials": {
+        "httpQueryAuth": {
+          "id": null,
+          "name": "${HTTPQUERYAUTH_CREDENTIAL}"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "http://api.aviationstack.com/v1/flights",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "dep_iata",
+              "value": "={{ $json.airport_iata }}"
+            },
+            {
+              "name": "limit",
+              "value": "={{ $json.limit }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        496,
+        800
+      ],
+      "id": "b4e763cd-2744-41f2-a9a4-7f01e142309c",
+      "name": "Get Departures",
+      "credentials": {
+        "httpQueryAuth": {
+          "id": null,
+          "name": "${HTTPQUERYAUTH_CREDENTIAL}"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "http://api.aviationstack.com/v1/flights",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "arr_iata",
+              "value": "={{ $json.airport_iata }}"
+            },
+            {
+              "name": "limit",
+              "value": "={{ $json.limit }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        496,
+        1200
+      ],
+      "id": "009fd734-87e7-4b17-826d-b832d4e4b54b",
+      "name": "Get Arrivals",
+      "credentials": {
+        "httpQueryAuth": {
+          "id": null,
+          "name": "${HTTPQUERYAUTH_CREDENTIAL}"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "try {\n  const data = $input.item.json;\n\n  const cityName = (name) => (name || 'unknown').replace(/ International( Airport)?| Airport| Regional/gi, '').trim();\n\n  if (data.error) {\n    const info = data.error.info || data.error.message || 'Unknown API error';\n    return { error: true, message: `Sorry, the flight service returned an error: ${info}` };\n  }\n\n  const flights = data.data;\n\n  if (!flights || flights.length === 0) {\n    return {\n      error: true,\n      message: \"Sorry, I couldn't find any information for that flight number.\"\n    };\n  }\n\n  const f = flights[0];\n  const status = f.flight_status || 'unknown';\n  const airline = f.airline?.name || 'Unknown airline';\n  const flightCode = f.flight?.iata || 'Unknown';\n  const depAirport = cityName(f.departure?.airport);\n  const arrAirport = cityName(f.arrival?.airport);\n\n  let message = `${airline} flight ${flightCode} is ${status}. From ${depAirport} to ${arrAirport}.`;\n\n  if (f.departure?.delay && f.departure.delay > 0) {\n    message += ` Departure delayed by ${f.departure.delay} minutes.`;\n  }\n\n  if (f.arrival?.delay && f.arrival.delay > 0) {\n    message += ` Arrival delayed by ${f.arrival.delay} minutes.`;\n  }\n\n  const formatTime = (dateStr) => {\n    if (!dateStr) return null;\n    const d = new Date(dateStr);\n    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });\n  };\n\n  const depTime = formatTime(f.departure?.estimated || f.departure?.scheduled);\n  const arrTime = formatTime(f.arrival?.estimated || f.arrival?.scheduled);\n\n  if (depTime) message += ` Departing at ${depTime}.`;\n  if (arrTime) message += ` Arriving at ${arrTime}.`;\n  if (f.departure?.gate) message += ` Gate ${f.departure.gate}.`;\n  if (f.departure?.terminal) message += ` Terminal ${f.departure.terminal}.`;\n\n  return {\n    message,\n    flights: flights.slice(0, 5).map(fl => ({\n      flight_iata: fl.flight?.iata,\n      airline: fl.airline?.name,\n      status: fl.flight_status,\n      departure_airport: fl.departure?.iata,\n      departure_name: fl.departure?.airport,\n      departure_scheduled: fl.departure?.scheduled,\n      departure_estimated: fl.departure?.estimated,\n      departure_actual: fl.departure?.actual,\n      departure_delay: fl.departure?.delay,\n      departure_gate: fl.departure?.gate,\n      departure_terminal: fl.departure?.terminal,\n      arrival_airport: fl.arrival?.iata,\n      arrival_name: fl.arrival?.airport,\n      arrival_scheduled: fl.arrival?.scheduled,\n      arrival_estimated: fl.arrival?.estimated,\n      arrival_actual: fl.arrival?.actual,\n      arrival_delay: fl.arrival?.delay,\n      arrival_gate: fl.arrival?.gate,\n      arrival_terminal: fl.arrival?.terminal\n    }))\n  };\n} catch (error) {\n  return { message: \"Sorry, I couldn't process the flight data.\", error: true };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        400
+      ],
+      "id": "56761150-4c91-487e-9ab4-6139e8be9cc5",
+      "name": "Format Track Response"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "try {\n  const data = $input.item.json;\n\n  const cityName = (name) => (name || 'unknown').replace(/ International( Airport)?| Airport| Regional/gi, '').trim();\n\n  if (data.error) {\n    const info = data.error.info || data.error.message || 'Unknown API error';\n    return { error: true, message: `Sorry, the flight service returned an error: ${info}` };\n  }\n\n  const flights = data.data;\n  const airportIata = $('Validate Input').item.json.airport_iata;\n  const limit = $('Validate Input').item.json.limit;\n\n  if (!flights || flights.length === 0) {\n    return { error: true, message: `No departures found from ${airportIata}.` };\n  }\n\n  const limited = flights.slice(0, limit);\n  const total = data.pagination?.total || flights.length;\n  const depName = cityName(limited[0]?.departure?.airport) || airportIata;\n\n  const formatTime = (dateStr) => {\n    if (!dateStr) return 'unknown time';\n    const d = new Date(dateStr);\n    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });\n  };\n\n  let message = `${limited.length} departures from ${depName}.`;\n\n  limited.forEach(f => {\n    const flightCode = f.flight?.iata || 'Unknown';\n    const dest = cityName(f.arrival?.airport) || f.arrival?.iata || 'unknown';\n    const time = formatTime(f.departure?.estimated || f.departure?.scheduled);\n    const status = f.flight_status || 'unknown';\n    const delay = (f.departure?.delay && f.departure.delay > 0) ? `, delayed ${f.departure.delay} min` : '';\n    message += ` ${flightCode} to ${dest} at ${time}, ${status}${delay}.`;\n  });\n\n  if (total > limit) {\n    message += ` Plus ${total - limit} more flights.`;\n  }\n\n  return {\n    message,\n    flights: limited.map(f => ({\n      flight_iata: f.flight?.iata,\n      airline: f.airline?.name,\n      status: f.flight_status,\n      destination: f.arrival?.iata,\n      destination_name: f.arrival?.airport,\n      scheduled: f.departure?.scheduled,\n      estimated: f.departure?.estimated,\n      delay: f.departure?.delay,\n      gate: f.departure?.gate,\n      terminal: f.departure?.terminal\n    }))\n  };\n} catch (error) {\n  return { message: \"Sorry, I couldn't process the departure data.\", error: true };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        800
+      ],
+      "id": "dad4dc2a-0e23-40ff-b05c-6787019218f1",
+      "name": "Format Departures Response"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "try {\n  const data = $input.item.json;\n\n  const cityName = (name) => (name || 'unknown').replace(/ International( Airport)?| Airport| Regional/gi, '').trim();\n\n  if (data.error) {\n    const info = data.error.info || data.error.message || 'Unknown API error';\n    return { error: true, message: `Sorry, the flight service returned an error: ${info}` };\n  }\n\n  const flights = data.data;\n  const airportIata = $('Validate Input').item.json.airport_iata;\n  const limit = $('Validate Input').item.json.limit;\n\n  if (!flights || flights.length === 0) {\n    return { error: true, message: `No arrivals found at ${airportIata}.` };\n  }\n\n  const limited = flights.slice(0, limit);\n  const total = data.pagination?.total || flights.length;\n  const arrName = cityName(limited[0]?.arrival?.airport) || airportIata;\n\n  const formatTime = (dateStr) => {\n    if (!dateStr) return 'unknown time';\n    const d = new Date(dateStr);\n    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });\n  };\n\n  let message = `${limited.length} arrivals at ${arrName}.`;\n\n  limited.forEach(f => {\n    const flightCode = f.flight?.iata || 'Unknown';\n    const origin = cityName(f.departure?.airport) || f.departure?.iata || 'unknown';\n    const time = formatTime(f.arrival?.estimated || f.arrival?.scheduled);\n    const status = f.flight_status || 'unknown';\n    const delay = (f.arrival?.delay && f.arrival.delay > 0) ? `, delayed ${f.arrival.delay} min` : '';\n    message += ` ${flightCode} from ${origin} at ${time}, ${status}${delay}.`;\n  });\n\n  if (total > limit) {\n    message += ` Plus ${total - limit} more flights.`;\n  }\n\n  return {\n    message,\n    flights: limited.map(f => ({\n      flight_iata: f.flight?.iata,\n      airline: f.airline?.name,\n      status: f.flight_status,\n      origin: f.departure?.iata,\n      origin_name: f.departure?.airport,\n      scheduled: f.arrival?.scheduled,\n      estimated: f.arrival?.estimated,\n      delay: f.arrival?.delay,\n      gate: f.arrival?.gate,\n      terminal: f.arrival?.terminal\n    }))\n  };\n} catch (error) {\n  return { message: \"Sorry, I couldn't process the arrival data.\", error: true };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        1200
+      ],
+      "id": "b49ac026-e440-41cb-a6f2-4eaa93fb6d47",
+      "name": "Format Arrivals Response"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const errorData = $input.item.json;\nlet errorMsg = errorData.message || errorData.error?.info || errorData.error?.message || JSON.stringify(errorData.error) || 'Unknown error';\n\nif (errorMsg.includes('invalid_access_key') || errorMsg.includes('101')) {\n  errorMsg = 'Authentication failed. Check the AviationStack API key in n8n.';\n} else if (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ETIMEDOUT')) {\n  errorMsg = 'Cannot connect to the flight tracking service.';\n} else if (errorMsg.includes('usage_limit_reached') || errorMsg.includes('104')) {\n  errorMsg = 'API request limit reached. The free tier allows 100 requests per month.';\n} else if (errorMsg.includes('https_access_restricted') || errorMsg.includes('105')) {\n  errorMsg = 'HTTPS not available on the free tier. The tool should use HTTP.';\n} else if (errorMsg.includes('function_access_restricted') || errorMsg.includes('106')) {\n  errorMsg = 'This feature requires a paid AviationStack plan.';\n}\n\nreturn { message: `Error: ${errorMsg}`, error: true };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        1600
+      ],
+      "id": "29375c74-6a59-48d2-ad84-2167e02e8819",
+      "name": "Format API Error"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        944,
+        800
+      ],
+      "id": "bf8da56c-75aa-451d-b699-3fea2eeb60b8",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** flight-tracker\n**Description:** Flight tracking tool - real-time flight status, airport departures and arrivals via AviationStack.\n**version:** v1.0.0\n**id:** ft7R2kLmN4xQ8sYwJpHcDg\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/utilities/flight-tracker)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        0,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "5dda9ba1-9055-4a34-bb3f-8274cf78781f",
+      "name": "Registry Tracking"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** flight-tracker\n**Description:** Track real-time flight status, airport departures, and arrivals via AviationStack API.\n**version:** v1.0.0\n**id:** hd201lGfOs9FBWjBcP2upw\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/utilities/flight-tracker)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -784,
+        -288
+      ],
+      "typeVersion": 1,
+      "id": "f36508d3-b9c9-4855-a54e-0a51ce40cbd8",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Check Errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Errors": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Action Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Action Switch": {
+      "main": [
+        [
+          {
+            "node": "Track Flight",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Departures",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Arrivals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Track Flight": {
+      "main": [
+        [
+          {
+            "node": "Format Track Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format API Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Departures": {
+      "main": [
+        [
+          {
+            "node": "Format Departures Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format API Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Arrivals": {
+      "main": [
+        [
+          {
+            "node": "Format Arrivals Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format API Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Track Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Departures Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Arrivals Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format API Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true
+  }
+}
