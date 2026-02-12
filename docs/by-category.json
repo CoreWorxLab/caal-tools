@@ -416,6 +416,27 @@
   ],
   "utilities": [
     {
+      "id": "G_MQWzXfXW6oW0wI26iDdA",
+      "name": "package-tracker",
+      "friendlyName": "Package Tracker",
+      "version": "1.0.0",
+      "description": "Tracks packages by tracking number with automatic carrier detection across 2000+ carriers worldwide.",
+      "category": "utilities",
+      "path": "tools/utilities/package-tracker",
+      "icon": "package-delivery-svgrepo-com.svg",
+      "voice_triggers": [
+        "Track my package",
+        "Where is my order"
+      ],
+      "required_services": [],
+      "tier": "coreworxlab",
+      "author": "cmac86",
+      "tags": [
+        "utilities"
+      ],
+      "updated": "2026-02-12"
+    },
+    {
       "id": "mXoo792Qi9j8e5rzW3kZiw",
       "name": "weather-aus",
       "friendlyName": "Weather Australia",
