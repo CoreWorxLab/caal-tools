@@ -1,5 +1,26 @@
 [
   {
+    "id": "4uAC7iCPB-_Y5Jtyz7IyBA",
+    "name": "espn",
+    "friendlyName": "ESPN",
+    "version": "1.0.0",
+    "description": "Get live scores, upcoming schedules, and league standings for NBA, NFL, NHL, EPL, MLS, and F1.",
+    "category": "sports",
+    "path": "tools/sports/espn",
+    "icon": null,
+    "voice_triggers": [
+      "What's the score of the Lakers game?",
+      "When do the Seahawks play next?"
+    ],
+    "required_services": [],
+    "tier": "coreworxlab",
+    "author": "cmac86",
+    "tags": [
+      "sports"
+    ],
+    "updated": "2026-03-04"
+  },
+  {
     "id": "nETOdpfq0fJT4fJoqdf0Iw",
     "name": "espn-epl",
     "friendlyName": "ESPN EPL",
