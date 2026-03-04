@@ -4,8 +4,8 @@
       "id": "aQ8KoJ2Nc2Z8ftAqlp5S-w",
       "name": "truenas",
       "friendlyName": "TrueNAS",
-      "version": "1.0.0",
-      "description": "Manage TrueNAS system status and control apps - check system health, resources, and storage pools, or start, stop, and restart applications.",
+      "version": "1.1.0",
+      "description": "TrueNAS — check NAS server health or control apps running on TrueNAS.",
       "category": "homelab",
       "path": "tools/homelab/truenas",
       "icon": "truenas.svg",
@@ -22,7 +22,7 @@
         "homelab",
         "truenas"
       ],
-      "updated": "2026-02-01"
+      "updated": "2026-02-21"
     }
   ],
   "radarr": [
@@ -30,8 +30,8 @@
       "id": "9fGeS8i9FH-7OHxAHAYB1A",
       "name": "radarr",
       "friendlyName": "Radarr",
-      "version": "1.0.0",
-      "description": "Manage Radarr movies - view upcoming releases and search your library.",
+      "version": "1.1.0",
+      "description": "Radarr — movie library. Use for movies and films. Not for TV shows — use sonarr for TV shows.",
       "category": "media",
       "path": "tools/media/radarr",
       "icon": "radarr.svg",
@@ -48,7 +48,7 @@
         "media",
         "radarr"
       ],
-      "updated": "2026-01-29"
+      "updated": "2026-02-21"
     }
   ],
   "sonarr": [
@@ -56,8 +56,8 @@
       "id": "dXkRDDTIOPPE8sYAtNs6NQ",
       "name": "sonarr",
       "friendlyName": "Sonarr",
-      "version": "1.0.0",
-      "description": "Manage Sonarr TV shows - view upcoming episodes and search your library.",
+      "version": "1.1.0",
+      "description": "Sonarr — TV show library. Use for TV shows, series, and episodes. Not for movies — use radarr for movies.",
       "category": "media",
       "path": "tools/media/sonarr",
       "icon": "sonarr.svg",
@@ -74,7 +74,7 @@
         "media",
         "sonarr"
       ],
-      "updated": "2026-01-29"
+      "updated": "2026-02-21"
     }
   ],
   "youtube": [
@@ -82,8 +82,8 @@
       "id": "ymrWW0bBJCq_d-KSgbJFlw",
       "name": "youtube",
       "friendlyName": "YouTube",
-      "version": "1.0.0",
-      "description": "Manage YouTube with comprehensive search, channel/video information retrieval, subscription management, and video rating capabilities.",
+      "version": "1.1.0",
+      "description": "YouTube API — search, get details, manage subscriptions, rate videos.",
       "category": "media",
       "path": "tools/media/youtube",
       "icon": "youtube.svg",
@@ -100,7 +100,7 @@
         "media",
         "youtube"
       ],
-      "updated": "2026-02-09"
+      "updated": "2026-02-21"
     }
   ],
   "gmail": [
@@ -108,8 +108,8 @@
       "id": "7FUfsUz1RkqcEdvm_Vglnw",
       "name": "gmail",
       "friendlyName": "Gmail",
-      "version": "1.0.0",
-      "description": "Manage Gmail - check unread emails and send messages.",
+      "version": "1.1.0",
+      "description": "Gmail — check unread emails or send an email.",
       "category": "productivity",
       "path": "tools/productivity/gmail",
       "icon": "gmail.svg",
@@ -126,7 +126,7 @@
         "productivity",
         "gmail"
       ],
-      "updated": "2026-01-29"
+      "updated": "2026-02-21"
     }
   ],
   "google calendar": [
@@ -134,8 +134,8 @@
       "id": "ndPj-EJI58ABJvg0drlAgw",
       "name": "google-calendar",
       "friendlyName": "Google Calendar",
-      "version": "1.0.0",
-      "description": "Manage Google Calendar events - view, create, and delete events with support for timed and all-day events.",
+      "version": "1.1.0",
+      "description": "Google Calendar — view, create, or delete events.",
       "category": "productivity",
       "path": "tools/productivity/google-calendar",
       "icon": "google-calendar.svg",
@@ -152,7 +152,7 @@
         "productivity",
         "google calendar"
       ],
-      "updated": "2026-02-01"
+      "updated": "2026-02-21"
     }
   ],
   "google contacts": [
@@ -160,8 +160,8 @@
       "id": "IugRPxb-3ekQ0b-Bfpx6wA",
       "name": "google-contacts",
       "friendlyName": "Google Contacts",
-      "version": "1.0.0",
-      "description": "Search and list Google Contacts with support for filtering by name and retrieving contact details including emails and phone numbers.",
+      "version": "1.1.0",
+      "description": "Google Contacts — look up email addresses and phone numbers. Call this before sending an email via gmail or a DM via x_twitter when you only have a person's name.",
       "category": "productivity",
       "path": "tools/productivity/google-contacts",
       "icon": "google-contacts.svg",
@@ -178,7 +178,7 @@
         "productivity",
         "google contacts"
       ],
-      "updated": "2026-01-26"
+      "updated": "2026-02-21"
     }
   ],
   "google tasks": [
@@ -186,8 +186,8 @@
       "id": "JLBpNNUkMXzOZDojN3VdrA",
       "name": "google-tasks",
       "friendlyName": "Google Tasks",
-      "version": "1.0.0",
-      "description": "Manage Google Tasks - get, add, complete, and delete tasks with optional due dates and notes.",
+      "version": "1.1.0",
+      "description": "Google Tasks — view, add, complete, or delete tasks.",
       "category": "productivity",
       "path": "tools/productivity/google-tasks",
       "icon": "google-tasks.svg",
@@ -204,7 +204,7 @@
         "productivity",
         "google tasks"
       ],
-      "updated": "2026-01-26"
+      "updated": "2026-02-21"
     }
   ],
   "notion": [
@@ -212,8 +212,8 @@
       "id": "Wv9iVQRT_j_fyCeMWcz_xA",
       "name": "notion-tasks",
       "friendlyName": "Notion Tasks",
-      "version": "1.0.0",
-      "description": "Manage tasks in Notion - get, add, complete, and delete tasks with support for due dates and filtering.",
+      "version": "1.1.0",
+      "description": "Notion Tasks — view, add, complete, or delete tasks.",
       "category": "productivity",
       "path": "tools/productivity/notion-tasks",
       "icon": "notion.svg",
@@ -230,7 +230,7 @@
         "productivity",
         "notion"
       ],
-      "updated": "2026-01-27"
+      "updated": "2026-02-21"
     }
   ],
   "paperless-ngx": [
@@ -238,8 +238,8 @@
       "id": "Aenyv1PlVgcKGrjn44HfBA",
       "name": "paperless-ngx",
       "friendlyName": "Paperless-ngx",
-      "version": "1.0.0",
-      "description": "Manage documents, search archives, and update metadata in Paperless-ngx document management system.",
+      "version": "1.1.0",
+      "description": "Paperless-ngx — document management system. Search, view, and organize scanned documents, receipts, invoices, and mail.",
       "category": "productivity",
       "path": "tools/productivity/paperless-ngx",
       "icon": "paperless.svg",
@@ -262,7 +262,7 @@
         "archive",
         "paperless"
       ],
-      "updated": "2026-02-09"
+      "updated": "2026-02-21"
     }
   ],
   "x (twitter)": [
@@ -270,8 +270,8 @@
       "id": "wn9K89sz3bAItFVWpvzkhQ",
       "name": "x-twitter",
       "friendlyName": "X (Twitter)",
-      "version": "1.0.0",
-      "description": "X (Twitter) automation: post tweets, like/retweet/delete, send DMs, lookup users with connection status and full metrics, mute users, and view blocked accounts. Requires X Developer account with API access.",
+      "version": "1.1.0",
+      "description": "X, formerly Twitter — post tweets, interact with tweets, send DMs, look up users.",
       "category": "social",
       "path": "tools/social/x-twitter",
       "icon": "x.svg",
@@ -295,7 +295,7 @@
         "automation",
         "social media"
       ],
-      "updated": "2026-02-04"
+      "updated": "2026-02-21"
     }
   ]
 }

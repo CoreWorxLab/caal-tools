@@ -21,137 +21,11 @@
     "updated": "2026-03-04"
   },
   {
-    "id": "nETOdpfq0fJT4fJoqdf0Iw",
-    "name": "espn-epl",
-    "friendlyName": "ESPN EPL",
-    "version": "1.0.0",
-    "description": "Get Premier League scores, standings, and team schedules from ESPN.",
-    "category": "sports",
-    "path": "tools/sports/espn-epl",
-    "icon": "epl.svg",
-    "voice_triggers": [
-      "What are the Premier League scores?",
-      "Where is Arsenal in the table?"
-    ],
-    "required_services": [],
-    "tier": "coreworxlab",
-    "author": "cmac86",
-    "tags": [
-      "sports"
-    ],
-    "updated": "2026-01-26"
-  },
-  {
-    "id": "bFrxKATo0kcNpuKFhCKn7g",
-    "name": "espn-f1",
-    "friendlyName": "ESPN F1",
-    "version": "1.0.0",
-    "description": "Get Formula 1 race results, schedule, and driver standings from ESPN.",
-    "category": "sports",
-    "path": "tools/sports/espn-f1",
-    "icon": "f1.svg",
-    "voice_triggers": [
-      "Who won the last F1 race?",
-      "What's the F1 schedule?"
-    ],
-    "required_services": [],
-    "tier": "coreworxlab",
-    "author": "cmac86",
-    "tags": [
-      "sports"
-    ],
-    "updated": "2026-01-26"
-  },
-  {
-    "id": "276uXOHHbo4JrrWs6-v6CA",
-    "name": "espn-mls",
-    "friendlyName": "ESPN MLS",
-    "version": "1.0.0",
-    "description": "Get MLS scores, schedules, and standings with optional team and conference filtering.",
-    "category": "sports",
-    "path": "tools/sports/espn-mls",
-    "icon": "mls.svg",
-    "voice_triggers": [
-      "What are the MLS scores?",
-      "When do the Sounders play next?"
-    ],
-    "required_services": [],
-    "tier": "coreworxlab",
-    "author": "cmac86",
-    "tags": [
-      "sports"
-    ],
-    "updated": "2026-01-26"
-  },
-  {
-    "id": "1XGXLx1KljGBmQypxSygDw",
-    "name": "espn-nba",
-    "friendlyName": "ESPN NBA",
-    "version": "1.0.0",
-    "description": "Get NBA scores, standings, and team schedules from ESPN.",
-    "category": "sports",
-    "path": "tools/sports/espn-nba",
-    "icon": "nba.svg",
-    "voice_triggers": [
-      "What are the NBA scores today?",
-      "Where are the Lakers in the standings?"
-    ],
-    "required_services": [],
-    "tier": "coreworxlab",
-    "author": "cmac86",
-    "tags": [
-      "sports"
-    ],
-    "updated": "2026-01-26"
-  },
-  {
-    "id": "v8JZaSOuG2czTZ-b06Z7Kg",
-    "name": "espn-nfl",
-    "friendlyName": "ESPN NFL",
-    "version": "1.0.0",
-    "description": "Get NFL scores, team schedules, and standings from ESPN.",
-    "category": "sports",
-    "path": "tools/sports/espn-nfl",
-    "icon": "nfl.svg",
-    "voice_triggers": [
-      "What are the NFL scores?",
-      "When do the Seahawks play next?"
-    ],
-    "required_services": [],
-    "tier": "coreworxlab",
-    "author": "cmac86",
-    "tags": [
-      "sports"
-    ],
-    "updated": "2026-01-26"
-  },
-  {
-    "id": "y_T38DT5FY2AO8iZwWQ9CQ",
-    "name": "espn-nhl",
-    "friendlyName": "ESPN NHL",
-    "version": "1.0.0",
-    "description": "Get NHL scores, schedules, and standings with optional team filtering.",
-    "category": "sports",
-    "path": "tools/sports/espn-nhl",
-    "icon": "nhl.svg",
-    "voice_triggers": [
-      "What are the NHL scores?",
-      "When do the Canucks play next?"
-    ],
-    "required_services": [],
-    "tier": "coreworxlab",
-    "author": "cmac86",
-    "tags": [
-      "sports"
-    ],
-    "updated": "2026-01-26"
-  },
-  {
     "id": "hd201lGfOs9FBWjBcP2upw",
     "name": "flight-tracker",
     "friendlyName": "Flight Tracker",
-    "version": "1.0.0",
-    "description": "Track real-time flight status, airport departures, and arrivals via AviationStack API.",
+    "version": "1.1.0",
+    "description": "Flight tracking — real-time flight status, airport departures, and arrivals.",
     "category": "utilities",
     "path": "tools/utilities/flight-tracker",
     "icon": "airplane-airplane-mode-general-svgrepo-com.svg",
@@ -167,14 +41,14 @@
     "tags": [
       "utilities"
     ],
-    "updated": "2026-02-12"
+    "updated": "2026-02-21"
   },
   {
     "id": "7FUfsUz1RkqcEdvm_Vglnw",
     "name": "gmail",
     "friendlyName": "Gmail",
-    "version": "1.0.0",
-    "description": "Manage Gmail - check unread emails and send messages.",
+    "version": "1.1.0",
+    "description": "Gmail — check unread emails or send an email.",
     "category": "productivity",
     "path": "tools/productivity/gmail",
     "icon": "gmail.svg",
@@ -191,14 +65,14 @@
       "productivity",
       "gmail"
     ],
-    "updated": "2026-01-29"
+    "updated": "2026-02-21"
   },
   {
     "id": "ndPj-EJI58ABJvg0drlAgw",
     "name": "google-calendar",
     "friendlyName": "Google Calendar",
-    "version": "1.0.0",
-    "description": "Manage Google Calendar events - view, create, and delete events with support for timed and all-day events.",
+    "version": "1.1.0",
+    "description": "Google Calendar — view, create, or delete events.",
     "category": "productivity",
     "path": "tools/productivity/google-calendar",
     "icon": "google-calendar.svg",
@@ -215,14 +89,14 @@
       "productivity",
       "google calendar"
     ],
-    "updated": "2026-02-01"
+    "updated": "2026-02-21"
   },
   {
     "id": "IugRPxb-3ekQ0b-Bfpx6wA",
     "name": "google-contacts",
     "friendlyName": "Google Contacts",
-    "version": "1.0.0",
-    "description": "Search and list Google Contacts with support for filtering by name and retrieving contact details including emails and phone numbers.",
+    "version": "1.1.0",
+    "description": "Google Contacts — look up email addresses and phone numbers. Call this before sending an email via gmail or a DM via x_twitter when you only have a person's name.",
     "category": "productivity",
     "path": "tools/productivity/google-contacts",
     "icon": "google-contacts.svg",
@@ -239,14 +113,14 @@
       "productivity",
       "google contacts"
     ],
-    "updated": "2026-01-26"
+    "updated": "2026-02-21"
   },
   {
     "id": "JLBpNNUkMXzOZDojN3VdrA",
     "name": "google-tasks",
     "friendlyName": "Google Tasks",
-    "version": "1.0.0",
-    "description": "Manage Google Tasks - get, add, complete, and delete tasks with optional due dates and notes.",
+    "version": "1.1.0",
+    "description": "Google Tasks — view, add, complete, or delete tasks.",
     "category": "productivity",
     "path": "tools/productivity/google-tasks",
     "icon": "google-tasks.svg",
@@ -263,14 +137,14 @@
       "productivity",
       "google tasks"
     ],
-    "updated": "2026-01-26"
+    "updated": "2026-02-21"
   },
   {
     "id": "Wv9iVQRT_j_fyCeMWcz_xA",
     "name": "notion-tasks",
     "friendlyName": "Notion Tasks",
-    "version": "1.0.0",
-    "description": "Manage tasks in Notion - get, add, complete, and delete tasks with support for due dates and filtering.",
+    "version": "1.1.0",
+    "description": "Notion Tasks — view, add, complete, or delete tasks.",
     "category": "productivity",
     "path": "tools/productivity/notion-tasks",
     "icon": "notion.svg",
@@ -287,14 +161,14 @@
       "productivity",
       "notion"
     ],
-    "updated": "2026-01-27"
+    "updated": "2026-02-21"
   },
   {
     "id": "G_MQWzXfXW6oW0wI26iDdA",
     "name": "package-tracker",
     "friendlyName": "Package Tracker",
-    "version": "1.0.0",
-    "description": "Tracks packages by tracking number with automatic carrier detection across 2000+ carriers worldwide.",
+    "version": "1.1.0",
+    "description": "Package tracking — track any package by tracking number. Auto-detects carrier including UPS, FedEx, USPS, DHL, Australia Post, Canada Post, and 2000+ more. Use when the user mentions a tracking number or asks about a package.",
     "category": "utilities",
     "path": "tools/utilities/package-tracker",
     "icon": "package-delivery-svgrepo-com.svg",
@@ -308,14 +182,14 @@
     "tags": [
       "utilities"
     ],
-    "updated": "2026-02-12"
+    "updated": "2026-02-21"
   },
   {
     "id": "Aenyv1PlVgcKGrjn44HfBA",
     "name": "paperless-ngx",
     "friendlyName": "Paperless-ngx",
-    "version": "1.0.0",
-    "description": "Manage documents, search archives, and update metadata in Paperless-ngx document management system.",
+    "version": "1.1.0",
+    "description": "Paperless-ngx — document management system. Search, view, and organize scanned documents, receipts, invoices, and mail.",
     "category": "productivity",
     "path": "tools/productivity/paperless-ngx",
     "icon": "paperless.svg",
@@ -338,14 +212,14 @@
       "archive",
       "paperless"
     ],
-    "updated": "2026-02-09"
+    "updated": "2026-02-21"
   },
   {
     "id": "9fGeS8i9FH-7OHxAHAYB1A",
     "name": "radarr",
     "friendlyName": "Radarr",
-    "version": "1.0.0",
-    "description": "Manage Radarr movies - view upcoming releases and search your library.",
+    "version": "1.1.0",
+    "description": "Radarr — movie library. Use for movies and films. Not for TV shows — use sonarr for TV shows.",
     "category": "media",
     "path": "tools/media/radarr",
     "icon": "radarr.svg",
@@ -362,14 +236,14 @@
       "media",
       "radarr"
     ],
-    "updated": "2026-01-29"
+    "updated": "2026-02-21"
   },
   {
     "id": "dXkRDDTIOPPE8sYAtNs6NQ",
     "name": "sonarr",
     "friendlyName": "Sonarr",
-    "version": "1.0.0",
-    "description": "Manage Sonarr TV shows - view upcoming episodes and search your library.",
+    "version": "1.1.0",
+    "description": "Sonarr — TV show library. Use for TV shows, series, and episodes. Not for movies — use radarr for movies.",
     "category": "media",
     "path": "tools/media/sonarr",
     "icon": "sonarr.svg",
@@ -386,14 +260,14 @@
       "media",
       "sonarr"
     ],
-    "updated": "2026-01-29"
+    "updated": "2026-02-21"
   },
   {
     "id": "aQ8KoJ2Nc2Z8ftAqlp5S-w",
     "name": "truenas",
     "friendlyName": "TrueNAS",
-    "version": "1.0.0",
-    "description": "Manage TrueNAS system status and control apps - check system health, resources, and storage pools, or start, stop, and restart applications.",
+    "version": "1.1.0",
+    "description": "TrueNAS — check NAS server health or control apps running on TrueNAS.",
     "category": "homelab",
     "path": "tools/homelab/truenas",
     "icon": "truenas.svg",
@@ -410,7 +284,7 @@
       "homelab",
       "truenas"
     ],
-    "updated": "2026-02-01"
+    "updated": "2026-02-21"
   },
   {
     "id": "OjfLaQTNG_90gxjpjFTlAg",
@@ -434,104 +308,11 @@
     "updated": "2026-03-04"
   },
   {
-    "id": "mXoo792Qi9j8e5rzW3kZiw",
-    "name": "weather-aus",
-    "friendlyName": "Weather Australia",
-    "version": "1.0.0",
-    "description": "Get Australian weather forecasts or current conditions for any city, suburb, or postcode.",
-    "category": "utilities",
-    "path": "tools/utilities/weather-aus",
-    "icon": "sydney-svgrepo-com.svg",
-    "voice_triggers": [
-      "What's the weather in Sydney?",
-      "Give me the forecast for Melbourne"
-    ],
-    "required_services": [],
-    "tier": "community",
-    "author": "AbdulShahzeb",
-    "tags": [
-      "utilities"
-    ],
-    "updated": "2026-01-30"
-  },
-  {
-    "id": "hbLGwIBVmViC-xsFC37GxQ",
-    "name": "weather-can",
-    "friendlyName": "Weather Canada",
-    "version": "1.0.0",
-    "description": "Gets weather forecasts and current conditions for Canadian cities using Environment Canada official data.",
-    "category": "utilities",
-    "path": "tools/utilities/weather-can",
-    "icon": "maple-leaf.svg",
-    "voice_triggers": [
-      "What's the weather in Toronto?",
-      "Vancouver forecast for next week"
-    ],
-    "required_services": [],
-    "tier": "coreworxlab",
-    "author": "cmac86",
-    "tags": [
-      "utilities"
-    ],
-    "updated": "2026-02-01"
-  },
-  {
-    "id": "2ATjQGqqA1vZdKL3czPuNA",
-    "name": "weather-fra",
-    "friendlyName": "Weather France",
-    "version": "1.0.0",
-    "description": "Gets current weather conditions and forecast data for French cities using the Open-Meteo API.",
-    "category": "utilities",
-    "path": "tools/utilities/weather-fra",
-    "icon": "weather-fra.svg",
-    "voice_triggers": [
-      "What's the weather in Paris?",
-      "Paris forecast"
-    ],
-    "required_services": [],
-    "tier": "community",
-    "author": "mmaudet",
-    "tags": [
-      "utilities"
-    ],
-    "updated": "2026-02-07"
-  },
-  {
-    "id": "Vu_piQqVkzsigLm2Ia6quQ",
-    "name": "weather-us",
-    "friendlyName": "Weather USA",
-    "version": "1.0.0",
-    "description": "Gets weather forecasts and current conditions for US cities using NOAA Weather.gov official data. Supports voice queries with automatic location geocoding via OpenStreetMap Nominatim.",
-    "category": "utilities",
-    "path": "tools/utilities/weather-us",
-    "icon": "us-weather-icon.svg",
-    "voice_triggers": [
-      "What's the weather in Chicago?",
-      "Austin forecast for next week",
-      "What's the current weather in Seattle?",
-      "Portland weather tomorrow",
-      "Miami forecast for Wednesday"
-    ],
-    "required_services": [],
-    "tier": "community",
-    "author": "JdCpuWiz",
-    "tags": [
-      "weather",
-      "utilities",
-      "us",
-      "noaa",
-      "forecast",
-      "geocoding",
-      "voice"
-    ],
-    "updated": "2026-02-09"
-  },
-  {
     "id": "wn9K89sz3bAItFVWpvzkhQ",
     "name": "x-twitter",
     "friendlyName": "X (Twitter)",
-    "version": "1.0.0",
-    "description": "X (Twitter) automation: post tweets, like/retweet/delete, send DMs, lookup users with connection status and full metrics, mute users, and view blocked accounts. Requires X Developer account with API access.",
+    "version": "1.1.0",
+    "description": "X, formerly Twitter — post tweets, interact with tweets, send DMs, look up users.",
     "category": "social",
     "path": "tools/social/x-twitter",
     "icon": "x.svg",
@@ -555,14 +336,14 @@
       "automation",
       "social media"
     ],
-    "updated": "2026-02-04"
+    "updated": "2026-02-21"
   },
   {
     "id": "ymrWW0bBJCq_d-KSgbJFlw",
     "name": "youtube",
     "friendlyName": "YouTube",
-    "version": "1.0.0",
-    "description": "Manage YouTube with comprehensive search, channel/video information retrieval, subscription management, and video rating capabilities.",
+    "version": "1.1.0",
+    "description": "YouTube API — search, get details, manage subscriptions, rate videos.",
     "category": "media",
     "path": "tools/media/youtube",
     "icon": "youtube.svg",
@@ -579,6 +360,6 @@
       "media",
       "youtube"
     ],
-    "updated": "2026-02-09"
+    "updated": "2026-02-21"
   }
 ]
