@@ -481,6 +481,27 @@
       "updated": "2026-02-12"
     },
     {
+      "id": "OjfLaQTNG_90gxjpjFTlAg",
+      "name": "weather",
+      "friendlyName": "Weather",
+      "version": "1.0.0",
+      "description": "Gets current weather conditions or multi-day forecasts for locations in Australia, Canada, France, and the USA.",
+      "category": "utilities",
+      "path": "tools/utilities/weather",
+      "icon": "weather.svg",
+      "voice_triggers": [
+        "What's the weather in Sydney?",
+        "Is it raining in Chicago?"
+      ],
+      "required_services": [],
+      "tier": "coreworxlab",
+      "author": "cmac86",
+      "tags": [
+        "utilities"
+      ],
+      "updated": "2026-03-04"
+    },
+    {
       "id": "mXoo792Qi9j8e5rzW3kZiw",
       "name": "weather-aus",
       "friendlyName": "Weather Australia",
