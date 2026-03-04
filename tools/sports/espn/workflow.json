@@ -1,0 +1,508 @@
+{
+  "name": "espn",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "espn",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -608,
+        608
+      ],
+      "id": "e5f1a2b3-0001-4aaa-b000-000000000001",
+      "name": "Webhook",
+      "webhookId": "espn-webhook-id",
+      "notes": "ESPN sports \u2014 scores, standings, and schedules for NFL, NBA, NHL, EPL, F1, MLS.\n\nActions:\n  scores \u2014 live and recent game results. Use when asked about scores, results, who won, who's playing.\n  standings \u2014 season rankings and win-loss records. Use when asked about standings, rankings, league table, who's leading.\n  schedule \u2014 upcoming games for a team. Use when asked about next game, upcoming matches, when does X play.\n\nRules:\n- sport is required for every action.\n- conference is ONLY for standings. Only NBA, NFL, and MLS have conferences. Values: east, west. Do NOT add conference unless the\nuser specifically asks for a conference.\n- team is required for schedule (except F1).\n- F1 results: use action \"scores\" (results maps to scores internally).\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: scores, standings, schedule\",\n    \"required\": true\n  },\n  \"sport\": {\n    \"type\": \"string\",\n    \"required\": true,\n    \"description\": \"Sport league. One of: nba, nfl, nhl, epl, mls, f1\"\n  },\n  \"team\": {\n    \"type\": \"string\",\n    \"description\": \"Team name or alias, e.g. lakers, seahawks, arsenal. For: schedule\"\n  },\n  \"conference\": {\n    \"type\": \"string\",\n    \"description\": \"Conference filter for NBA/NFL/MLS standings. One of: east, west. For: standings\"\n  }\n}"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const body = $input.item.json.body || $input.item.json;\n\nconst sport = (body.sport || '').toLowerCase().trim();\nlet action = (body.action || '').toLowerCase().trim();\nconst teamQuery = (body.team || '').toLowerCase().trim();\nconst conferenceQuery = (body.conference || '').toLowerCase().trim();\n\n// Validate sport\nconst validSports = ['nba', 'nfl', 'nhl', 'epl', 'mls', 'f1'];\nif (!sport || !validSports.includes(sport)) {\n  return { error: true, message: `Invalid sport \"${sport || 'none'}\". Valid options: nba, nfl, nhl, epl, mls, f1.` };\n}\n\n// Normalize F1 \"results\" to \"scores\"\nif (sport === 'f1' && action === 'results') {\n  action = 'scores';\n}\n\n// Validate action\nconst validActions = ['scores', 'schedule', 'standings'];\nif (!action || !validActions.includes(action)) {\n  return { error: true, message: `Invalid action \"${action || 'none'}\". Valid options: scores, schedule, standings.` };\n}\n\n// Sport paths\nconst sportPaths = {\n  nba: 'basketball/nba',\n  nfl: 'football/nfl',\n  nhl: 'hockey/nhl',\n  epl: 'soccer/eng.1',\n  mls: 'soccer/usa.1',\n  f1: 'racing/f1'\n};\nconst sportPath = sportPaths[sport];\n\n// ============================================================\n// NBA ALIASES\n// ============================================================\nconst nbaAliases = {\n  'hawks': 'atlanta', 'atlanta': 'atlanta',\n  'celtics': 'boston', 'boston': 'boston',\n  'nets': 'brooklyn', 'brooklyn': 'brooklyn',\n  'hornets': 'charlotte', 'charlotte': 'charlotte',\n  'bulls': 'chicago', 'chicago': 'chicago',\n  'cavaliers': 'cleveland', 'cavs': 'cleveland', 'cleveland': 'cleveland',\n  'mavericks': 'dallas', 'mavs': 'dallas', 'dallas': 'dallas',\n  'nuggets': 'denver', 'denver': 'denver',\n  'pistons': 'detroit', 'detroit': 'detroit',\n  'warriors': 'golden state', 'golden state': 'golden state', 'dubs': 'golden state',\n  'rockets': 'houston', 'houston': 'houston',\n  'pacers': 'indiana', 'indiana': 'indiana',\n  'clippers': 'la clippers', 'los angeles clippers': 'la clippers',\n  'lakers': 'la lakers', 'los angeles lakers': 'la lakers',\n  'grizzlies': 'memphis', 'memphis': 'memphis',\n  'heat': 'miami', 'miami': 'miami',\n  'bucks': 'milwaukee', 'milwaukee': 'milwaukee',\n  'timberwolves': 'minnesota', 'wolves': 'minnesota', 'minnesota': 'minnesota',\n  'pelicans': 'new orleans', 'new orleans': 'new orleans',\n  'knicks': 'new york', 'new york': 'new york',\n  'thunder': 'oklahoma city', 'okc': 'oklahoma city', 'oklahoma city': 'oklahoma city',\n  'magic': 'orlando', 'orlando': 'orlando',\n  '76ers': 'philadelphia', 'sixers': 'philadelphia', 'philadelphia': 'philadelphia',\n  'suns': 'phoenix', 'phoenix': 'phoenix',\n  'trail blazers': 'portland', 'blazers': 'portland', 'portland': 'portland',\n  'kings': 'sacramento', 'sacramento': 'sacramento',\n  'spurs': 'san antonio', 'san antonio': 'san antonio',\n  'raptors': 'toronto', 'toronto': 'toronto',\n  'jazz': 'utah', 'utah': 'utah',\n  'wizards': 'washington', 'washington': 'washington'\n};\nconst nbaAbbreviations = {\n  'atlanta': 'atl', 'boston': 'bos', 'brooklyn': 'bkn', 'charlotte': 'cha',\n  'chicago': 'chi', 'cleveland': 'cle', 'dallas': 'dal', 'denver': 'den',\n  'detroit': 'det', 'golden state': 'gs', 'houston': 'hou', 'indiana': 'ind',\n  'la clippers': 'lac', 'la lakers': 'lal', 'memphis': 'mem', 'miami': 'mia',\n  'milwaukee': 'mil', 'minnesota': 'min', 'new orleans': 'no', 'new york': 'ny',\n  'oklahoma city': 'okc', 'orlando': 'orl', 'philadelphia': 'phi', 'phoenix': 'phx',\n  'portland': 'por', 'sacramento': 'sac', 'san antonio': 'sa', 'toronto': 'tor',\n  'utah': 'utah', 'washington': 'wsh'\n};\nconst nbaAbbrevToName = {\n  'ATL': 'Hawks', 'BOS': 'Celtics', 'BKN': 'Nets', 'CHA': 'Hornets', 'CHI': 'Bulls',\n  'CLE': 'Cavaliers', 'DAL': 'Mavericks', 'DEN': 'Nuggets', 'DET': 'Pistons', 'GS': 'Warriors',\n  'HOU': 'Rockets', 'IND': 'Pacers', 'LAC': 'Clippers', 'LAL': 'Lakers', 'MEM': 'Grizzlies',\n  'MIA': 'Heat', 'MIL': 'Bucks', 'MIN': 'Timberwolves', 'NO': 'Pelicans', 'NY': 'Knicks',\n  'OKC': 'Thunder', 'ORL': 'Magic', 'PHI': '76ers', 'PHX': 'Suns', 'POR': 'Trail Blazers',\n  'SAC': 'Kings', 'SA': 'Spurs', 'TOR': 'Raptors', 'UTAH': 'Jazz', 'WSH': 'Wizards'\n};\n\n// ============================================================\n// NFL ALIASES\n// ============================================================\nconst nflAliases = {\n  'cardinals': 'ari', 'arizona': 'ari', 'arizona cardinals': 'ari',\n  'falcons': 'atl', 'atlanta': 'atl', 'atlanta falcons': 'atl',\n  'ravens': 'bal', 'baltimore': 'bal', 'baltimore ravens': 'bal',\n  'bills': 'buf', 'buffalo': 'buf', 'buffalo bills': 'buf',\n  'panthers': 'car', 'carolina': 'car', 'carolina panthers': 'car',\n  'bears': 'chi', 'chicago': 'chi', 'chicago bears': 'chi',\n  'bengals': 'cin', 'cincinnati': 'cin', 'cincinnati bengals': 'cin',\n  'browns': 'cle', 'cleveland': 'cle', 'cleveland browns': 'cle',\n  'cowboys': 'dal', 'dallas': 'dal', 'dallas cowboys': 'dal',\n  'broncos': 'den', 'denver': 'den', 'denver broncos': 'den',\n  'lions': 'det', 'detroit': 'det', 'detroit lions': 'det',\n  'packers': 'gb', 'green bay': 'gb', 'green bay packers': 'gb',\n  'texans': 'hou', 'houston': 'hou', 'houston texans': 'hou',\n  'colts': 'ind', 'indianapolis': 'ind', 'indianapolis colts': 'ind',\n  'jaguars': 'jax', 'jacksonville': 'jax', 'jacksonville jaguars': 'jax',\n  'chiefs': 'kc', 'kansas city': 'kc', 'kansas city chiefs': 'kc',\n  'raiders': 'lv', 'las vegas': 'lv', 'las vegas raiders': 'lv',\n  'chargers': 'lac', 'los angeles chargers': 'lac', 'la chargers': 'lac',\n  'rams': 'lar', 'los angeles rams': 'lar', 'la rams': 'lar',\n  'dolphins': 'mia', 'miami': 'mia', 'miami dolphins': 'mia',\n  'vikings': 'min', 'minnesota': 'min', 'minnesota vikings': 'min',\n  'patriots': 'ne', 'new england': 'ne', 'new england patriots': 'ne',\n  'saints': 'no', 'new orleans': 'no', 'new orleans saints': 'no',\n  'giants': 'nyg', 'new york giants': 'nyg', 'ny giants': 'nyg',\n  'jets': 'nyj', 'new york jets': 'nyj', 'ny jets': 'nyj',\n  'eagles': 'phi', 'philadelphia': 'phi', 'philadelphia eagles': 'phi',\n  'steelers': 'pit', 'pittsburgh': 'pit', 'pittsburgh steelers': 'pit',\n  '49ers': 'sf', 'niners': 'sf', 'san francisco': 'sf', 'san francisco 49ers': 'sf',\n  'seahawks': 'sea', 'seattle': 'sea', 'seattle seahawks': 'sea',\n  'buccaneers': 'tb', 'bucs': 'tb', 'tampa': 'tb', 'tampa bay': 'tb', 'tampa bay buccaneers': 'tb',\n  'titans': 'ten', 'tennessee': 'ten', 'tennessee titans': 'ten',\n  'commanders': 'wsh', 'washington': 'wsh', 'washington commanders': 'wsh'\n};\nconst nflAbbrevToName = {\n  'ARI': 'Cardinals', 'ATL': 'Falcons', 'BAL': 'Ravens', 'BUF': 'Bills',\n  'CAR': 'Panthers', 'CHI': 'Bears', 'CIN': 'Bengals', 'CLE': 'Browns',\n  'DAL': 'Cowboys', 'DEN': 'Broncos', 'DET': 'Lions', 'GB': 'Packers',\n  'HOU': 'Texans', 'IND': 'Colts', 'JAX': 'Jaguars', 'KC': 'Chiefs',\n  'LV': 'Raiders', 'LAC': 'Chargers', 'LAR': 'Rams', 'MIA': 'Dolphins',\n  'MIN': 'Vikings', 'NE': 'Patriots', 'NO': 'Saints', 'NYG': 'Giants',\n  'NYJ': 'Jets', 'PHI': 'Eagles', 'PIT': 'Steelers', 'SF': '49ers',\n  'SEA': 'Seahawks', 'TB': 'Buccaneers', 'TEN': 'Titans', 'WSH': 'Commanders'\n};\n\n// ============================================================\n// NHL ALIASES\n// ============================================================\nconst nhlAliases = {\n  'ducks': 'ana', 'anaheim': 'ana',\n  'coyotes': 'ari', 'arizona': 'ari',\n  'bruins': 'bos', 'boston': 'bos',\n  'sabres': 'buf', 'buffalo': 'buf',\n  'flames': 'cgy', 'calgary': 'cgy',\n  'hurricanes': 'car', 'carolina': 'car',\n  'blackhawks': 'chi', 'chicago': 'chi',\n  'avalanche': 'col', 'colorado': 'col',\n  'blue jackets': 'cbj', 'columbus': 'cbj',\n  'stars': 'dal', 'dallas': 'dal',\n  'red wings': 'det', 'detroit': 'det',\n  'oilers': 'edm', 'edmonton': 'edm',\n  'panthers': 'fla', 'florida': 'fla',\n  'kings': 'la', 'los angeles': 'la',\n  'wild': 'min', 'minnesota': 'min',\n  'canadiens': 'mtl', 'montreal': 'mtl', 'habs': 'mtl',\n  'predators': 'nsh', 'nashville': 'nsh',\n  'devils': 'nj', 'new jersey': 'nj',\n  'islanders': 'nyi', 'new york islanders': 'nyi',\n  'rangers': 'nyr', 'new york rangers': 'nyr',\n  'senators': 'ott', 'ottawa': 'ott',\n  'flyers': 'phi', 'philadelphia': 'phi',\n  'penguins': 'pit', 'pittsburgh': 'pit',\n  'sharks': 'sj', 'san jose': 'sj',\n  'kraken': 'sea', 'seattle': 'sea',\n  'blues': 'stl', 'st louis': 'stl', 'st. louis': 'stl',\n  'lightning': 'tb', 'tampa': 'tb', 'tampa bay': 'tb',\n  'maple leafs': 'tor', 'leafs': 'tor', 'toronto': 'tor',\n  'canucks': 'van', 'vancouver': 'van',\n  'golden knights': 'vgk', 'vegas': 'vgk',\n  'capitals': 'wsh', 'washington': 'wsh', 'caps': 'wsh',\n  'jets': 'wpg', 'winnipeg': 'wpg'\n};\nconst nhlAbbrevToName = {\n  'ANA': 'Ducks', 'ARI': 'Coyotes', 'BOS': 'Bruins', 'BUF': 'Sabres', 'CGY': 'Flames',\n  'CAR': 'Hurricanes', 'CHI': 'Blackhawks', 'COL': 'Avalanche', 'CBJ': 'Blue Jackets',\n  'DAL': 'Stars', 'DET': 'Red Wings', 'EDM': 'Oilers', 'FLA': 'Panthers', 'LA': 'Kings',\n  'MIN': 'Wild', 'MTL': 'Canadiens', 'NSH': 'Predators', 'NJ': 'Devils', 'NYI': 'Islanders',\n  'NYR': 'Rangers', 'OTT': 'Senators', 'PHI': 'Flyers', 'PIT': 'Penguins', 'SJ': 'Sharks',\n  'SEA': 'Kraken', 'STL': 'Blues', 'TB': 'Lightning', 'TOR': 'Maple Leafs', 'VAN': 'Canucks',\n  'VGK': 'Golden Knights', 'WSH': 'Capitals', 'WPG': 'Jets'\n};\n\n// ============================================================\n// EPL ALIASES\n// ============================================================\nconst eplAliases = {\n  'arsenal': 'arsenal', 'gunners': 'arsenal',\n  'aston villa': 'aston villa', 'villa': 'aston villa',\n  'bournemouth': 'bournemouth', 'cherries': 'bournemouth',\n  'brentford': 'brentford', 'bees': 'brentford',\n  'brighton': 'brighton', 'seagulls': 'brighton',\n  'chelsea': 'chelsea', 'blues': 'chelsea',\n  'crystal palace': 'crystal palace', 'palace': 'crystal palace', 'eagles': 'crystal palace',\n  'everton': 'everton', 'toffees': 'everton',\n  'fulham': 'fulham', 'cottagers': 'fulham',\n  'ipswich': 'ipswich', 'ipswich town': 'ipswich',\n  'leicester': 'leicester', 'leicester city': 'leicester', 'foxes': 'leicester',\n  'liverpool': 'liverpool', 'reds': 'liverpool',\n  'man city': 'manchester city', 'manchester city': 'manchester city', 'city': 'manchester city', 'citizens': 'manchester city',\n  'man united': 'manchester united', 'manchester united': 'manchester united', 'united': 'manchester united', 'red devils': 'manchester united',\n  'newcastle': 'newcastle', 'newcastle united': 'newcastle', 'magpies': 'newcastle', 'toon': 'newcastle',\n  'nottingham forest': 'nottingham forest', 'forest': 'nottingham forest',\n  'southampton': 'southampton', 'saints': 'southampton',\n  'tottenham': 'tottenham', 'spurs': 'tottenham',\n  'west ham': 'west ham', 'hammers': 'west ham',\n  'wolves': 'wolves', 'wolverhampton': 'wolves'\n};\nconst eplTeamIds = {\n  'arsenal': '359', 'aston villa': '362', 'bournemouth': '349', 'brentford': '337',\n  'brighton': '331', 'chelsea': '363', 'crystal palace': '384', 'everton': '368',\n  'fulham': '370', 'ipswich': '373', 'leicester': '375', 'liverpool': '364',\n  'manchester city': '382', 'manchester united': '360', 'newcastle': '361',\n  'nottingham forest': '393', 'southampton': '376', 'tottenham': '367',\n  'west ham': '371', 'wolves': '380'\n};\n\n// ============================================================\n// MLS ALIASES\n// ============================================================\nconst mlsAliases = {\n  'sounders': 'seattle', 'seattle sounders': 'seattle', 'seattle': 'seattle',\n  'whitecaps': 'vancouver', 'vancouver whitecaps': 'vancouver', 'vancouver': 'vancouver',\n  'timbers': 'portland', 'portland timbers': 'portland', 'portland': 'portland',\n  'galaxy': 'la galaxy', 'los angeles galaxy': 'la galaxy', 'la galaxy': 'la galaxy',\n  'lafc': 'los angeles fc', 'los angeles football club': 'los angeles fc', 'los angeles fc': 'los angeles fc',\n  'san diego': 'san diego', 'san diego fc': 'san diego',\n  'earthquakes': 'san jose', 'san jose earthquakes': 'san jose', 'san jose': 'san jose',\n  'real salt lake': 'salt lake', 'rsl': 'salt lake', 'salt lake': 'salt lake',\n  'rapids': 'colorado', 'colorado rapids': 'colorado', 'colorado': 'colorado',\n  'fc dallas': 'dallas', 'dallas': 'dallas',\n  'dynamo': 'houston', 'houston dynamo': 'houston', 'houston': 'houston',\n  'sporting kc': 'sporting kansas city', 'skc': 'sporting kansas city', 'sporting kansas city': 'sporting kansas city', 'kansas city': 'sporting kansas city',\n  'minnesota united': 'minnesota', 'loons': 'minnesota', 'minnesota': 'minnesota',\n  'fire': 'chicago', 'chicago fire': 'chicago', 'chicago': 'chicago',\n  'crew': 'columbus', 'columbus crew': 'columbus', 'columbus': 'columbus',\n  'fc cincinnati': 'cincinnati', 'fcc': 'cincinnati', 'cincinnati': 'cincinnati',\n  'inter miami': 'miami', 'miami': 'miami',\n  'orlando city': 'orlando', 'orlando': 'orlando',\n  'atlanta united': 'atlanta', 'atl utd': 'atlanta', 'atlanta': 'atlanta',\n  'nashville sc': 'nashville', 'nashville': 'nashville',\n  'charlotte fc': 'charlotte', 'charlotte': 'charlotte',\n  'dc united': 'dc', 'washington': 'dc', 'dc': 'dc',\n  'cf montreal': 'montreal', 'montreal': 'montreal', 'impact': 'montreal',\n  'toronto fc': 'toronto', 'tfc': 'toronto', 'toronto': 'toronto',\n  'red bulls': 'ny red bulls', 'new york red bulls': 'ny red bulls', 'nyrb': 'ny red bulls', 'ny red bulls': 'ny red bulls',\n  'nycfc': 'new york city fc', 'new york city': 'new york city fc', 'new york city fc': 'new york city fc',\n  'revolution': 'new england', 'new england revolution': 'new england', 'new england': 'new england',\n  'union': 'philadelphia', 'philadelphia union': 'philadelphia', 'philadelphia': 'philadelphia',\n  'austin fc': 'austin', 'austin': 'austin',\n  'st louis city': 'st. louis', 'st louis': 'st. louis', 'st. louis': 'st. louis'\n};\nconst mlsTeamIds = {\n  'seattle': '9726', 'vancouver': '9727', 'portland': '9713',\n  'la galaxy': '9568', 'los angeles fc': '22660', 'san diego': '22529',\n  'san jose': '9569', 'salt lake': '9570', 'colorado': '9571',\n  'dallas': '9572', 'houston': '9573', 'sporting kansas city': '9574',\n  'minnesota': '18586', 'chicago': '9575', 'columbus': '9576',\n  'cincinnati': '21291', 'miami': '21292', 'orlando': '15615',\n  'atlanta': '18305', 'nashville': '21293', 'charlotte': '24749',\n  'dc': '9577', 'montreal': '9578', 'toronto': '9579',\n  'ny red bulls': '9580', 'new york city fc': '17015', 'new england': '9581',\n  'philadelphia': '9582', 'austin': '23569', 'st. louis': '25621'\n};\n\n// ============================================================\n// RESOLVE TEAM IDENTIFIER\n// ============================================================\nlet normalizedTeam = '';\nlet teamIdentifier = '';\nlet driverQuery = '';\nlet abbrevToName = {};\n\nif (teamQuery) {\n  switch (sport) {\n    case 'nba': {\n      normalizedTeam = nbaAliases[teamQuery] || '';\n      if (normalizedTeam) {\n        teamIdentifier = nbaAbbreviations[normalizedTeam] || '';\n      }\n      abbrevToName = nbaAbbrevToName;\n      break;\n    }\n    case 'nfl': {\n      teamIdentifier = nflAliases[teamQuery] || '';\n      if (!teamIdentifier && teamQuery.length <= 3) {\n        teamIdentifier = teamQuery;\n      }\n      abbrevToName = nflAbbrevToName;\n      break;\n    }\n    case 'nhl': {\n      teamIdentifier = nhlAliases[teamQuery] || '';\n      if (!teamIdentifier && teamQuery.length <= 3) {\n        teamIdentifier = teamQuery;\n      }\n      abbrevToName = nhlAbbrevToName;\n      break;\n    }\n    case 'epl': {\n      normalizedTeam = eplAliases[teamQuery] || '';\n      if (normalizedTeam) {\n        teamIdentifier = eplTeamIds[normalizedTeam] || '';\n      }\n      break;\n    }\n    case 'mls': {\n      normalizedTeam = mlsAliases[teamQuery] || '';\n      if (normalizedTeam) {\n        teamIdentifier = mlsTeamIds[normalizedTeam] || '';\n      }\n      break;\n    }\n    case 'f1': {\n      driverQuery = teamQuery;\n      break;\n    }\n  }\n} else {\n  // Set abbrevToName even when no team query\n  switch (sport) {\n    case 'nba': abbrevToName = nbaAbbrevToName; break;\n    case 'nfl': abbrevToName = nflAbbrevToName; break;\n    case 'nhl': abbrevToName = nhlAbbrevToName; break;\n  }\n}\n\n// ============================================================\n// BUILD URLs\n// ============================================================\nconst currentYear = new Date().getFullYear();\n\nlet scoresUrl = `https://site.api.espn.com/apis/site/v2/sports/${sportPath}/scoreboard`;\nif (sport === 'f1') {\n  scoresUrl += `?dates=${currentYear}&limit=50`;\n}\n\nlet scheduleUrl = '';\nif (teamIdentifier) {\n  scheduleUrl = `https://site.api.espn.com/apis/site/v2/sports/${sportPath}/teams/${teamIdentifier}/schedule`;\n  if (sport === 'nhl') {\n    scheduleUrl += `?dates=${currentYear}`;\n  }\n}\nif (sport === 'f1') {\n  scheduleUrl = scoresUrl;\n}\n\nlet standingsUrl = `https://site.api.espn.com/apis/v2/sports/${sportPath}/standings`;\nif (sport === 'nhl') {\n  standingsUrl = 'https://site.web.api.espn.com/apis/v2/sports/hockey/nhl/standings';\n}\n\nreturn {\n  sport,\n  action,\n  teamQuery,\n  normalizedTeam,\n  teamIdentifier,\n  driverQuery,\n  conferenceQuery,\n  sportPath,\n  scoresUrl,\n  scheduleUrl,\n  standingsUrl,\n  abbrevToName\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -368,
+        608
+      ],
+      "id": "e5f1a2b3-0002-4aaa-b000-000000000002",
+      "name": "Parse Parameters"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "action-scores",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "scores",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "scores"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "action-schedule",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "schedule",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "schedule"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "action-standings",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "standings",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "standings"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -96,
+        608
+      ],
+      "id": "e5f1a2b3-0003-4aaa-b000-000000000003",
+      "name": "Switch Action"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Parse Parameters').item.json.scoresUrl }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        160,
+        208
+      ],
+      "id": "e5f1a2b3-0004-4aaa-b000-000000000004",
+      "name": "Get Scores",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "has-team-check",
+              "leftValue": "={{ $('Parse Parameters').item.json.teamIdentifier }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        160,
+        608
+      ],
+      "id": "e5f1a2b3-0005-4aaa-b000-000000000005",
+      "name": "Has Team?"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Parse Parameters').item.json.scheduleUrl }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        512
+      ],
+      "id": "e5f1a2b3-0006-4aaa-b000-000000000006",
+      "name": "Get Schedule",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Parse Parameters').item.json.standingsUrl }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        160,
+        1008
+      ],
+      "id": "e5f1a2b3-0007-4aaa-b000-000000000007",
+      "name": "Get Standings",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "try {\n  const data = $input.item.json;\n  const params = $('Parse Parameters').item.json;\n  const sport = params.sport;\n  const teamQuery = params.teamQuery;\n  const teamId = params.teamIdentifier;\n  const abbrevToName = params.abbrevToName || {};\n\n  if (!data.events && !data.leagues) {\n    return { message: 'No scores data available.', action: 'scores', games: [] };\n  }\n\n  let events = data.events || [];\n\n  // Filter by team if provided\n  if (teamQuery && sport !== 'f1') {\n    events = events.filter(e => {\n      const competitors = e.competitions?.[0]?.competitors || [];\n      return competitors.some(c => {\n        const abbr = (c.team?.abbreviation || '').toLowerCase();\n        const name = (c.team?.displayName || '').toLowerCase();\n        const id = c.team?.id || '';\n        return abbr === teamId || name.includes(teamQuery) || id === teamId;\n      });\n    });\n  }\n\n  let games = [];\n  let lines = [];\n\n  switch (sport) {\n    case 'f1': {\n      // Find most recent completed race\n      const completedEvents = events.filter(e => {\n        const status = e.competitions?.[0]?.status?.type?.completed;\n        return status === true;\n      });\n      if (completedEvents.length === 0) {\n        return { message: 'No completed F1 races found yet this season.', action: 'scores', games: [] };\n      }\n      const lastRace = completedEvents[completedEvents.length - 1];\n      const raceName = lastRace.name || 'Race';\n      const competitors = lastRace.competitions?.[0]?.competitors || [];\n      const sorted = competitors.sort((a, b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));\n      const podium = sorted.slice(0, 3);\n\n      if (podium.length >= 3) {\n        const winner = podium[0].athlete?.displayName || podium[0].team?.displayName || 'Unknown';\n        const second = podium[1].athlete?.displayName || podium[1].team?.displayName || 'Unknown';\n        const third = podium[2].athlete?.displayName || podium[2].team?.displayName || 'Unknown';\n        lines.push(`${winner} won the ${raceName}. ${second} second, ${third} third.`);\n      } else if (podium.length > 0) {\n        const winner = podium[0].athlete?.displayName || podium[0].team?.displayName || 'Unknown';\n        lines.push(`${winner} won the ${raceName}.`);\n      }\n\n      // Filter by driver if provided\n      let driverQuery = params.driverQuery;\n      if (driverQuery) {\n        const driverResult = sorted.find(c => {\n          const name = (c.athlete?.displayName || c.team?.displayName || '').toLowerCase();\n          return name.includes(driverQuery);\n        });\n        if (driverResult) {\n          const pos = driverResult.order || '?';\n          const dName = driverResult.athlete?.displayName || driverResult.team?.displayName;\n          lines.push(`${dName} finished P${pos}.`);\n        }\n      }\n\n      games = podium.map(c => ({\n        position: c.order,\n        driver: c.athlete?.displayName || c.team?.displayName,\n        team: c.team?.displayName\n      }));\n      break;\n    }\n\n    case 'nba': {\n      events = events.slice(0, 5);\n      events.forEach(e => {\n        const comp = e.competitions?.[0];\n        const competitors = comp?.competitors || [];\n        const status = comp?.status;\n        const state = status?.type?.state; // pre, in, post\n        const detail = status?.type?.shortDetail || status?.type?.detail || '';\n\n        const home = competitors.find(c => c.homeAway === 'home');\n        const away = competitors.find(c => c.homeAway === 'away');\n        if (!home || !away) return;\n\n        const homeName = abbrevToName[home.team?.abbreviation] || home.team?.displayName || home.team?.abbreviation;\n        const awayName = abbrevToName[away.team?.abbreviation] || away.team?.displayName || away.team?.abbreviation;\n        const homeScore = parseInt(home.score) || 0;\n        const awayScore = parseInt(away.score) || 0;\n\n        if (state === 'post') {\n          const winner = homeScore > awayScore ? homeName : awayName;\n          const loser = homeScore > awayScore ? awayName : homeName;\n          const winScore = Math.max(homeScore, awayScore);\n          const loseScore = Math.min(homeScore, awayScore);\n          lines.push(`${winner} beat ${loser} ${winScore} to ${loseScore}.`);\n        } else if (state === 'in') {\n          const periodNum = status?.period || 0;\n          const periods = ['1st quarter', '2nd quarter', '3rd quarter', '4th quarter'];\n          const periodStr = periods[periodNum - 1] || `period ${periodNum}`;\n          const clock = status?.displayClock || '';\n          lines.push(`${awayName} ${awayScore}, ${homeName} ${homeScore} - ${clock} ${periodStr}.`);\n        } else {\n          const dateStr = new Date(e.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });\n          lines.push(`${awayName} at ${homeName} - ${dateStr}.`);\n        }\n\n        games.push({\n          home: homeName, away: awayName,\n          homeScore, awayScore, status: state, detail\n        });\n      });\n      break;\n    }\n\n    case 'nfl': {\n      events = events.slice(0, 5);\n      events.forEach(e => {\n        const comp = e.competitions?.[0];\n        const competitors = comp?.competitors || [];\n        const status = comp?.status;\n        const state = status?.type?.state;\n        const detail = status?.type?.shortDetail || '';\n\n        const home = competitors.find(c => c.homeAway === 'home');\n        const away = competitors.find(c => c.homeAway === 'away');\n        if (!home || !away) return;\n\n        const homeName = home.team?.displayName || home.team?.abbreviation;\n        const awayName = away.team?.displayName || away.team?.abbreviation;\n        const homeScore = parseInt(home.score) || 0;\n        const awayScore = parseInt(away.score) || 0;\n\n        if (state === 'post') {\n          const isOT = detail.toLowerCase().includes('ot');\n          const otStr = isOT ? ' in overtime' : '';\n          const winner = homeScore > awayScore ? homeName : awayName;\n          const loser = homeScore > awayScore ? awayName : homeName;\n          const winScore = Math.max(homeScore, awayScore);\n          const loseScore = Math.min(homeScore, awayScore);\n          lines.push(`${winner} beat ${loser} ${winScore} to ${loseScore}${otStr}.`);\n        } else if (state === 'in') {\n          const periodNum = status?.period || 0;\n          const periods = ['1st quarter', '2nd quarter', '3rd quarter', '4th quarter'];\n          const periodStr = periodNum > 4 ? 'overtime' : (periods[periodNum - 1] || `quarter ${periodNum}`);\n          const clock = status?.displayClock || '';\n          lines.push(`${awayName} ${awayScore}, ${homeName} ${homeScore} - ${clock} ${periodStr}.`);\n        } else {\n          const dateStr = new Date(e.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });\n          lines.push(`${awayName} at ${homeName} - ${dateStr}.`);\n        }\n\n        games.push({\n          home: homeName, away: awayName,\n          homeScore, awayScore, status: state, detail\n        });\n      });\n      break;\n    }\n\n    case 'nhl': {\n      events = events.slice(0, 5);\n      events.forEach(e => {\n        const comp = e.competitions?.[0];\n        const competitors = comp?.competitors || [];\n        const status = comp?.status;\n        const state = status?.type?.state;\n        const detail = status?.type?.shortDetail || '';\n\n        const home = competitors.find(c => c.homeAway === 'home');\n        const away = competitors.find(c => c.homeAway === 'away');\n        if (!home || !away) return;\n\n        const homeName = abbrevToName[home.team?.abbreviation] || home.team?.displayName || home.team?.abbreviation;\n        const awayName = abbrevToName[away.team?.abbreviation] || away.team?.displayName || away.team?.abbreviation;\n        const homeScore = parseInt(home.score) || 0;\n        const awayScore = parseInt(away.score) || 0;\n\n        if (state === 'post') {\n          const isOT = detail.toLowerCase().includes('ot') || detail.toLowerCase().includes('so');\n          const otStr = isOT ? ' in overtime' : '';\n          const winner = homeScore > awayScore ? homeName : awayName;\n          const loser = homeScore > awayScore ? awayName : homeName;\n          const winScore = Math.max(homeScore, awayScore);\n          const loseScore = Math.min(homeScore, awayScore);\n          lines.push(`${winner} beat ${loser} ${winScore} to ${loseScore}${otStr}.`);\n        } else if (state === 'in') {\n          const periodNum = status?.period || 0;\n          const periods = ['1st period', '2nd period', '3rd period'];\n          const periodStr = periodNum > 3 ? 'overtime' : (periods[periodNum - 1] || `period ${periodNum}`);\n          const clock = status?.displayClock || '';\n          lines.push(`${awayName} ${awayScore}, ${homeName} ${homeScore} - ${clock} ${periodStr}.`);\n        } else {\n          const dateStr = new Date(e.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });\n          lines.push(`${awayName} at ${homeName} - ${dateStr}.`);\n        }\n\n        games.push({\n          home: homeName, away: awayName,\n          homeScore, awayScore, status: state, detail\n        });\n      });\n      break;\n    }\n\n    case 'epl':\n    case 'mls': {\n      events = events.slice(0, 5);\n      events.forEach(e => {\n        const comp = e.competitions?.[0];\n        const competitors = comp?.competitors || [];\n        const status = comp?.status;\n        const state = status?.type?.state;\n        const clock = status?.displayClock || '';\n\n        const home = competitors.find(c => c.homeAway === 'home');\n        const away = competitors.find(c => c.homeAway === 'away');\n        if (!home || !away) return;\n\n        const homeName = home.team?.displayName || home.team?.name;\n        const awayName = away.team?.displayName || away.team?.name;\n        const homeScore = parseInt(home.score) || 0;\n        const awayScore = parseInt(away.score) || 0;\n\n        if (state === 'post') {\n          if (homeScore === awayScore) {\n            lines.push(`${homeName} drew ${awayName} ${homeScore} to ${awayScore}.`);\n          } else {\n            const winner = homeScore > awayScore ? homeName : awayName;\n            const loser = homeScore > awayScore ? awayName : homeName;\n            const winScore = Math.max(homeScore, awayScore);\n            const loseScore = Math.min(homeScore, awayScore);\n            lines.push(`${winner} beat ${loser} ${winScore} to ${loseScore}.`);\n          }\n        } else if (state === 'in') {\n          if (homeScore === awayScore) {\n            lines.push(`${homeName} and ${awayName} level at ${homeScore} - ${clock}.`);\n          } else {\n            lines.push(`${awayName} ${awayScore}, ${homeName} ${homeScore} - ${clock}.`);\n          }\n        } else {\n          const dateStr = new Date(e.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });\n          lines.push(`${awayName} at ${homeName} - ${dateStr}.`);\n        }\n\n        games.push({\n          home: homeName, away: awayName,\n          homeScore, awayScore, status: state\n        });\n      });\n      break;\n    }\n  }\n\n  const sportLabels = { nba: 'NBA', nfl: 'NFL', nhl: 'NHL', epl: 'EPL', mls: 'MLS', f1: 'F1' };\n  const label = sportLabels[sport];\n\n  if (lines.length === 0) {\n    return { message: `No ${label} scores found${teamQuery ? ' for ' + teamQuery : ''}.`, action: 'scores', games: [] };\n  }\n\n  const message = lines.join(' ');\n  return { message, action: 'scores', games };\n} catch (error) {\n  return { message: 'Error processing scores: ' + error.message, action: 'scores', games: [] };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        208
+      ],
+      "id": "e5f1a2b3-0008-4aaa-b000-000000000008",
+      "name": "Format Scores"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "try {\n  const data = $input.item.json;\n  const params = $('Parse Parameters').item.json;\n  const sport = params.sport;\n  const teamQuery = params.teamQuery;\n  const teamId = params.teamIdentifier;\n  const abbrevToName = params.abbrevToName || {};\n\n  let games = [];\n  let lines = [];\n\n  if (sport === 'f1') {\n    // F1 uses scoreboard data for schedule\n    const events = data.events || [];\n    const now = new Date();\n    const upcoming = events.filter(e => new Date(e.date) > now);\n\n    if (upcoming.length === 0) {\n      return { message: 'No upcoming F1 races found.', action: 'schedule', games: [] };\n    }\n\n    const next = upcoming.slice(0, 3);\n    next.forEach((e, i) => {\n      const name = e.name || 'Race';\n      const dateStr = new Date(e.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });\n      if (i === 0) {\n        lines.push(`The next F1 race is the ${name} on ${dateStr}.`);\n      } else {\n        lines.push(`${name} on ${dateStr}.`);\n      }\n      games.push({ race: name, date: e.date });\n    });\n\n    return { message: lines.join(' '), action: 'schedule', games };\n  }\n\n  // Team sports schedule\n  const scheduleEvents = data.events || [];\n  const now = new Date();\n  const upcoming = scheduleEvents.filter(e => new Date(e.date) > now);\n\n  if (upcoming.length === 0) {\n    return { message: 'No upcoming games found.', action: 'schedule', games: [] };\n  }\n\n  const next = upcoming.slice(0, 3);\n\n  next.forEach(e => {\n    const comp = e.competitions?.[0];\n    const competitors = comp?.competitors || [];\n    const dateStr = new Date(e.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });\n\n    if (sport === 'epl' || sport === 'mls') {\n      // Soccer: parse from competitors, find opponent by team ID mismatch\n      const ourTeam = competitors.find(c => c.team?.id === teamId);\n      const opponent = competitors.find(c => c.team?.id !== teamId);\n      if (ourTeam && opponent) {\n        const oppName = opponent.team?.displayName || opponent.team?.name || 'Unknown';\n        const location = ourTeam.homeAway === 'home' ? 'vs' : 'at';\n        lines.push(`${location === 'vs' ? 'vs' : 'at'} ${oppName} - ${dateStr}.`);\n      } else {\n        // Fallback\n        const shortName = e.shortName || e.name || '';\n        lines.push(`${shortName} - ${dateStr}.`);\n      }\n      games.push({\n        opponent: competitors.find(c => c.team?.id !== teamId)?.team?.displayName,\n        date: e.date,\n        homeAway: competitors.find(c => c.team?.id === teamId)?.homeAway\n      });\n    } else {\n      // NBA/NFL/NHL: parse shortName (format \"ABBR @ ABBR\")\n      const shortName = e.shortName || '';\n      const parts = shortName.split(/\\s*[@]\\s*/);\n      if (parts.length === 2) {\n        const awayAbbr = parts[0].trim();\n        const homeAbbr = parts[1].trim();\n        const awayName = abbrevToName[awayAbbr] || awayAbbr;\n        const homeName = abbrevToName[homeAbbr] || homeAbbr;\n        const upperTeamId = teamId.toUpperCase();\n\n        if (awayAbbr === upperTeamId) {\n          lines.push(`at ${homeName} - ${dateStr}.`);\n        } else if (homeAbbr === upperTeamId) {\n          lines.push(`vs ${awayName} - ${dateStr}.`);\n        } else {\n          lines.push(`${awayName} at ${homeName} - ${dateStr}.`);\n        }\n\n        games.push({\n          away: awayName, home: homeName, date: e.date,\n          homeAway: awayAbbr === upperTeamId ? 'away' : 'home'\n        });\n      } else {\n        lines.push(`${shortName || e.name} - ${dateStr}.`);\n        games.push({ name: shortName || e.name, date: e.date });\n      }\n    }\n  });\n\n  const sportLabels = { nba: 'NBA', nfl: 'NFL', nhl: 'NHL', epl: 'EPL', mls: 'MLS' };\n  const label = sportLabels[sport];\n  const message = `Upcoming ${label} schedule: ` + lines.join(' ');\n\n  return { message, action: 'schedule', games };\n} catch (error) {\n  return { message: 'Error processing schedule: ' + error.message, action: 'schedule', games: [] };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        512
+      ],
+      "id": "e5f1a2b3-0009-4aaa-b000-000000000009",
+      "name": "Format Schedule"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const sport = $('Parse Parameters').item.json.sport;\nconst examples = { nba: 'Lakers', nfl: 'Seahawks', nhl: 'Canucks', epl: 'Arsenal', mls: 'Sounders', f1: null };\nconst ex = examples[sport];\nif (sport === 'f1') {\n  return { message: \"F1 doesn't use team schedules. Try 'F1 schedule' to see the race calendar.\", error: true, action: 'schedule' };\n}\nreturn { message: \"Schedule requires a team. Try: 'when do the \" + ex + \" play next'\", error: true, action: 'schedule' };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        752
+      ],
+      "id": "e5f1a2b3-0010-4aaa-b000-000000000010",
+      "name": "Schedule No Team"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "try {\n  const data = $input.item.json;\n  const params = $('Parse Parameters').item.json;\n  const sport = params.sport;\n  const teamQuery = params.teamQuery;\n  const teamId = params.teamIdentifier;\n  const conferenceQuery = params.conferenceQuery;\n\n  let standingsData = [];\n  let lines = [];\n\n  const sportLabels = { nba: 'NBA', nfl: 'NFL', nhl: 'NHL', epl: 'EPL', mls: 'MLS', f1: 'F1' };\n  const label = sportLabels[sport];\n\n  const getStat = (stats, name) => {\n    const s = (stats || []).find(st => st.name === name || st.abbreviation === name);\n    return s ? (s.displayValue || s.value || '0') : '0';\n  };\n\n  switch (sport) {\n    case 'nba': {\n      // Conference-based\n      const children = data.children || [];\n      let groups = children;\n\n      if (conferenceQuery) {\n        groups = children.filter(c => {\n          const name = (c.name || c.abbreviation || '').toLowerCase();\n          return name.includes(conferenceQuery);\n        });\n      }\n\n      groups.forEach(group => {\n        const confName = group.name || group.abbreviation || 'Conference';\n        const standings = group.standings?.entries || [];\n\n        let entries = standings.map(entry => {\n          const team = entry.team?.displayName || entry.team?.name || 'Unknown';\n          const abbr = entry.team?.abbreviation || '';\n          const wins = parseInt(getStat(entry.stats, 'wins')) || 0;\n          const losses = parseInt(getStat(entry.stats, 'losses')) || 0;\n          return { team, abbr, wins, losses };\n        });\n\n        entries.sort((a, b) => b.wins - a.wins);\n\n        if (teamQuery) {\n          entries = entries.filter(e => {\n            return e.abbr.toLowerCase() === teamId ||\n                   e.team.toLowerCase().includes(teamQuery);\n          });\n        }\n\n        if (!teamQuery) entries = entries.slice(0, 5);\n\n        lines.push(`${confName}:`);\n        entries.forEach((e, i) => {\n          lines.push(`${i + 1}. ${e.team} (${e.wins}-${e.losses})`);\n        });\n\n        standingsData.push(...entries);\n      });\n      break;\n    }\n\n    case 'nfl': {\n      const children = data.children || [];\n      let groups = children;\n\n      if (conferenceQuery) {\n        groups = children.filter(c => {\n          const name = (c.name || c.abbreviation || '').toLowerCase();\n          return name.includes(conferenceQuery);\n        });\n      }\n\n      groups.forEach(group => {\n        const confName = group.name || group.abbreviation || 'Conference';\n        // NFL has divisions within conferences\n        const divGroups = group.children || [group];\n\n        divGroups.forEach(div => {\n          const divName = div.name || '';\n          const standings = div.standings?.entries || [];\n\n          let entries = standings.map(entry => {\n            const team = entry.team?.displayName || entry.team?.name || 'Unknown';\n            const abbr = entry.team?.abbreviation || '';\n            const wins = parseInt(getStat(entry.stats, 'wins')) || 0;\n            const losses = parseInt(getStat(entry.stats, 'losses')) || 0;\n            const ties = parseInt(getStat(entry.stats, 'ties')) || 0;\n            const winPct = parseFloat(getStat(entry.stats, 'winPercent')) || 0;\n            return { team, abbr, wins, losses, ties, winPct };\n          });\n\n          entries.sort((a, b) => b.winPct - a.winPct);\n\n          if (teamQuery) {\n            entries = entries.filter(e => {\n              return e.abbr.toLowerCase() === teamId ||\n                     e.team.toLowerCase().includes(teamQuery);\n            });\n          }\n\n          if (!teamQuery) entries = entries.slice(0, 5);\n\n          const header = divName ? `${confName} - ${divName}:` : `${confName}:`;\n          lines.push(header);\n          entries.forEach((e, i) => {\n            const record = e.ties > 0 ? `${e.wins}-${e.losses}-${e.ties}` : `${e.wins}-${e.losses}`;\n            lines.push(`${i + 1}. ${e.team} (${record})`);\n          });\n\n          standingsData.push(...entries);\n        });\n      });\n      break;\n    }\n\n    case 'nhl': {\n      // Points-based, flat sort\n      const children = data.children || [];\n      let allEntries = [];\n\n      children.forEach(group => {\n        const standings = group.standings?.entries || [];\n        standings.forEach(entry => {\n          const team = entry.team?.displayName || entry.team?.name || 'Unknown';\n          const abbr = entry.team?.abbreviation || '';\n          const points = parseInt(getStat(entry.stats, 'points')) || 0;\n          const wins = parseInt(getStat(entry.stats, 'wins')) || 0;\n          const losses = parseInt(getStat(entry.stats, 'losses')) || 0;\n          const otLosses = parseInt(getStat(entry.stats, 'OTLosses')) || 0;\n          allEntries.push({ team, abbr, points, wins, losses, otLosses });\n        });\n      });\n\n      allEntries.sort((a, b) => b.points - a.points);\n\n      if (teamQuery) {\n        allEntries = allEntries.filter(e => {\n          return e.abbr.toLowerCase() === teamId ||\n                 e.team.toLowerCase().includes(teamQuery);\n        });\n      }\n\n      if (!teamQuery) allEntries = allEntries.slice(0, 5);\n\n      lines.push('NHL Standings:');\n      allEntries.forEach((e, i) => {\n        lines.push(`${i + 1}. ${e.team} - ${e.points} pts (${e.wins}-${e.losses}-${e.otLosses})`);\n      });\n\n      standingsData = allEntries;\n      break;\n    }\n\n    case 'epl': {\n      // Flat table sorted by points\n      const children = data.children || [];\n      let allEntries = [];\n\n      children.forEach(group => {\n        const standings = group.standings?.entries || [];\n        standings.forEach(entry => {\n          const team = entry.team?.displayName || entry.team?.name || 'Unknown';\n          const id = entry.team?.id || '';\n          const points = parseInt(getStat(entry.stats, 'points')) || 0;\n          const wins = parseInt(getStat(entry.stats, 'wins')) || 0;\n          const draws = parseInt(getStat(entry.stats, 'ties')) || 0;\n          const losses = parseInt(getStat(entry.stats, 'losses')) || 0;\n          const gamesPlayed = parseInt(getStat(entry.stats, 'gamesPlayed')) || 0;\n          allEntries.push({ team, id, points, wins, draws, losses, gamesPlayed });\n        });\n      });\n\n      allEntries.sort((a, b) => b.points - a.points);\n\n      if (teamQuery) {\n        allEntries = allEntries.filter(e => {\n          return e.id === teamId ||\n                 e.team.toLowerCase().includes(teamQuery);\n        });\n      }\n\n      if (!teamQuery) allEntries = allEntries.slice(0, 5);\n\n      lines.push('EPL Standings:');\n      allEntries.forEach((e, i) => {\n        lines.push(`${i + 1}. ${e.team} - ${e.points} pts (W${e.wins} D${e.draws} L${e.losses}, ${e.gamesPlayed} played)`);\n      });\n\n      standingsData = allEntries;\n      break;\n    }\n\n    case 'mls': {\n      // Conference-based, sort by points\n      const children = data.children || [];\n      let groups = children;\n\n      if (conferenceQuery) {\n        groups = children.filter(c => {\n          const name = (c.name || c.abbreviation || '').toLowerCase();\n          return name.includes(conferenceQuery);\n        });\n      }\n\n      groups.forEach(group => {\n        const confName = group.name || group.abbreviation || 'Conference';\n        const standings = group.standings?.entries || [];\n\n        let entries = standings.map(entry => {\n          const team = entry.team?.displayName || entry.team?.name || 'Unknown';\n          const id = entry.team?.id || '';\n          const points = parseInt(getStat(entry.stats, 'points')) || 0;\n          const wins = parseInt(getStat(entry.stats, 'wins')) || 0;\n          const draws = parseInt(getStat(entry.stats, 'ties')) || 0;\n          const losses = parseInt(getStat(entry.stats, 'losses')) || 0;\n          return { team, id, points, wins, draws, losses };\n        });\n\n        entries.sort((a, b) => b.points - a.points);\n\n        if (teamQuery) {\n          entries = entries.filter(e => {\n            return e.id === teamId ||\n                   e.team.toLowerCase().includes(teamQuery);\n          });\n        }\n\n        if (!teamQuery) entries = entries.slice(0, 5);\n\n        lines.push(`${confName}:`);\n        entries.forEach((e, i) => {\n          lines.push(`${i + 1}. ${e.team} - ${e.points} pts (W${e.wins} D${e.draws} L${e.losses})`);\n        });\n\n        standingsData.push(...entries);\n      });\n      break;\n    }\n\n    case 'f1': {\n      // Driver standings\n      const children = data.children || [];\n      let driverGroup = null;\n\n      for (const child of children) {\n        const name = (child.name || '').toLowerCase();\n        if (name.includes('driver')) {\n          driverGroup = child;\n          break;\n        }\n      }\n\n      if (!driverGroup) {\n        // Try first group as fallback\n        driverGroup = children[0];\n      }\n\n      if (!driverGroup) {\n        return { message: 'No F1 standings data available.', action: 'standings', standings: [] };\n      }\n\n      let entries = (driverGroup.standings?.entries || []).map(entry => {\n        const name = entry.athlete?.displayName || entry.team?.displayName || 'Unknown';\n        const points = parseFloat(getStat(entry.stats, 'championshipPts')) || 0;\n        return { name, points };\n      });\n\n      entries.sort((a, b) => b.points - a.points);\n\n      if (teamQuery) {\n        entries = entries.filter(e => e.name.toLowerCase().includes(params.driverQuery));\n      }\n\n      if (!teamQuery) entries = entries.slice(0, 5);\n\n      lines.push('F1 Driver Standings:');\n      entries.forEach((e, i) => {\n        lines.push(`${i + 1}. ${e.name} - ${e.points} pts`);\n      });\n\n      standingsData = entries;\n      break;\n    }\n  }\n\n  if (lines.length === 0) {\n    return { message: `No ${label} standings found.`, action: 'standings', standings: [] };\n  }\n\n  const message = lines.join('\\n');\n  return { message, action: 'standings', standings: standingsData };\n} catch (error) {\n  return { message: 'Error processing standings: ' + error.message, action: 'standings', standings: [] };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        1008
+      ],
+      "id": "e5f1a2b3-0011-4aaa-b000-000000000011",
+      "name": "Format Standings"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const errorData = $input.item.json;\nlet errorMsg = errorData.message || errorData.error?.message || JSON.stringify(errorData.error) || 'Unknown ESPN API error';\n\nif (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ETIMEDOUT')) {\n  errorMsg = 'Cannot connect to the ESPN API. Please try again later.';\n}\n\nreturn { message: `Error: ${errorMsg}`, error: true };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        1408
+      ],
+      "id": "e5f1a2b3-0012-4aaa-b000-000000000012",
+      "name": "Format Error"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        944,
+        608
+      ],
+      "id": "e5f1a2b3-0013-4aaa-b000-000000000013",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Draft Tool\n**Tool Name:** espn\n**Description:** Consolidated ESPN Sports tool covering NBA, NFL, NHL, EPL, MLS, and F1.",
+        "height": 200,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -608,
+        208
+      ],
+      "typeVersion": 1,
+      "id": "e5f1a2b3-0014-4aaa-b000-000000000014",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** espn\n**Description:** Get live scores, upcoming schedules, and league standings for NBA, NFL, NHL, EPL, MLS, and F1.\n**version:** v1.0.0\n**id:** 4uAC7iCPB-_Y5Jtyz7IyBA\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/sports/espn)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -784,
+        -288
+      ],
+      "typeVersion": 1,
+      "id": "b7d0b124-bd77-4cf8-8c11-f0702f9c5924",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Parameters": {
+      "main": [
+        [
+          {
+            "node": "Switch Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Action": {
+      "main": [
+        [
+          {
+            "node": "Get Scores",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Has Team?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Standings",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Scores": {
+      "main": [
+        [
+          {
+            "node": "Format Scores",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Team?": {
+      "main": [
+        [
+          {
+            "node": "Get Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Schedule No Team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Schedule": {
+      "main": [
+        [
+          {
+            "node": "Format Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Standings": {
+      "main": [
+        [
+          {
+            "node": "Format Standings",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Scores": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Schedule": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule No Team": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Standings": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
