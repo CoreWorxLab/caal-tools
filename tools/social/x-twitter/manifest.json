@@ -2,8 +2,8 @@
   "id": "wn9K89sz3bAItFVWpvzkhQ",
   "name": "x-twitter",
   "friendlyName": "X (Twitter)",
-  "version": "1.0.0",
-  "description": "X (Twitter) automation: post tweets, like/retweet/delete, send DMs, lookup users with connection status and full metrics, mute users, and view blocked accounts. Requires X Developer account with API access.",
+  "version": "1.1.0",
+  "description": "X, formerly Twitter — post tweets, interact with tweets, send DMs, look up users.",
   "category": "social",
   "toolSuite": true,
   "actions": [
@@ -65,5 +65,5 @@
   ],
   "dependencies": [],
   "created": "2026-02-02",
-  "updated": "2026-02-04"
+  "updated": "2026-02-21"
 }

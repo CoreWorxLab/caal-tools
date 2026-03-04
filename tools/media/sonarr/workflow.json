@@ -16,7 +16,7 @@
       ],
       "name": "Webhook",
       "webhookId": "sonarr",
-      "notes": "Sonarr TV show suite - calendar and search. Parameters: action (required) - 'calendar' or 'search'; query (required for search) - show name; days (optional for calendar, default 7) - days to look ahead. Examples: 'what TV shows are coming up', 'search for Breaking Bad on Sonarr', 'what's on TV this week'.",
+      "notes": "Sonarr — TV show library. Use for TV shows, series, and episodes. Not for movies — use radarr for movies.\n\nActions:\n  search — search for a TV show in the library. Use for \"is Breaking Bad on Sonarr\", \"search for Bluey\".\n  calendar — upcoming episodes airing soon. Use for \"what's coming up\", \"any new episodes this week\".\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: calendar, search\",\n    \"required\": true\n  },\n  \"query\": {\n    \"type\": \"string\",\n    \"description\": \"TV show name, e.g. Bluey, Breaking Bad. For: search\"\n  },\n  \"days\": {\n    \"type\": \"integer\",\n    \"description\": \"Calendar lookahead days. Default 7. For: calendar\"\n  }\n}",
       "id": "38146e85-af33-4ef4-8ca6-f4221907c174"
     },
     {
@@ -191,7 +191,7 @@
     },
     {
       "parameters": {
-        "content": "## CAAL Registry Tracking\n**Tool Name:** sonarr\n**Description:** Manage Sonarr TV shows - view upcoming episodes and search your library.\n**version:** v1.0.0\n**id:** dXkRDDTIOPPE8sYAtNs6NQ\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/media/sonarr)\n\n### (Do not delete this sticky)",
+        "content": "## CAAL Registry Tracking\n**Tool Name:** sonarr\n**Description:** Sonarr — TV show library. Use for TV shows, series, and episodes. Not for movies — use radarr for movies.\n**version:** v1.1.0\n**id:** dXkRDDTIOPPE8sYAtNs6NQ\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/media/sonarr)\n\n### (Do not delete this sticky)",
         "height": 260,
         "width": 360
       },

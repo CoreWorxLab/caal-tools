@@ -2,8 +2,8 @@
   "id": "hd201lGfOs9FBWjBcP2upw",
   "name": "flight-tracker",
   "friendlyName": "Flight Tracker",
-  "version": "1.0.0",
-  "description": "Track real-time flight status, airport departures, and arrivals via AviationStack API.",
+  "version": "1.1.0",
+  "description": "Flight tracking — real-time flight status, airport departures, and arrivals.",
   "category": "utilities",
   "toolSuite": true,
   "actions": [
@@ -36,5 +36,5 @@
   ],
   "dependencies": [],
   "created": "2026-02-12",
-  "updated": "2026-02-12"
+  "updated": "2026-02-21"
 }

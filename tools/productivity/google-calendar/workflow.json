@@ -16,7 +16,7 @@
       ],
       "name": "Webhook",
       "webhookId": "google_calendar",
-      "notes": "Google Calendar suite - view and manage events. Parameters: action (required) - 'get', 'create', or 'delete'; start_date (required for get) - YYYY-MM-DD; end_date (required for get) - YYYY-MM-DD (exclusive); title (required for create) - event name; date (required for create) - YYYY-MM-DD; start_time (optional for create) - HH:MM 24hr format; end_time (optional for create) - HH:MM; event_id (required for delete) - event ID from get. Examples: 'what's on my calendar today', 'add dentist appointment tomorrow at 2pm', 'delete the dentist appointment'.",
+      "notes": "Google Calendar — view, create, or delete events.\n\nActions:\n  get — list events in a date range. Use for \"what's on my calendar\", \"any meetings today\", \"schedule this week\".\n  create — create a new event. Use for \"add a meeting\", \"schedule lunch\", \"book time for\".\n  delete — remove an event by ID. Requires event_id from a prior get call.\n\nRules:\n- Dates are YYYY-MM-DD format. end_date is exclusive — to get one day, use start_date=today, end_date=tomorrow.\n- Times are HH:MM in 24hr format.\n- event_id comes from a prior get call. Do not fabricate event IDs.\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: get, create, delete\",\n    \"required\": true\n  },\n  \"start_date\": {\n    \"type\": \"string\",\n    \"description\": \"Start date YYYY-MM-DD. For: get\"\n  },\n  \"end_date\": {\n    \"type\": \"string\",\n    \"description\": \"End date YYYY-MM-DD, exclusive. For: get\"\n  },\n  \"title\": {\n    \"type\": \"string\",\n    \"description\": \"Event title. For: create\"\n  },\n  \"date\": {\n    \"type\": \"string\",\n    \"description\": \"Event date YYYY-MM-DD. For: create\"\n  },\n  \"start_time\": {\n    \"type\": \"string\",\n    \"description\": \"Start time HH:MM 24hr, e.g. 14:30. For: create\"\n  },\n  \"end_time\": {\n    \"type\": \"string\",\n    \"description\": \"End time HH:MM 24hr. For: create\"\n  },\n  \"event_id\": {\n    \"type\": \"string\",\n    \"description\": \"Event ID from a prior get call. For: delete\"\n  }\n}",
       "id": "a497dd16-8b90-445d-a076-98006b32b373"
     },
     {
@@ -330,7 +330,7 @@
     },
     {
       "parameters": {
-        "content": "## CAAL Registry Tracking\n**Tool Name:** google-calendar\n**Description:** Manage Google Calendar events - view, create, and delete events with support for timed and all-day events.\n**version:** v1.0.0\n**id:** ndPj-EJI58ABJvg0drlAgw\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/productivity/google-calendar)\n\n### (Do not delete this sticky)",
+        "content": "## CAAL Registry Tracking\n**Tool Name:** google-calendar\n**Description:** Google Calendar — view, create, or delete events.\n**version:** v1.1.0\n**id:** ndPj-EJI58ABJvg0drlAgw\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/productivity/google-calendar)\n\n### (Do not delete this sticky)",
         "height": 260,
         "width": 360
       },

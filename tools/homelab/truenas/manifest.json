@@ -2,8 +2,8 @@
   "id": "aQ8KoJ2Nc2Z8ftAqlp5S-w",
   "name": "truenas",
   "friendlyName": "TrueNAS",
-  "version": "1.0.0",
-  "description": "Manage TrueNAS system status and control apps - check system health, resources, and storage pools, or start, stop, and restart applications.",
+  "version": "1.1.0",
+  "description": "TrueNAS — check NAS server health or control apps running on TrueNAS.",
   "category": "homelab",
   "toolSuite": true,
   "actions": [
@@ -47,5 +47,5 @@
   ],
   "dependencies": [],
   "created": "2026-02-01",
-  "updated": "2026-02-01"
+  "updated": "2026-02-21"
 }

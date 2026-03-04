@@ -16,7 +16,7 @@
       ],
       "name": "Webhook",
       "webhookId": "truenas",
-      "notes": "TrueNAS server suite - status and app control. Parameters: action (required) - 'status' or 'control'; app (required for control) - app name; command (required for control) - 'start', 'stop', or 'restart'. Examples: 'what's my TrueNAS status', 'restart Plex on TrueNAS', 'stop the Jellyfin app'.",
+      "notes": "TrueNAS — check NAS server health or control apps running on TrueNAS.\n\nActions:\n  status — overall server health including CPU, RAM, disks, and pools. Use for \"check TrueNAS\", \"how's the server\", \"NAS status\".\n  control — start, stop, or restart an app. Use for \"restart Plex\", \"stop Sonarr\", \"start Home Assistant\".\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: status, control\",\n    \"required\": true\n  },\n  \"app\": {\n    \"type\": \"string\",\n    \"description\": \"App name, e.g. plex, sonarr, radarr, home-assistant. For: control\"\n  },\n  \"command\": {\n    \"type\": \"string\",\n    \"description\": \"App control command. One of: start, stop, restart. For: control\"\n  }\n}",
       "id": "54ba637a-8312-470f-acab-bbc07d482cde"
     },
     {
@@ -824,7 +824,7 @@
     },
     {
       "parameters": {
-        "content": "## CAAL Registry Tracking\n**Tool Name:** truenas\n**Description:** Manage TrueNAS system status and control apps - check system health, resources, and storage pools, or start, stop, and restart applications.\n**version:** v1.0.0\n**id:** aQ8KoJ2Nc2Z8ftAqlp5S-w\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/homelab/truenas)\n\n### (Do not delete this sticky)",
+        "content": "## CAAL Registry Tracking\n**Tool Name:** truenas\n**Description:** TrueNAS — check NAS server health or control apps running on TrueNAS.\n**version:** v1.1.0\n**id:** aQ8KoJ2Nc2Z8ftAqlp5S-w\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/homelab/truenas)\n\n### (Do not delete this sticky)",
         "height": 260,
         "width": 360
       },

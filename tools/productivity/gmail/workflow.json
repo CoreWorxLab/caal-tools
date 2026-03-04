@@ -16,7 +16,7 @@
       ],
       "name": "Webhook",
       "webhookId": "gmail",
-      "notes": "Gmail suite - check and send emails. Parameters: action (required) - 'get_unread' or 'send'; limit (optional for get_unread, default 10) - number of emails; to (required for send) - recipient email address; subject (required for send); body (required for send). For send: if user provides a name instead of email address, use contacts lookup tool first to get their email, then confirm before sending. Examples: 'do I have any new emails', 'send email to john@example.com saying I'll be late', 'email Mom to say happy birthday'.",
+      "notes": "Gmail — check unread emails or send an email.\n\nActions:\n  get_unread — list unread emails. Use for \"check my email\", \"any new emails\", \"unread messages\".\n  send — send an email. Requires to, subject, and body. The to field must be an email address.\n\nRules:\n- For send: if the user gives a name instead of an email address, call google_contacts with action search first to look up the address, then send.\n- get_unread returns up to limit emails. Default is 10.\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: get_unread, send\",\n    \"required\": true\n  },\n  \"to\": {\n    \"type\": \"string\",\n    \"description\": \"Recipient email address. For: send\"\n  },\n  \"subject\": {\n    \"type\": \"string\",\n    \"description\": \"Email subject line. For: send\"\n  },\n  \"body\": {\n    \"type\": \"string\",\n    \"description\": \"Email body text. For: send\"\n  },\n  \"limit\": {\n    \"type\": \"integer\",\n    \"description\": \"Max unread emails to return. Default 10. For: get_unread\"\n  }\n}",
       "id": "7b6cd0e6-2d4b-4046-a566-be328215db4a"
     },
     {
@@ -211,7 +211,7 @@
     },
     {
       "parameters": {
-        "content": "## CAAL Registry Tracking\n**Tool Name:** gmail\n**Description:** Manage Gmail - check unread emails and send messages.\n**version:** v1.0.0\n**id:** 7FUfsUz1RkqcEdvm_Vglnw\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/productivity/gmail)\n\n### (Do not delete this sticky)",
+        "content": "## CAAL Registry Tracking\n**Tool Name:** gmail\n**Description:** Gmail — check unread emails or send an email.\n**version:** v1.1.0\n**id:** 7FUfsUz1RkqcEdvm_Vglnw\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/productivity/gmail)\n\n### (Do not delete this sticky)",
         "height": 260,
         "width": 360
       },

@@ -17,7 +17,7 @@
       "id": "9fb620de-b242-4127-9a58-520be35b2b7a",
       "name": "Webhook",
       "webhookId": "package-tracker-webhook-id",
-      "notes": "Package tracking tool - track any package by tracking number with automatic carrier detection. Supports 2000+ carriers worldwide including UPS, FedEx, USPS, DHL, Australia Post, Royal Mail, Canada Post, and more.\n\nParameters:\n- tracking_number (required): the package tracking number. Examples: \"1Z999AA10123456784\" (UPS), \"9400111899223856226452\" (USPS), \"7489999223\" (FedEx)\n\nNo other parameters needed. The carrier is automatically detected from the tracking number.\n\nReturns: current status (delivered, in transit, picked up, etc.), carrier name, latest tracking event with location and time, and recent tracking history.\n\nExamples: 'track my package 1Z999AA10123456784', 'where is my package', 'has my order arrived', 'check tracking number 9400111899223856226452', 'what is the status of my delivery'"
+      "notes": "Package tracking — track any package by tracking number. Auto-detects carrier including UPS, FedEx, USPS, DHL, Australia Post, Canada Post, and 2000+ more. Use when the user mentions a tracking number or asks about a package.\n\n---schema\n{\n  \"tracking_number\": {\n    \"type\": \"string\",\n    \"required\": true,\n    \"description\": \"Package tracking number, e.g. 1Z999AA10123456784\"\n  }\n}"
     },
     {
       "parameters": {
@@ -168,7 +168,7 @@
     },
     {
       "parameters": {
-        "content": "## CAAL Registry Tracking\n**Tool Name:** package-tracker\n**Description:** Package tracking with automatic carrier detection via 17track.\n**version:** v1.0.0\n**id:** pk8T3mNnP5yR9uZxKqIeDw\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/utilities/package-tracker)\n\n### (Do not delete this sticky)",
+        "content": "## CAAL Registry Tracking\n**Tool Name:** package-tracker\n**Description:** Package tracking — track any package by tracking number. Auto-detects carrier including UPS, FedEx, USPS, DHL, Australia Post, Canada Post, and 2000+ more. Use when the user mentions a tracking number or asks about a package.\n**version:** v1.1.0\n**id:** pk8T3mNnP5yR9uZxKqIeDw\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/utilities/package-tracker)\n\n### (Do not delete this sticky)",
         "height": 260,
         "width": 360
       },

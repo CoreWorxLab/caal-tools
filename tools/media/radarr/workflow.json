@@ -16,7 +16,7 @@
       ],
       "name": "Webhook",
       "webhookId": "radarr",
-      "notes": "Radarr movie suite - calendar and search. Parameters: action (required) - 'calendar' or 'search'; query (required for search) - movie name; days (optional for calendar, default 30) - days to look ahead. Examples: 'what movies are coming out', 'search for Dune on Radarr', 'do I have Inception'.",
+      "notes": "Radarr — movie library. Use for movies and films. Not for TV shows — use sonarr for TV shows.\n\nActions:\n  search — search for a movie in the library. Use for \"is Inception on Radarr\", \"search for The Matrix\".\n  calendar — upcoming movie releases. Use for \"any movies coming out\", \"new releases this month\".\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: calendar, search\",\n    \"required\": true\n  },\n  \"query\": {\n    \"type\": \"string\",\n    \"description\": \"Movie name, e.g. Interstellar, The Matrix. For: search\"\n  },\n  \"days\": {\n    \"type\": \"integer\",\n    \"description\": \"Calendar lookahead days. Default 30. For: calendar\"\n  }\n}",
       "id": "2a79d0c4-d5f4-4f9b-a977-2ab5b4154a45"
     },
     {
@@ -204,7 +204,7 @@
     },
     {
       "parameters": {
-        "content": "## CAAL Registry Tracking\n**Tool Name:** radarr\n**Description:** Manage Radarr movies - view upcoming releases and search your library.\n**version:** v1.0.0\n**id:** 9fGeS8i9FH-7OHxAHAYB1A\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/media/radarr)\n\n### (Do not delete this sticky)",
+        "content": "## CAAL Registry Tracking\n**Tool Name:** radarr\n**Description:** Radarr — movie library. Use for movies and films. Not for TV shows — use sonarr for TV shows.\n**version:** v1.1.0\n**id:** 9fGeS8i9FH-7OHxAHAYB1A\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/media/radarr)\n\n### (Do not delete this sticky)",
         "height": 260,
         "width": 360
       },

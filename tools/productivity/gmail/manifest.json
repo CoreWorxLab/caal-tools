@@ -2,8 +2,8 @@
   "id": "7FUfsUz1RkqcEdvm_Vglnw",
   "name": "gmail",
   "friendlyName": "Gmail",
-  "version": "1.0.0",
-  "description": "Manage Gmail - check unread emails and send messages.",
+  "version": "1.1.0",
+  "description": "Gmail — check unread emails or send an email.",
   "category": "productivity",
   "toolSuite": true,
   "actions": [
@@ -36,5 +36,5 @@
   ],
   "dependencies": [],
   "created": "2026-01-29",
-  "updated": "2026-01-29"
+  "updated": "2026-02-21"
 }

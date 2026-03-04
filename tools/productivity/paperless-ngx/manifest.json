@@ -2,8 +2,8 @@
   "id": "Aenyv1PlVgcKGrjn44HfBA",
   "name": "paperless-ngx",
   "friendlyName": "Paperless-ngx",
-  "version": "1.0.0",
-  "description": "Manage documents, search archives, and update metadata in Paperless-ngx document management system.",
+  "version": "1.1.0",
+  "description": "Paperless-ngx — document management system. Search, view, and organize scanned documents, receipts, invoices, and mail.",
   "category": "productivity",
   "toolSuite": true,
   "actions": [
@@ -52,5 +52,5 @@
   ],
   "dependencies": [],
   "created": "2026-02-09",
-  "updated": "2026-02-09"
+  "updated": "2026-02-21"
 }

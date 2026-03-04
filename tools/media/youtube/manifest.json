@@ -2,8 +2,8 @@
   "id": "ymrWW0bBJCq_d-KSgbJFlw",
   "name": "youtube",
   "friendlyName": "YouTube",
-  "version": "1.0.0",
-  "description": "Manage YouTube with comprehensive search, channel/video information retrieval, subscription management, and video rating capabilities.",
+  "version": "1.1.0",
+  "description": "YouTube API — search, get details, manage subscriptions, rate videos.",
   "category": "media",
   "toolSuite": true,
   "actions": [
@@ -39,5 +39,5 @@
   ],
   "dependencies": [],
   "created": "2026-02-09",
-  "updated": "2026-02-09"
+  "updated": "2026-02-21"
 }

@@ -16,7 +16,7 @@
       ],
       "name": "Webhook",
       "webhookId": "google_contacts",
-      "notes": "Google Contacts suite - lookup contact information. Parameters: action (required) - 'search' or 'list'; query (required for search) - name to search for; limit (optional for list, default 10) - max contacts to return. Examples: 'find Mom's email', 'lookup John Smith', 'list my contacts'.",
+      "notes": "Google Contacts — look up email addresses and phone numbers. Call this before sending an email via gmail or a DM via x_twitter when you only have a person's name.\n\nActions:\n  search — find a contact by name. Use when you need someone's email or phone number.\n  list — list all contacts.\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: search, list\",\n    \"required\": true\n  },\n  \"query\": {\n    \"type\": \"string\",\n    \"description\": \"Name to search for, e.g. Corey, Mom, John Smith. For: search\"\n  },\n  \"limit\": {\n    \"type\": \"integer\",\n    \"description\": \"Max contacts to return. Default 10. For: list\"\n  }\n}",
       "id": "cea51df3-39b9-4bcb-b5b2-4de2d33f07ce"
     },
     {
@@ -205,7 +205,7 @@
     },
     {
       "parameters": {
-        "content": "## CAAL Registry Tracking\n**Tool Name:** google-contacts\n**Description:** Search and list Google Contacts with support for filtering by name and retrieving contact details including emails and phone numbers.\n**version:** v1.0.0\n**id:** IugRPxb-3ekQ0b-Bfpx6wA\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/productivity/google-contacts)\n\n### (Do not delete this sticky)",
+        "content": "## CAAL Registry Tracking\n**Tool Name:** google-contacts\n**Description:** Google Contacts — look up email addresses and phone numbers. Call this before sending an email via gmail or a DM via x_twitter when you only have a person's name.\n**version:** v1.1.0\n**id:** IugRPxb-3ekQ0b-Bfpx6wA\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/productivity/google-contacts)\n\n### (Do not delete this sticky)",
         "height": 260,
         "width": 360
       },

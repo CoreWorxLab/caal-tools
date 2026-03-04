@@ -2,8 +2,8 @@
   "id": "G_MQWzXfXW6oW0wI26iDdA",
   "name": "package-tracker",
   "friendlyName": "Package Tracker",
-  "version": "1.0.0",
-  "description": "Tracks packages by tracking number with automatic carrier detection across 2000+ carriers worldwide.",
+  "version": "1.1.0",
+  "description": "Package tracking — track any package by tracking number. Auto-detects carrier including UPS, FedEx, USPS, DHL, Australia Post, Canada Post, and 2000+ more. Use when the user mentions a tracking number or asks about a package.",
   "category": "utilities",
   "toolSuite": false,
   "actions": [],
@@ -30,5 +30,5 @@
   ],
   "dependencies": [],
   "created": "2026-02-12",
-  "updated": "2026-02-12"
+  "updated": "2026-02-21"
 }

@@ -16,7 +16,7 @@
         0
       ],
       "webhookId": "notion_tasks",
-      "notes": "Notion Tasks suite - manage tasks in Notion database. Parameters: action (required) - 'get', 'add', 'complete', or 'delete'; task (required for add/complete/delete) - task name; filter (optional for get) - 'all', 'today', 'tomorrow', 'week', 'overdue'; due (optional for add) - due date like 'today', 'tomorrow', 'friday', or 'YYYY-MM-DD'; notes (optional for add); show_completed (optional for get, default false). Examples: 'what's on my notion task list', 'add notion task buy groceries due friday', 'complete buy groceries in notion', 'delete old task from notion'.",
+      "notes": "Notion Tasks — view, add, complete, or delete tasks.\n\nActions:\n  get — list tasks. Use for \"what are my tasks\", \"show my to-do list\".\n  add — create a new task. Use for \"add a task\", \"remind me to\".\n  complete — mark a task done by name.\n  delete — remove a task by name.\n\nRules:\n- task is the task name as text, not an ID.\n- filter narrows get results: all, today, tomorrow, week, overdue.\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: get, add, complete, delete\",\n    \"required\": true\n  },\n  \"task\": {\n    \"type\": \"string\",\n    \"description\": \"Task name. For: add, complete, delete\"\n  },\n  \"due\": {\n    \"type\": \"string\",\n    \"description\": \"Due date, e.g. friday, 2026-02-20. For: add\"\n  },\n  \"notes\": {\n    \"type\": \"string\",\n    \"description\": \"Task notes. For: add\"\n  },\n  \"filter\": {\n    \"type\": \"string\",\n    \"description\": \"Filter tasks by timeframe. One of: all, today, tomorrow, week, overdue. For: get\"\n  },\n  \"show_completed\": {\n    \"type\": \"boolean\",\n    \"description\": \"Include completed tasks. Default false. For: get\"\n  }\n}",
       "id": "477e4411-257c-442f-b8a1-649ff818d006"
     },
     {
@@ -506,7 +506,7 @@
     },
     {
       "parameters": {
-        "content": "## CAAL Registry Tracking\n**Tool Name:** notion-tasks\n**Description:** Manage tasks in Notion - get, add, complete, and delete tasks with support for due dates and filtering.\n**version:** v1.0.0\n**id:** Wv9iVQRT_j_fyCeMWcz_xA\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/productivity/notion-tasks)\n\n### (Do not delete this sticky)",
+        "content": "## CAAL Registry Tracking\n**Tool Name:** notion-tasks\n**Description:** Notion Tasks — view, add, complete, or delete tasks.\n**version:** v1.1.0\n**id:** Wv9iVQRT_j_fyCeMWcz_xA\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/productivity/notion-tasks)\n\n### (Do not delete this sticky)",
         "height": 260,
         "width": 360
       },

@@ -2,8 +2,8 @@
   "id": "9fGeS8i9FH-7OHxAHAYB1A",
   "name": "radarr",
   "friendlyName": "Radarr",
-  "version": "1.0.0",
-  "description": "Manage Radarr movies - view upcoming releases and search your library.",
+  "version": "1.1.0",
+  "description": "Radarr — movie library. Use for movies and films. Not for TV shows — use sonarr for TV shows.",
   "category": "media",
   "toolSuite": true,
   "actions": [
@@ -42,5 +42,5 @@
   ],
   "dependencies": [],
   "created": "2026-01-29",
-  "updated": "2026-01-29"
+  "updated": "2026-02-21"
 }

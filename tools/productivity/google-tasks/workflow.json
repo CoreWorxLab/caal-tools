@@ -16,7 +16,7 @@
         0
       ],
       "webhookId": "google_tasks",
-      "notes": "Google Tasks suite - manage tasks. Parameters: action (required) - 'get', 'add', 'complete', or 'delete'; title (required for add) - task name; task_id (required for complete/delete) - task ID; notes (optional for add); due (optional for add) - YYYY-MM-DD; show_completed (optional for get, default false). Examples: 'what's on my task list', 'add task buy groceries', 'mark the groceries task done'.",
+      "notes": "Google Tasks — view, add, complete, or delete tasks.\n\nActions:\n  get — list tasks. Use for \"what are my tasks\", \"show my to-do list\".\n  add — create a new task. Use for \"add a task\", \"remind me to\".\n  complete — mark a task done. Requires task_id from a prior get call.\n  delete — remove a task. Requires task_id from a prior get call.\n\nRules:\n- task_id comes from a prior get call. Do not fabricate task IDs.\n- due is YYYY-MM-DD format.\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: get, add, complete, delete\",\n    \"required\": true\n  },\n  \"title\": {\n    \"type\": \"string\",\n    \"description\": \"Task title. For: add\"\n  },\n  \"notes\": {\n    \"type\": \"string\",\n    \"description\": \"Task notes or details. For: add\"\n  },\n  \"due\": {\n    \"type\": \"string\",\n    \"description\": \"Due date YYYY-MM-DD. For: add\"\n  },\n  \"task_id\": {\n    \"type\": \"string\",\n    \"description\": \"Task ID from a prior get call. For: complete, delete\"\n  },\n  \"show_completed\": {\n    \"type\": \"boolean\",\n    \"description\": \"Include completed tasks. Default false. For: get\"\n  }\n}",
       "id": "82193e8e-6dde-46bf-88c6-c8188a2c0fae"
     },
     {
@@ -325,7 +325,7 @@
     },
     {
       "parameters": {
-        "content": "## CAAL Registry Tracking\n**Tool Name:** google-tasks\n**Description:** Manage Google Tasks - get, add, complete, and delete tasks with optional due dates and notes.\n**version:** v1.0.0\n**id:** JLBpNNUkMXzOZDojN3VdrA\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/productivity/google-tasks)\n\n### (Do not delete this sticky)",
+        "content": "## CAAL Registry Tracking\n**Tool Name:** google-tasks\n**Description:** Google Tasks — view, add, complete, or delete tasks.\n**version:** v1.1.0\n**id:** JLBpNNUkMXzOZDojN3VdrA\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/productivity/google-tasks)\n\n### (Do not delete this sticky)",
         "height": 260,
         "width": 360
       },
