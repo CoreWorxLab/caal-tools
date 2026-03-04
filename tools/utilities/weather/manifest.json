@@ -1,0 +1,31 @@
+{
+  "id": "OjfLaQTNG_90gxjpjFTlAg",
+  "name": "weather",
+  "friendlyName": "Weather",
+  "version": "1.0.0",
+  "description": "Gets current weather conditions or multi-day forecasts for locations in Australia, Canada, France, and the USA.",
+  "category": "utilities",
+  "toolSuite": true,
+  "actions": [
+    "current",
+    "forecast"
+  ],
+  "icon": "weather.svg",
+  "voice_triggers": [
+    "What's the weather in Sydney?",
+    "Is it raining in Chicago?"
+  ],
+  "required_services": [],
+  "required_credentials": [],
+  "required_variables": [],
+  "author": {
+    "github": "cmac86"
+  },
+  "tier": "coreworxlab",
+  "tags": [
+    "utilities"
+  ],
+  "dependencies": [],
+  "created": "2026-03-04",
+  "updated": "2026-03-04"
+}
