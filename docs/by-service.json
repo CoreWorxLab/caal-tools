@@ -108,14 +108,24 @@
       "id": "7FUfsUz1RkqcEdvm_Vglnw",
       "name": "gmail",
       "friendlyName": "Gmail",
-      "version": "1.1.0",
-      "description": "Gmail — check unread emails or send an email.",
+      "version": "2.0.0",
+      "description": "Gmail - read, send, reply, forward, search, and manage emails.",
       "category": "productivity",
       "path": "tools/productivity/gmail",
       "icon": "gmail.svg",
       "voice_triggers": [
         "Do I have any new emails?",
-        "Check my unread emails"
+        "Check my unread emails",
+        "Read my latest email",
+        "Send an email to John",
+        "Reply to that email",
+        "Forward that email to Sarah",
+        "Search for emails from boss",
+        "Find invoices in my email",
+        "Mark that email as read",
+        "Delete that email",
+        "Label that as important",
+        "Show my email labels"
       ],
       "required_services": [
         "gmail"
@@ -124,9 +134,10 @@
       "author": "cmac86",
       "tags": [
         "productivity",
-        "gmail"
+        "gmail",
+        "email"
       ],
-      "updated": "2026-02-21"
+      "updated": "2026-03-06"
     }
   ],
   "google calendar": [
