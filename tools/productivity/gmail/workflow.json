@@ -16,12 +16,12 @@
       ],
       "name": "Webhook",
       "webhookId": "gmail",
-      "notes": "Gmail — check unread emails or send an email.\n\nActions:\n  get_unread — list unread emails. Use for \"check my email\", \"any new emails\", \"unread messages\".\n  send — send an email. Requires to, subject, and body. The to field must be an email address.\n\nRules:\n- For send: if the user gives a name instead of an email address, call google_contacts with action search first to look up the address, then send.\n- get_unread returns up to limit emails. Default is 10.\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: get_unread, send\",\n    \"required\": true\n  },\n  \"to\": {\n    \"type\": \"string\",\n    \"description\": \"Recipient email address. For: send\"\n  },\n  \"subject\": {\n    \"type\": \"string\",\n    \"description\": \"Email subject line. For: send\"\n  },\n  \"body\": {\n    \"type\": \"string\",\n    \"description\": \"Email body text. For: send\"\n  },\n  \"limit\": {\n    \"type\": \"integer\",\n    \"description\": \"Max unread emails to return. Default 10. For: get_unread\"\n  }\n}",
+      "notes": "Gmail - read, send, reply, search, and manage emails.\n\nActions:\n  get_unread - list unread emails. Use for \"check my email\", \"any new emails\".\n  read - get full email content by ID. Requires message_id from a prior get_unread or search.\n  send - send an email. Requires to, subject, and body.\n  reply - reply to an email. Requires message_id and body.\n  forward - forward an email. Requires message_id and to (recipient email).\n  search - search emails by query. Use Gmail syntax like \"from:boss\", \"subject:invoice\", \"has:attachment\".\n  mark_read - mark an email as read. Requires message_id.\n  trash - move an email to trash. Requires message_id.\n  get_labels - list all labels/folders.\n  get_thread - get a full email conversation. Requires thread_id from a prior read call.\n  add_label - add a label to an email. Requires message_id and label name.\n  remove_label - remove a label from an email. Requires message_id and label name.\n\nRules:\n- message_id and thread_id come from prior calls. Never fabricate IDs.\n- For send: if user gives a name instead of email, call google_contacts first.\n- search uses Gmail query syntax: from:, to:, subject:, has:attachment, is:starred, newer_than:2d, etc.\n\nChaining:\n- \"Read my latest email\" -> get_unread limit 1 -> read with message_id\n- \"Reply to that email\" -> reply with message_id from context\n- \"Find invoices from last week\" -> search \"subject:invoice newer_than:7d\"\n- \"Label that as important\" -> add_label with message_id and label \"IMPORTANT\"\n- \"Forward that to John\" -> forward with message_id and to from google_contacts lookup\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: get_unread, read, send, reply, forward, search, mark_read, trash, get_labels, get_thread, add_label, remove_label\",\n    \"required\": true\n  },\n  \"message_id\": {\n    \"type\": \"string\",\n    \"description\": \"Gmail message ID. For: read, reply, forward, mark_read, trash, add_label, remove_label\"\n  },\n  \"thread_id\": {\n    \"type\": \"string\",\n    \"description\": \"Gmail thread ID. For: get_thread\"\n  },\n  \"to\": {\n    \"type\": \"string\",\n    \"description\": \"Recipient email address. For: send, forward\"\n  },\n  \"cc\": {\n    \"type\": \"string\",\n    \"description\": \"CC recipients, comma-separated. For: send\"\n  },\n  \"bcc\": {\n    \"type\": \"string\",\n    \"description\": \"BCC recipients, comma-separated. For: send\"\n  },\n  \"subject\": {\n    \"type\": \"string\",\n    \"description\": \"Email subject line. For: send\"\n  },\n  \"body\": {\n    \"type\": \"string\",\n    \"description\": \"Email body text. For: send, reply\"\n  },\n  \"query\": {\n    \"type\": \"string\",\n    \"description\": \"Gmail search query, e.g. from:boss subject:meeting. For: search\"\n  },\n  \"label\": {\n    \"type\": \"string\",\n    \"description\": \"Label name, e.g. IMPORTANT, Work, Receipts. For: add_label, remove_label\"\n  },\n  \"limit\": {\n    \"type\": \"integer\",\n    \"description\": \"Max results. Default 10. For: get_unread, search\"\n  }\n}",
       "id": "7b6cd0e6-2d4b-4046-a566-be328215db4a"
     },
     {
       "parameters": {
-        "jsCode": "// Parse input\nlet data;\nconst input = $input.item.json;\n\nif (typeof input.body === 'string') {\n  data = JSON.parse(input.body);\n} else if (typeof input.body === 'object') {\n  data = input.body;\n} else {\n  data = input;\n}\n\nconst action = data.action || '';\nconst limit = parseInt(data.limit) || 10;\nconst to = data.to || '';\nconst subject = data.subject || '';\nconst body = data.body || data.message || '';\n\nif (!action) {\n  throw new Error('Action is required. Use get_unread or send.');\n}\n\nreturn [{\n  json: {\n    action: action,\n    limit: limit,\n    to: to,\n    subject: subject,\n    body: body\n  }\n}];"
+        "jsCode": "// Parse input\nlet data;\nconst input = $input.item.json;\n\nif (typeof input.body === 'string') {\n  data = JSON.parse(input.body);\n} else if (typeof input.body === 'object') {\n  data = input.body;\n} else {\n  data = input;\n}\n\nconst action = (data.action || '').toLowerCase().trim();\nconst limit = parseInt(data.limit) || 10;\nconst message_id = data.message_id || '';\nconst thread_id = data.thread_id || '';\nconst to = data.to || '';\nconst cc = data.cc || '';\nconst bcc = data.bcc || '';\nconst subject = data.subject || '';\nconst body = data.body || data.message || '';\nconst query = data.query || '';\nconst label = data.label || '';\n\nif (!action) {\n  return [{ json: { error: true, message: 'Action is required. Use one of: get_unread, read, send, reply, search, mark_read, trash, get_labels, get_thread, add_label, remove_label.' } }];\n}\n\n// Determine category\nconst categoryMap = {\n  get_unread: 'read',\n  read: 'read',\n  search: 'read',\n  get_thread: 'read',\n  get_labels: 'read',\n  send: 'write',\n  reply: 'write',\n  forward: 'write',\n  mark_read: 'manage',\n  trash: 'manage',\n  add_label: 'manage',\n  remove_label: 'manage'\n};\n\nconst category = categoryMap[action] || '';\n\nif (!category) {\n  return [{ json: { error: true, message: `Unknown action: ${action}. Use one of: get_unread, read, send, reply, search, mark_read, trash, get_labels, get_thread, add_label, remove_label.` } }];\n}\n\nreturn [{\n  json: {\n    action,\n    category,\n    message_id,\n    thread_id,\n    to,\n    cc,\n    bcc,\n    subject,\n    body,\n    query,\n    label,\n    limit\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -30,7 +30,124 @@
         0
       ],
       "name": "Parse Parameters",
-      "id": "ebbc7fb2-b751-416f-bfe4-9192ba6da6df"
+      "id": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5e",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -200,
+        0
+      ],
+      "name": "If Error Parse",
+      "id": "11111111-1111-4111-8111-111111111111"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "read",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "read"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "write",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "write"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "manage",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "manage"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        0,
+        0
+      ],
+      "name": "Category Switch",
+      "id": "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f"
     },
     {
       "parameters": {
@@ -68,6 +185,113 @@
                 "conditions": [
                   {
                     "leftValue": "={{ $json.action }}",
+                    "rightValue": "read",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "read"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "search",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "search"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "get_thread",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "get_thread"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "get_labels",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "get_labels"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        250,
+        -400
+      ],
+      "name": "Read Switch",
+      "id": "d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
                     "rightValue": "send",
                     "operator": {
                       "type": "string",
@@ -79,19 +303,172 @@
               },
               "renameOutput": true,
               "outputKey": "send"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "reply",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "reply"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "forward",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "forward"
             }
           ]
         },
-        "options": {}
+        "options": {
+          "fallbackOutput": "extra"
+        }
       },
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        -200,
+        250,
         0
       ],
-      "name": "Switch Action",
-      "id": "f1828dd4-25da-45eb-b891-13c9b1ac75b7"
+      "name": "Write Switch",
+      "id": "e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "mark_read",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "mark_read"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "trash",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "trash"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "add_label",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "add_label"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "remove_label",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "remove_label"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        250,
+        400
+      ],
+      "name": "Manage Switch",
+      "id": "f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f8a9b0c"
     },
     {
       "parameters": {
@@ -110,8 +487,8 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        50,
-        -150
+        500,
+        -700
       ],
       "name": "Get Unread Emails",
       "credentials": {
@@ -120,20 +497,793 @@
           "name": "${GMAILOAUTH2_CREDENTIAL}"
         }
       },
-      "id": "4c1ca0ed-fc32-4157-a21b-153ffa5e56f9"
+      "id": "a7b8c9d0-e1f2-4a3b-4c5d-6e7f8a9b0c1d"
     },
     {
       "parameters": {
-        "jsCode": "// Validate send parameters\nconst data = $input.item.json;\n\nif (!data.to) {\n  throw new Error('Recipient email address (to) is required');\n}\nif (!data.subject) {\n  throw new Error('Email subject is required');\n}\nif (!data.body) {\n  throw new Error('Email body/message is required');\n}\n\nreturn [{ json: data }];"
+        "jsCode": "// Format emails for voice\nconst allItems = $input.all();\nconst emails = allItems.map(i => i.json).filter(e => e && e.id);\n\nif (!emails || emails.length === 0) {\n  return {\n    message: \"No unread emails.\",\n    count: 0,\n    emails: []\n  };\n}\n\n// Format emails - Gmail API returns capitalized fields: From, Subject, internalDate\nconst formatted = emails.map(email => {\n  // Get sender name (extract from \"Name <email>\" format)\n  let from = email.From || email.from || 'Unknown';\n  const nameMatch = from.match(/^([^<]+)/);\n  if (nameMatch) {\n    from = nameMatch[1].trim().replace(/\"/g, '');\n  }\n  \n  // Get date from internalDate (milliseconds since epoch)\n  const timestamp = email.internalDate || email.date;\n  const date = new Date(parseInt(timestamp));\n  const now = new Date();\n  const diffHours = Math.floor((now - date) / (1000 * 60 * 60));\n  let timeAgo = '';\n  if (diffHours < 1) {\n    const diffMins = Math.floor((now - date) / (1000 * 60));\n    timeAgo = diffMins <= 1 ? 'just now' : `${diffMins} minutes ago`;\n  } else if (diffHours < 24) {\n    timeAgo = diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`;\n  } else {\n    const diffDays = Math.floor(diffHours / 24);\n    timeAgo = diffDays === 1 ? 'yesterday' : `${diffDays} days ago`;\n  }\n  \n  return {\n    from: from,\n    subject: email.Subject || email.subject || '(no subject)',\n    snippet: email.snippet || '',\n    date: timeAgo,\n    id: email.id,\n    threadId: email.threadId || ''\n  };\n});\n\n// Build voice message\nlet message = '';\nif (formatted.length === 1) {\n  const e = formatted[0];\n  message = `You have one unread email from ${e.from}: ${e.subject}.`;\n} else {\n  message = `You have ${formatted.length} unread emails. `;\n  const summaries = formatted.slice(0, 3).map(e => `${e.from}: ${e.subject}`);\n  message += summaries.join('. ') + '.';\n  if (formatted.length > 3) {\n    message += ` Plus ${formatted.length - 3} more.`;\n  }\n}\n\nreturn {\n  message: message,\n  count: formatted.length,\n  emails: formatted\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        50,
-        150
+        750,
+        -750
+      ],
+      "name": "Format Get Unread",
+      "id": "b8c9d0e1-f2a3-4b4c-5d6e-7f8a9b0c1d2e"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.message_id }}",
+        "simple": true,
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        500,
+        -550
+      ],
+      "name": "Get Message",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": null,
+          "name": "${GMAILOAUTH2_CREDENTIAL}"
+        }
+      },
+      "id": "c9d0e1f2-a3b4-4c5d-6e7f-8a9b0c1d2e3f"
+    },
+    {
+      "parameters": {
+        "jsCode": "const email = $input.item.json;\n\n// Extract fields\nlet from = email.From || email.from || 'Unknown';\nconst nameMatch = from.match(/^([^<]+)/);\nif (nameMatch) {\n  from = nameMatch[1].trim().replace(/\"/g, '');\n}\n\nconst to = email.To || email.to || '';\nconst subject = email.Subject || email.subject || '(no subject)';\nconst date = email.Date || email.date || '';\nconst bodyText = email.textPlain || email.snippet || email.textHtml || '';\nconst threadId = email.threadId || '';\nconst messageId = email.id || '';\n\n// Build a body preview (first 500 chars)\nlet bodyPreview = bodyText;\nif (bodyPreview.length > 500) {\n  bodyPreview = bodyPreview.substring(0, 500) + '...';\n}\n\nconst message = `Email from ${from}: ${subject}. ${bodyPreview}`;\n\nreturn {\n  message: message,\n  email: {\n    from: from,\n    to: to,\n    subject: subject,\n    date: date,\n    body: bodyText,\n    message_id: messageId,\n    thread_id: threadId\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        750,
+        -600
+      ],
+      "name": "Format Read",
+      "id": "d0e1f2a3-b4c5-4d6e-7f8a-9b0c1d2e3f4a"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": "={{ $json.limit }}",
+        "filters": {
+          "q": "={{ $json.query }}",
+          "includeSpamTrash": false
+        },
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        500,
+        -400
+      ],
+      "name": "Search Emails",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": null,
+          "name": "${GMAILOAUTH2_CREDENTIAL}"
+        }
+      },
+      "id": "e1f2a3b4-c5d6-4e7f-8a9b-0c1d2e3f4a5b"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format search results\nconst allItems = $input.all();\nconst emails = allItems.map(i => i.json).filter(e => e && e.id);\nconst query = $('Parse Parameters').item.json.query;\n\nif (!emails || emails.length === 0) {\n  return {\n    message: `No emails found matching \"${query}\".`,\n    count: 0,\n    emails: []\n  };\n}\n\nconst formatted = emails.map(email => {\n  let from = email.From || email.from || 'Unknown';\n  const nameMatch = from.match(/^([^<]+)/);\n  if (nameMatch) {\n    from = nameMatch[1].trim().replace(/\"/g, '');\n  }\n  \n  const timestamp = email.internalDate || email.date;\n  const date = new Date(parseInt(timestamp));\n  const now = new Date();\n  const diffHours = Math.floor((now - date) / (1000 * 60 * 60));\n  let timeAgo = '';\n  if (diffHours < 1) {\n    const diffMins = Math.floor((now - date) / (1000 * 60));\n    timeAgo = diffMins <= 1 ? 'just now' : `${diffMins} minutes ago`;\n  } else if (diffHours < 24) {\n    timeAgo = diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`;\n  } else {\n    const diffDays = Math.floor(diffHours / 24);\n    timeAgo = diffDays === 1 ? 'yesterday' : `${diffDays} days ago`;\n  }\n  \n  return {\n    from: from,\n    subject: email.Subject || email.subject || '(no subject)',\n    snippet: email.snippet || '',\n    date: timeAgo,\n    id: email.id,\n    threadId: email.threadId || ''\n  };\n});\n\nlet message = '';\nif (formatted.length === 1) {\n  const e = formatted[0];\n  message = `Found 1 email matching \"${query}\": from ${e.from}, subject: ${e.subject}.`;\n} else {\n  message = `Found ${formatted.length} emails matching \"${query}\". `;\n  const summaries = formatted.slice(0, 3).map(e => `${e.from}: ${e.subject}`);\n  message += summaries.join('. ') + '.';\n  if (formatted.length > 3) {\n    message += ` Plus ${formatted.length - 3} more.`;\n  }\n}\n\nreturn {\n  message: message,\n  count: formatted.length,\n  emails: formatted\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        750,
+        -450
+      ],
+      "name": "Format Search",
+      "id": "f2a3b4c5-d6e7-4f8a-9b0c-1d2e3f4a5b6c"
+    },
+    {
+      "parameters": {
+        "url": "=https://gmail.googleapis.com/gmail/v1/users/me/threads/{{ $json.thread_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "format",
+              "value": "full"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        500,
+        -250
+      ],
+      "name": "Get Thread",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": null,
+          "name": "${GMAILOAUTH2_CREDENTIAL}"
+        }
+      },
+      "id": "a3b4c5d6-e7f8-4a9b-0c1d-2e3f4a5b6c7d"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.item.json;\nconst messages = response.messages || [];\n\nif (!messages.length) {\n  return [{ json: { message: 'No messages found in this thread.', error: true } }];\n}\n\nconst formatted = messages.map(msg => {\n  const headers = msg.payload?.headers || [];\n  const getHeader = (name) => {\n    const h = headers.find(h => h.name.toLowerCase() === name.toLowerCase());\n    return h ? h.value : '';\n  };\n  \n  let from = getHeader('From');\n  const nameMatch = from.match(/^([^<]+)/);\n  if (nameMatch) from = nameMatch[1].trim().replace(/\"/g, '');\n  \n  return {\n    from: from,\n    to: getHeader('To'),\n    subject: getHeader('Subject'),\n    date: getHeader('Date'),\n    snippet: msg.snippet || '',\n    id: msg.id\n  };\n});\n\nconst participants = [...new Set(formatted.map(m => m.from).filter(Boolean))];\nconst subject = formatted.find(m => m.subject)?.subject || '(no subject)';\nconst latest = formatted[formatted.length - 1];\n\nlet message = `Thread with ${formatted.length} message${formatted.length > 1 ? 's' : ''}`;\nif (participants.length) message += ` between ${participants.join(' and ')}`;\nmessage += `. Subject: ${subject}.`;\nif (latest.snippet) message += ` Latest from ${latest.from}: ${latest.snippet}`;\n\nreturn {\n  message,\n  thread_id: response.id || $('Parse Parameters').item.json.thread_id,\n  count: formatted.length,\n  messages: formatted\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        750,
+        -300
+      ],
+      "name": "Format Thread",
+      "id": "b4c5d6e7-f8a9-4b0c-1d2e-3f4a5b6c7d8e"
+    },
+    {
+      "parameters": {
+        "url": "https://gmail.googleapis.com/gmail/v1/users/me/labels",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        500,
+        -100
+      ],
+      "name": "Get Labels",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": null,
+          "name": "${GMAILOAUTH2_CREDENTIAL}"
+        }
+      },
+      "id": "c5d6e7f8-a9b0-4c1d-2e3f-4a5b6c7d8e9f"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.item.json;\nconst labels = response.labels || [];\n\nif (!labels || labels.length === 0) {\n  return {\n    message: 'No labels found.',\n    labels: []\n  };\n}\n\nconst formatted = labels.map(l => ({\n  id: l.id,\n  name: l.name,\n  type: l.type || 'user'\n}));\n\n// Separate system and user labels\nconst systemLabels = formatted.filter(l => l.type === 'system').map(l => l.name);\nconst userLabels = formatted.filter(l => l.type === 'user').map(l => l.name);\n\nlet message = `You have ${formatted.length} labels. `;\nif (userLabels.length > 0) {\n  message += `Custom labels: ${userLabels.join(', ')}. `;\n}\nmessage += `System labels: ${systemLabels.join(', ')}.`;\n\nreturn {\n  message: message,\n  count: formatted.length,\n  labels: formatted\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        750,
+        -150
+      ],
+      "name": "Format Labels",
+      "id": "d6e7f8a9-b0c1-4d2e-3f4a-5b6c7d8e9f0a"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate send parameters\nconst data = $input.item.json;\n\nif (!data.to) {\n  return [{ json: { error: true, message: 'Recipient email address (to) is required.' } }];\n}\nif (!data.subject) {\n  return [{ json: { error: true, message: 'Email subject is required.' } }];\n}\nif (!data.body) {\n  return [{ json: { error: true, message: 'Email body/message is required.' } }];\n}\n\nreturn [{ json: data }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        450,
+        -50
       ],
       "name": "Validate Send",
-      "id": "81128113-6d21-4603-96df-7fe91072d099"
+      "id": "e7f8a9b0-c1d2-4e3f-4a5b-6c7d8e9f0a1b"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "2a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5e",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        650,
+        -50
+      ],
+      "name": "If Error Send",
+      "id": "22222222-2222-4222-8222-222222222222"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "sendTo": "={{ $json.to }}",
+        "ccList": "={{ $json.cc }}",
+        "bccList": "={{ $json.bcc }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.body }}",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        850,
+        0
+      ],
+      "name": "Send Email",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": null,
+          "name": "${GMAILOAUTH2_CREDENTIAL}"
+        }
+      },
+      "id": "f8a9b0c1-d2e3-4f4a-5b6c-7d8e9f0a1b2c"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format success response for voice\nconst result = $input.item.json;\nconst validated = $('Validate Send').item.json;\nconst to = validated.to || '';\nconst subject = validated.subject || '';\n\n// Extract recipient name from email if possible\nlet recipientName = to;\nif (to.includes('@')) {\n  recipientName = to.split('@')[0].replace(/[._]/g, ' ');\n}\n\nconst message = `Done. Email sent to ${recipientName} with subject: ${subject}.`;\n\nreturn {\n  message: message,\n  sent: true,\n  to: to,\n  subject: subject,\n  messageId: result.id\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1050,
+        -50
+      ],
+      "name": "Format Send",
+      "id": "a9b0c1d2-e3f4-4a5b-6c7d-8e9f0a1b2c3d"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate reply parameters\nconst data = $input.item.json;\n\nif (!data.message_id) {\n  return [{ json: { error: true, message: 'message_id is required for reply. Get it from a prior read or get_unread call.' } }];\n}\nif (!data.body) {\n  return [{ json: { error: true, message: 'Reply body/message is required.' } }];\n}\n\nreturn [{ json: data }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        450,
+        100
+      ],
+      "name": "Validate Reply",
+      "id": "b0c1d2e3-f4a5-4b6c-7d8e-9f0a1b2c3d4e"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "3a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5e",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        650,
+        100
+      ],
+      "name": "If Error Reply",
+      "id": "33333333-3333-4333-8333-333333333333"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $json.message_id }}",
+        "message": "={{ $json.body }}",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        850,
+        150
+      ],
+      "name": "Reply Email",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": null,
+          "name": "${GMAILOAUTH2_CREDENTIAL}"
+        }
+      },
+      "id": "c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f"
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.item.json;\nconst messageId = result.id || $('Validate Reply').item.json.message_id || '';\n\nreturn {\n  message: 'Reply sent.',\n  sent: true,\n  message_id: messageId\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1050,
+        100
+      ],
+      "name": "Format Reply",
+      "id": "d2e3f4a5-b6c7-4d8e-9f0a-1b2c3d4e5f6a"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://gmail.googleapis.com/gmail/v1/users/me/messages/{{ $json.message_id }}/modify",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"removeLabelIds\": [\"UNREAD\"] }",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        500,
+        300
+      ],
+      "name": "Mark As Read",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": null,
+          "name": "${GMAILOAUTH2_CREDENTIAL}"
+        }
+      },
+      "id": "e3f4a5b6-c7d8-4e9f-0a1b-2c3d4e5f6a7b"
+    },
+    {
+      "parameters": {
+        "jsCode": "const messageId = $('Parse Parameters').item.json.message_id || '';\n\nreturn {\n  message: 'Email marked as read.',\n  message_id: messageId\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        750,
+        250
+      ],
+      "name": "Format Mark Read",
+      "id": "f4a5b6c7-d8e9-4f0a-1b2c-3d4e5f6a7b8c"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "messageId": "={{ $json.message_id }}"
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        500,
+        450
+      ],
+      "name": "Trash Message",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": null,
+          "name": "${GMAILOAUTH2_CREDENTIAL}"
+        }
+      },
+      "id": "a5b6c7d8-e9f0-4a1b-2c3d-4e5f6a7b8c9d"
+    },
+    {
+      "parameters": {
+        "jsCode": "const messageId = $('Parse Parameters').item.json.message_id || '';\n\nreturn {\n  message: 'Email moved to trash.',\n  message_id: messageId\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        750,
+        400
+      ],
+      "name": "Format Trash",
+      "id": "b6c7d8e9-f0a1-4b2c-3d4e-5f6a7b8c9d0e"
+    },
+    {
+      "parameters": {
+        "url": "https://gmail.googleapis.com/gmail/v1/users/me/labels",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        500,
+        600
+      ],
+      "name": "Resolve Label Add",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": null,
+          "name": "${GMAILOAUTH2_CREDENTIAL}"
+        }
+      },
+      "id": "c7d8e9f0-a1b2-4c3d-4e5f-6a7b8c9d0e1f"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.item.json;\nconst labels = response.labels || [];\nconst params = $('Parse Parameters').item.json;\nconst labelName = params.label;\nconst messageId = params.message_id;\n\nif (!labelName) {\n  return [{ json: { error: true, message: 'Label name is required for add_label.' } }];\n}\nif (!messageId) {\n  return [{ json: { error: true, message: 'message_id is required for add_label.' } }];\n}\n\n// Find label by name (case-insensitive)\nconst match = labels.find(l => l.name.toLowerCase() === labelName.toLowerCase());\n\nif (!match) {\n  return [{ json: { error: true, message: `Label \"${labelName}\" not found. Use get_labels to see available labels.` } }];\n}\n\nreturn [{\n  json: {\n    message_id: messageId,\n    label_id: match.id,\n    label_name: match.name\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        600
+      ],
+      "name": "Find Label Add",
+      "id": "d8e9f0a1-b2c3-4d4e-5f6a-7b8c9d0e1f2a"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "4a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5e",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        900,
+        600
+      ],
+      "name": "If Error Label Add",
+      "id": "44444444-4444-4444-8444-444444444444"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://gmail.googleapis.com/gmail/v1/users/me/messages/{{ $json.message_id }}/modify",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"addLabelIds\": [\"{{ $json.label_id }}\"] }",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        550
+      ],
+      "name": "Add Label",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": null,
+          "name": "${GMAILOAUTH2_CREDENTIAL}"
+        }
+      },
+      "id": "e9f0a1b2-c3d4-4e5f-6a7b-8c9d0e1f2a3b"
+    },
+    {
+      "parameters": {
+        "jsCode": "const params = $('Find Label Add').item.json;\n\nreturn {\n  message: `Label \"${params.label_name}\" added to email.`,\n  message_id: params.message_id,\n  label: params.label_name\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        500
+      ],
+      "name": "Format Add Label",
+      "id": "f0a1b2c3-d4e5-4f6a-7b8c-9d0e1f2a3b4c"
+    },
+    {
+      "parameters": {
+        "url": "https://gmail.googleapis.com/gmail/v1/users/me/labels",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        500,
+        750
+      ],
+      "name": "Resolve Label Remove",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": null,
+          "name": "${GMAILOAUTH2_CREDENTIAL}"
+        }
+      },
+      "id": "a1b2c3d4-e5f6-4a7b-8c9d-1e2f3a4b5c6d"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.item.json;\nconst labels = response.labels || [];\nconst params = $('Parse Parameters').item.json;\nconst labelName = params.label;\nconst messageId = params.message_id;\n\nif (!labelName) {\n  return [{ json: { error: true, message: 'Label name is required for remove_label.' } }];\n}\nif (!messageId) {\n  return [{ json: { error: true, message: 'message_id is required for remove_label.' } }];\n}\n\n// Find label by name (case-insensitive)\nconst match = labels.find(l => l.name.toLowerCase() === labelName.toLowerCase());\n\nif (!match) {\n  return [{ json: { error: true, message: `Label \"${labelName}\" not found. Use get_labels to see available labels.` } }];\n}\n\nreturn [{\n  json: {\n    message_id: messageId,\n    label_id: match.id,\n    label_name: match.name\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        750
+      ],
+      "name": "Find Label Remove",
+      "id": "b2c3d4e5-f6a7-4b8c-9d0e-2f3a4b5c6d7e"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "5a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5e",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        900,
+        750
+      ],
+      "name": "If Error Label Remove",
+      "id": "55555555-5555-4555-8555-555555555555"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://gmail.googleapis.com/gmail/v1/users/me/messages/{{ $json.message_id }}/modify",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"removeLabelIds\": [\"{{ $json.label_id }}\"] }",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        700
+      ],
+      "name": "Remove Label",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": null,
+          "name": "${GMAILOAUTH2_CREDENTIAL}"
+        }
+      },
+      "id": "c3d4e5f6-a7b8-4c9d-0e1f-3a4b5c6d7e8f"
+    },
+    {
+      "parameters": {
+        "jsCode": "const params = $('Find Label Remove').item.json;\n\nreturn {\n  message: `Label \"${params.label_name}\" removed from email.`,\n  message_id: params.message_id,\n  label: params.label_name\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        650
+      ],
+      "name": "Format Remove Label",
+      "id": "d4e5f6a7-b8c9-4d0e-1f2a-4b5c6d7e8f9a"
+    },
+    {
+      "parameters": {
+        "jsCode": "const errorData = $input.item.json;\n\n// If it's already a formatted error from a Code node\nif (errorData.error === true && errorData.message) {\n  return { message: errorData.message, error: true };\n}\n\n// Otherwise it's from an n8n node error output\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\n\nif (typeof errorMsg === 'object') {\n  errorMsg = errorMsg.message || JSON.stringify(errorMsg);\n}\n\n// Make error voice-friendly\nif (errorMsg.includes('authorization') || errorMsg.includes('token') || errorMsg.includes('invalid_grant')) {\n  errorMsg = 'Gmail authentication failed. Please re-authorize the Gmail connection.';\n} else if (errorMsg.includes('rate limit') || errorMsg.includes('429')) {\n  errorMsg = 'Gmail rate limit reached. Try again in a few minutes.';\n} else if (errorMsg.includes('404') || errorMsg.includes('Not Found')) {\n  errorMsg = 'Email not found. The message_id may be invalid or the email was deleted.';\n} else if (errorMsg.includes('400') || errorMsg.includes('Bad Request')) {\n  errorMsg = 'Bad request - please check your parameters.';\n} else if (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ETIMEDOUT')) {\n  errorMsg = 'Cannot connect to Gmail. Check your internet connection.';\n}\n\nreturn { message: 'Gmail error: ' + errorMsg, error: true };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        300
+      ],
+      "name": "Format Error",
+      "id": "e5f6a7b8-c9d0-4e1f-2a3b-5c6d7e8f9a0b"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1500,
+        300
+      ],
+      "name": "Respond to Webhook",
+      "id": "f6a7b8c9-d0e1-4f2a-3b4c-6d7e8f9a0b1c"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** gmail\n**Description:** Gmail - read, send, reply, search, and manage emails.\n**version:** v2.0.0\n**id:** 7FUfsUz1RkqcEdvm_Vglnw\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/productivity/gmail)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -784,
+        -288
+      ],
+      "typeVersion": 1,
+      "id": "a7b8c9d0-e1f2-4a3b-4c5d-7e8f9a0b1c2d",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\n\nif (!data.message_id) {\n  return [{ json: { error: true, message: 'message_id is required for forward. Get it from a prior read or get_unread call.' } }];\n}\nif (!data.to) {\n  return [{ json: { error: true, message: 'Recipient email address (to) is required for forward.' } }];\n}\n\nreturn [{ json: data }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        450,
+        200
+      ],
+      "name": "Validate Forward",
+      "id": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "fwd-err-cond-1",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        650,
+        200
+      ],
+      "name": "If Error Forward",
+      "id": "f2a3b4c5-d6e7-4f8a-9b0c-1d2e3f4a5b6c"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.message_id }}",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        850,
+        250
+      ],
+      "name": "Get Forward Message",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": null,
+          "name": "${GMAILOAUTH2_CREDENTIAL}"
+        }
+      },
+      "id": "f3a4b5c6-d7e8-4f9a-0b1c-2d3e4f5a6b7c"
+    },
+    {
+      "parameters": {
+        "jsCode": "const original = $input.item.json;\nconst params = $('Parse Parameters').item.json;\n\n// Get original details\nconst origFrom = original.From || original.from || 'Unknown';\nconst origTo = original.To || original.to || '';\nconst origSubject = original.Subject || original.subject || '(no subject)';\nconst origDate = original.Date || original.date || '';\nconst origBody = original.text || original.snippet || '';\n\n// Build forwarded subject\nconst subject = origSubject.startsWith('Fwd:') ? origSubject : `Fwd: ${origSubject}`;\n\n// Build forwarded body\nconst forwardHeader = `---------- Forwarded message ----------\\nFrom: ${origFrom}\\nDate: ${origDate}\\nSubject: ${origSubject}\\nTo: ${origTo}\\n\\n`;\n\nconst body = forwardHeader + origBody;\n\nreturn [{ json: { to: params.to, subject, body } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1050,
+        200
+      ],
+      "name": "Build Forward",
+      "id": "f4a5b6c7-d8e9-4f0a-1b2c-3d4e5f6a7b8c"
     },
     {
       "parameters": {
@@ -147,82 +1297,30 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        250,
-        150
+        1250,
+        200
       ],
-      "name": "Send Email",
+      "name": "Send Forward",
       "credentials": {
         "gmailOAuth2": {
           "id": null,
           "name": "${GMAILOAUTH2_CREDENTIAL}"
         }
       },
-      "id": "3feac2dc-f3da-4c18-9c74-7de434a00662"
+      "id": "f5a6b7c8-d9e0-4f1a-2b3c-4d5e6f7a8b9c"
     },
     {
       "parameters": {
-        "jsCode": "// Format emails for voice\nconst allItems = $input.all();\nconst emails = allItems.map(i => i.json).filter(e => e && e.id);\n\nif (!emails || emails.length === 0) {\n  return {\n    message: \"No unread emails.\",\n    count: 0,\n    emails: []\n  };\n}\n\n// Format emails - Gmail API returns capitalized fields: From, Subject, internalDate\nconst formatted = emails.map(email => {\n  // Get sender name (extract from \"Name <email>\" format)\n  let from = email.From || email.from || 'Unknown';\n  const nameMatch = from.match(/^([^<]+)/);\n  if (nameMatch) {\n    from = nameMatch[1].trim().replace(/\"/g, '');\n  }\n  \n  // Get date from internalDate (milliseconds since epoch)\n  const timestamp = email.internalDate || email.date;\n  const date = new Date(parseInt(timestamp));\n  const now = new Date();\n  const diffHours = Math.floor((now - date) / (1000 * 60 * 60));\n  let timeAgo = '';\n  if (diffHours < 1) {\n    const diffMins = Math.floor((now - date) / (1000 * 60));\n    timeAgo = diffMins <= 1 ? 'just now' : `${diffMins} minutes ago`;\n  } else if (diffHours < 24) {\n    timeAgo = diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`;\n  } else {\n    const diffDays = Math.floor(diffHours / 24);\n    timeAgo = diffDays === 1 ? 'yesterday' : `${diffDays} days ago`;\n  }\n  \n  return {\n    from: from,\n    subject: email.Subject || email.subject || '(no subject)',\n    snippet: email.snippet || '',\n    date: timeAgo,\n    id: email.id\n  };\n});\n\n// Build voice message\nlet message = '';\nif (formatted.length === 1) {\n  const e = formatted[0];\n  message = `You have one unread email from ${e.from}: ${e.subject}.`;\n} else {\n  message = `You have ${formatted.length} unread emails. `;\n  const summaries = formatted.slice(0, 3).map(e => `${e.from}: ${e.subject}`);\n  message += summaries.join('. ') + '.';\n  if (formatted.length > 3) {\n    message += ` Plus ${formatted.length - 3} more.`;\n  }\n}\n\nreturn {\n  message: message,\n  count: formatted.length,\n  emails: formatted\n};"
+        "jsCode": "const result = $input.item.json;\nconst params = $('Parse Parameters').item.json;\nconst to = params.to || '';\n\nlet recipientName = to;\nif (to.includes('@')) {\n  recipientName = to.split('@')[0].replace(/[._]/g, ' ');\n}\n\nreturn {\n  message: `Email forwarded to ${recipientName}.`,\n  forwarded: true,\n  to: to,\n  messageId: result.id\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        300,
-        -200
+        1450,
+        150
       ],
-      "name": "Format Get Unread",
-      "id": "ebe53cae-a1c6-4d87-9303-87c7d3522fe3"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Format success response for voice\nconst result = $input.item.json;\nconst validated = $('Validate Send').item.json;\nconst to = validated.to || '';\nconst subject = validated.subject || '';\n\n// Extract recipient name from email if possible\nlet recipientName = to;\nif (to.includes('@')) {\n  recipientName = to.split('@')[0].replace(/[._]/g, ' ');\n}\n\nconst message = `Done. Email sent to ${recipientName} with subject: ${subject}.`;\n\nreturn {\n  message: message,\n  sent: true,\n  to: to,\n  subject: subject,\n  messageId: result.id\n};"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        500,
-        100
-      ],
-      "name": "Format Send",
-      "id": "f9bb6ed2-a942-41b5-abf1-728e3c1a18c8"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Format error for voice\nconst errorData = $input.item.json;\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\n\n// Make error voice-friendly\nif (errorMsg.includes('authorization') || errorMsg.includes('token') || errorMsg.includes('invalid_grant')) {\n  errorMsg = 'Gmail authentication failed. Please re-authorize the Gmail connection in n8n.';\n} else if (errorMsg.includes('rate limit') || errorMsg.includes('429')) {\n  errorMsg = 'Gmail rate limit reached. Try again in a few minutes.';\n} else if (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ETIMEDOUT')) {\n  errorMsg = 'Cannot connect to Gmail. Check your internet connection.';\n}\n\nreturn {\n  message: `Gmail error: ${errorMsg}`,\n  error: true\n};"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        500,
-        0
-      ],
-      "name": "Format Error",
-      "id": "851ec062-53a2-48b8-9797-761fc1dead63"
-    },
-    {
-      "parameters": {},
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        750,
-        0
-      ],
-      "name": "Respond to Webhook",
-      "id": "964e2acb-bc14-4684-8bdd-f51ea8c81bec"
-    },
-    {
-      "parameters": {
-        "content": "## CAAL Registry Tracking\n**Tool Name:** gmail\n**Description:** Gmail — check unread emails or send an email.\n**version:** v1.1.0\n**id:** 7FUfsUz1RkqcEdvm_Vglnw\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/productivity/gmail)\n\n### (Do not delete this sticky)",
-        "height": 260,
-        "width": 360
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        -784,
-        -288
-      ],
-      "typeVersion": 1,
-      "id": "da1358a6-94aa-46f8-bf2b-bf14efb6cd93",
-      "name": "Sticky Note"
+      "name": "Format Forward",
+      "id": "f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f8a9b0c"
     }
   ],
   "connections": {
@@ -241,14 +1339,64 @@
       "main": [
         [
           {
-            "node": "Switch Action",
+            "node": "If Error Parse",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Switch Action": {
+    "If Error Parse": {
+      "main": [
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Category Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Category Switch": {
+      "main": [
+        [
+          {
+            "node": "Read Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Write Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Manage Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Switch": {
       "main": [
         [
           {
@@ -259,7 +1407,106 @@
         ],
         [
           {
+            "node": "Get Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Search Emails",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Thread",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Labels",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Switch": {
+      "main": [
+        [
+          {
             "node": "Validate Send",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validate Reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validate Forward",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manage Switch": {
+      "main": [
+        [
+          {
+            "node": "Mark As Read",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Trash Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Resolve Label Add",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Resolve Label Remove",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
             "type": "main",
             "index": 0
           }
@@ -284,8 +1531,153 @@
         ]
       ]
     },
+    "Format Get Unread": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Message": {
+      "main": [
+        [
+          {
+            "node": "Format Read",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Read": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Emails": {
+      "main": [
+        [
+          {
+            "node": "Format Search",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Search": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Thread": {
+      "main": [
+        [
+          {
+            "node": "Format Thread",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Thread": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Labels": {
+      "main": [
+        [
+          {
+            "node": "Format Labels",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Labels": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Validate Send": {
       "main": [
+        [
+          {
+            "node": "If Error Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error Send": {
+      "main": [
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Send Email",
@@ -313,17 +1705,6 @@
         ]
       ]
     },
-    "Format Get Unread": {
-      "main": [
-        [
-          {
-            "node": "Respond to Webhook",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Format Send": {
       "main": [
         [
@@ -335,7 +1716,362 @@
         ]
       ]
     },
+    "Validate Reply": {
+      "main": [
+        [
+          {
+            "node": "If Error Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error Reply": {
+      "main": [
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply Email": {
+      "main": [
+        [
+          {
+            "node": "Format Reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Reply": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark As Read": {
+      "main": [
+        [
+          {
+            "node": "Format Mark Read",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Mark Read": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trash Message": {
+      "main": [
+        [
+          {
+            "node": "Format Trash",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Trash": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Label Add": {
+      "main": [
+        [
+          {
+            "node": "Find Label Add",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Label Add": {
+      "main": [
+        [
+          {
+            "node": "If Error Label Add",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error Label Add": {
+      "main": [
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add Label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Label": {
+      "main": [
+        [
+          {
+            "node": "Format Add Label",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Add Label": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Label Remove": {
+      "main": [
+        [
+          {
+            "node": "Find Label Remove",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Label Remove": {
+      "main": [
+        [
+          {
+            "node": "If Error Label Remove",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error Label Remove": {
+      "main": [
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Remove Label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Label": {
+      "main": [
+        [
+          {
+            "node": "Format Remove Label",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Remove Label": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Forward": {
+      "main": [
+        [
+          {
+            "node": "If Error Forward",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error Forward": {
+      "main": [
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Forward Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Forward Message": {
+      "main": [
+        [
+          {
+            "node": "Build Forward",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Forward": {
+      "main": [
+        [
+          {
+            "node": "Send Forward",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Forward": {
+      "main": [
+        [
+          {
+            "node": "Format Forward",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Forward": {
       "main": [
         [
           {
