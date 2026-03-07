@@ -645,7 +645,7 @@
         "nodeCredentialType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ image: $json.image, disk: $json.disk || 100, label: $json.label || '', direct: true }) }}",
+        "jsonBody": "={{ JSON.stringify({ image: $json.image, disk: $json.disk || 100, label: $json.label || '', runtype: 'ssh_direct' }) }}",
         "options": {
           "response": {
             "response": {
