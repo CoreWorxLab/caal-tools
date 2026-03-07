@@ -645,7 +645,7 @@
         "nodeCredentialType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ image: $json.image, disk: $json.disk || 100, label: $json.label || '' }) }}",
+        "jsonBody": "={{ JSON.stringify({ image: $json.image, disk: $json.disk || 100, label: $json.label || '', direct: true }) }}",
         "options": {
           "response": {
             "response": {
@@ -672,7 +672,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const result = $input.item.json;\nconst contractId = result.new_contract || result.contract_id || result.id || 'unknown';\n\nreturn [{ json: { message: `Instance created. Contract ID: ${contractId}. It will be ready in a few moments.`, contract_id: contractId, success: true } }];"
+        "jsCode": "const result = $input.item.json;\nconst contractId = result.new_contract || result.contract_id || result.id || 'unknown';\n\nreturn [{ json: { message: `Instance created. Contract ID: ${contractId}. I'll let you know when it's ready.`, contract_id: contractId, success: true } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -718,7 +718,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const instanceId = $('Parse Parameters').item.json.instance_id;\nreturn [{ json: { message: `Instance ${instanceId} started.`, instance_id: instanceId, success: true } }];"
+        "jsCode": "const instanceId = $('Parse Parameters').item.json.instance_id;\nreturn [{ json: { message: `Instance ${instanceId} is starting up. I'll let you know when it's ready.`, instance_id: instanceId, success: true } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -976,7 +976,126 @@
     },
     {
       "parameters": {
-        "content": "## CAAL Registry Tracking\n**Tool Name:** vast-ai\n**Description:** Vast.ai - search GPU offers, rent and manage cloud GPU instances.\n**version:** v1.0.0\n**id:** (pending)\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/cloud/vast-ai)\n\n### (Do not delete this sticky)",
+        "jsCode": "// Init polling state for create_instance or start_instance\nconst data = $input.item.json;\n// contract_id from create, instance_id from start\nconst instanceId = data.contract_id || data.instance_id;\nreturn [{ json: { instance_id: instanceId, pollCount: 0, maxPolls: 12 } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        600
+      ],
+      "name": "Init Poll",
+      "id": "a1b2c3d4-poll-init-0001-000000000001"
+    },
+    {
+      "parameters": {
+        "amount": 15,
+        "unit": "seconds"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        600
+      ],
+      "name": "Wait 15s",
+      "id": "a1b2c3d4-poll-wait-0002-000000000002"
+    },
+    {
+      "parameters": {
+        "url": "=https://console.vast.ai/api/v0/instances/{{ $('Wait 15s').item.json.instance_id }}/",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1400,
+        600
+      ],
+      "name": "Check Status",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${VASTAI_API_KEY}"
+        }
+      },
+      "id": "a1b2c3d4-poll-http-0003-000000000003"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.item.json;\nconst state = $('Wait 15s').item.json;\nconst pollCount = state.pollCount + 1;\nconst maxPolls = state.maxPolls;\nconst instanceId = state.instance_id;\n\n// Handle HTTP errors or parse response\nconst i = raw.instances || raw;\nconst status = (i && i.actual_status) || (i && i.status_msg) || 'unknown';\n\nlet done = false;\nlet announceMessage = '';\n\nif (status === 'running') {\n  done = true;\n  const gpu = i.gpu_name || 'GPU';\n  const numGpus = i.num_gpus > 1 ? ` x${i.num_gpus}` : '';\n  let ssh = '';\n  if (i.ssh_host && i.ssh_port) {\n    ssh = ` SSH ready: ssh -p ${i.ssh_port} root@${i.ssh_host}.`;\n  }\n  announceMessage = `Your Vast.ai instance ${instanceId} is now running. ${gpu}${numGpus}.${ssh}`;\n} else if (pollCount >= maxPolls) {\n  done = true;\n  announceMessage = `Vast.ai instance ${instanceId} is still starting after 3 minutes. Current status: ${status}. You may want to check on it.`;\n}\n\nreturn [{ json: { instance_id: instanceId, pollCount, maxPolls, done, announceMessage } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        600
+      ],
+      "name": "Evaluate Status",
+      "id": "a1b2c3d4-poll-eval-0004-000000000004"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "vast-poll-done-cond",
+              "leftValue": "={{ $json.done }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1800,
+        600
+      ],
+      "name": "Is Ready",
+      "id": "a1b2c3d4-poll-if00-0005-000000000005"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "${CAAL_ANNOUNCE_URL}/announce",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ message: $json.announceMessage }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2000,
+        550
+      ],
+      "name": "CAAL Announce",
+      "id": "a1b2c3d4-poll-ann0-0006-000000000006"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** vast-ai\n**Description:** Vast.ai - search GPU offers, rent and manage cloud GPU instances.\n**version:** v1.1.0\n**id:** AqH_6oxoqajm82hhTHdRAg\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/utilities/vast-ai)\n\n### (Do not delete this sticky)",
         "height": 260,
         "width": 360
       },
@@ -1283,6 +1402,11 @@
             "node": "Respond to Webhook",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Init Poll",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -1363,6 +1487,11 @@
         [
           {
             "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Init Poll",
             "type": "main",
             "index": 0
           }
@@ -1519,6 +1648,75 @@
         [
           {
             "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Init Poll": {
+      "main": [
+        [
+          {
+            "node": "Wait 15s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 15s": {
+      "main": [
+        [
+          {
+            "node": "Check Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Status": {
+      "main": [
+        [
+          {
+            "node": "Evaluate Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Evaluate Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate Status": {
+      "main": [
+        [
+          {
+            "node": "Is Ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Ready": {
+      "main": [
+        [
+          {
+            "node": "CAAL Announce",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait 15s",
             "type": "main",
             "index": 0
           }
