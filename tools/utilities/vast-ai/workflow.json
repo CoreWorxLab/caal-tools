@@ -1,0 +1,1533 @@
+{
+  "name": "vast-ai",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vast_ai",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -600,
+        0
+      ],
+      "name": "Webhook",
+      "webhookId": "vast_ai",
+      "notes": "Vast.ai - search GPU offers, rent and manage cloud GPU instances.\n\nActions:\n  search_offers - search available GPU rental offers. Filter by gpu_name, num_gpus, max_price, min_ram.\n  list_instances - list all your rented GPU instances with status.\n  show_instance - get detailed info for a specific instance. Requires instance_id.\n  get_balance - check your Vast.ai account balance.\n  create_instance - rent a GPU from an offer. Requires offer_id. Default image: vastai/pytorch.\n  start_instance - start a stopped instance. Requires instance_id.\n  stop_instance - stop a running instance. Requires instance_id.\n  reboot_instance - reboot an instance. Requires instance_id.\n  destroy_instance - permanently destroy an instance. Requires instance_id. Irreversible.\n  get_logs - get container logs for an instance. Requires instance_id.\n  label_instance - set a label on an instance. Requires instance_id and label.\n\nRules:\n- instance_id comes from list_instances or show_instance. Never fabricate IDs.\n- offer_id comes from search_offers. Always search first before creating.\n- For create_instance, image is a Docker image like \"nvidia/cuda:12.1.0-devel-ubuntu22.04\" or \"pytorch/pytorch:latest\".\n- destroy_instance is permanent and irreversible. Confirm with user before calling.\n\nChaining:\n- \"Find me a cheap 4090\" -> search_offers gpu_name \"4090\"\n- \"Rent the cheapest one\" -> create_instance with offer_id from search\n- \"What's running?\" -> list_instances\n- \"Show me instance 12345\" -> show_instance\n- \"Stop that instance\" -> stop_instance with instance_id from context\n- \"Check my balance\" -> get_balance\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: search_offers, list_instances, show_instance, get_balance, create_instance, start_instance, stop_instance, reboot_instance, destroy_instance, get_logs, label_instance\",\n    \"required\": true\n  },\n  \"instance_id\": {\n    \"type\": \"integer\",\n    \"description\": \"Vast.ai instance ID. For: show_instance, start_instance, stop_instance, reboot_instance, destroy_instance, get_logs, label_instance\"\n  },\n  \"offer_id\": {\n    \"type\": \"integer\",\n    \"description\": \"Vast.ai offer ID from search_offers. For: create_instance\"\n  },\n  \"gpu_name\": {\n    \"type\": \"string\",\n    \"description\": \"GPU model name, e.g. 4090, 3090, A100, H100. For: search_offers\"\n  },\n  \"num_gpus\": {\n    \"type\": \"integer\",\n    \"description\": \"Minimum number of GPUs. For: search_offers\"\n  },\n  \"max_price\": {\n    \"type\": \"number\",\n    \"description\": \"Maximum price in $/hour. For: search_offers\"\n  },\n  \"min_ram\": {\n    \"type\": \"integer\",\n    \"description\": \"Minimum GPU RAM in GB. For: search_offers\"\n  },\n  \"image\": {\n    \"type\": \"string\",\n    \"description\": \"Docker image to run. Default: vastai/pytorch. For: create_instance\"\n  },\n  \"disk\": {\n    \"type\": \"integer\",\n    \"description\": \"Disk space in GB. Default 100. For: create_instance\"\n  },\n  \"label\": {\n    \"type\": \"string\",\n    \"description\": \"Label for the instance. For: create_instance, label_instance\"\n  },\n  \"limit\": {\n    \"type\": \"integer\",\n    \"description\": \"Max results. Default 10. For: search_offers\"\n  }\n}",
+      "id": "d6a6239f-2397-462b-84cf-f8b17c6181c8"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse input\nlet data;\nconst input = $input.item.json;\n\nif (typeof input.body === 'string') {\n  data = JSON.parse(input.body);\n} else if (typeof input.body === 'object') {\n  data = input.body;\n} else {\n  data = input;\n}\n\nconst action = (data.action || '').toLowerCase().trim();\n\nif (!action) {\n  return [{ json: { error: true, message: 'Action is required. Use one of: search_offers, list_instances, show_instance, get_balance, create_instance, start_instance, stop_instance, reboot_instance, destroy_instance, get_logs, label_instance.' } }];\n}\n\n// Determine category\nconst categoryMap = {\n  search_offers: 'read',\n  list_instances: 'read',\n  show_instance: 'read',\n  get_balance: 'read',\n  create_instance: 'write',\n  start_instance: 'manage',\n  stop_instance: 'manage',\n  reboot_instance: 'manage',\n  destroy_instance: 'manage',\n  get_logs: 'manage',\n  label_instance: 'manage'\n};\n\nconst category = categoryMap[action] || '';\n\nif (!category) {\n  return [{ json: { error: true, message: `Unknown action: ${action}. Use one of: search_offers, list_instances, show_instance, get_balance, create_instance, start_instance, stop_instance, reboot_instance, destroy_instance, get_logs, label_instance.` } }];\n}\n\nconst instance_id = parseInt(data.instance_id) || null;\nconst offer_id = parseInt(data.offer_id) || null;\nconst gpu_name = data.gpu_name || '';\nconst num_gpus = parseInt(data.num_gpus) || 1;\nconst max_price = parseFloat(data.max_price) || null;\nconst min_ram = parseInt(data.min_ram) || null;\nconst image = data.image || '';\nconst disk = parseInt(data.disk) || 20;\nconst label = data.label || '';\nconst limit = parseInt(data.limit) || 10;\n\nreturn [{\n  json: {\n    action,\n    category,\n    instance_id,\n    offer_id,\n    gpu_name,\n    num_gpus,\n    max_price,\n    min_ram,\n    image,\n    disk,\n    label,\n    limit\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        0
+      ],
+      "name": "Parse Parameters",
+      "id": "17f2ff6d-6e00-4b9d-8c30-2e7eece861ff"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "vast-err-parse-cond",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -200,
+        0
+      ],
+      "name": "If Error Parse",
+      "id": "33989ab5-30b6-45b6-8c3c-e6969e6aff27"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "read",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "read"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "write",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "write"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "manage",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "manage"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        0,
+        0
+      ],
+      "name": "Category Switch",
+      "id": "8063a359-4a16-446f-9e8d-57051a914282"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "search_offers",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "search_offers"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "list_instances",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "list_instances"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "show_instance",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "show_instance"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "get_balance",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "get_balance"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        200,
+        -200
+      ],
+      "name": "Read Switch",
+      "id": "2d79bde7-c089-4006-95e4-71eab0247b18"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "start_instance",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "start_instance"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "stop_instance",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "stop_instance"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "reboot_instance",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "reboot_instance"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "destroy_instance",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "destroy_instance"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "get_logs",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "get_logs"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "label_instance",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "label_instance"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        200,
+        400
+      ],
+      "name": "Manage Switch",
+      "id": "6a87ab03-f476-44d4-9123-7eac08ba5805"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst gpu_name = data.gpu_name || '';\nconst num_gpus = data.num_gpus || 1;\nconst max_price = data.max_price || null;\nconst min_ram = data.min_ram || null;\nconst limit = data.limit || 10;\n\n// Build the query filter\nconst regionEnv = $env.VASTAI_SEARCH_REGION || 'US,CA';\nconst regions = regionEnv.split(',').map(r => r.trim()).filter(Boolean);\n\nconst q = {\n  verified: { eq: true },\n  rentable: { eq: true },\n  type: 'on-demand',\n  geolocation: { in: regions },\n  direct_port_count: { gte: 1 },\n  order: [['dph_total', 'asc']],\n  limit: limit\n};\n\n// GPU name mapping (API uses spaces, e.g. 'RTX 4090')\nif (gpu_name) {\n  const nameMap = {\n    '4090': 'RTX 4090',\n    'rtx4090': 'RTX 4090',\n    'rtx 4090': 'RTX 4090',\n    '3090': 'RTX 3090',\n    'rtx3090': 'RTX 3090',\n    'rtx 3090': 'RTX 3090',\n    '3080': 'RTX 3080',\n    'rtx3080': 'RTX 3080',\n    'rtx 3080': 'RTX 3080',\n    '3080 ti': 'RTX 3080 Ti',\n    '4080': 'RTX 4080',\n    'rtx4080': 'RTX 4080',\n    'rtx 4080': 'RTX 4080',\n    '4070': 'RTX 4070',\n    '4070 ti': 'RTX 4070 Ti',\n    '4060': 'RTX 4060',\n    '3060': 'RTX 3060',\n    '3070 ti': 'RTX 3070 Ti',\n    'a100': 'A100',\n    'a6000': 'RTX A6000',\n    'a40': 'A40',\n    'h100': 'H100',\n    'l40': 'L40',\n    'l40s': 'L40S',\n    'a10': 'A10',\n    '5090': 'RTX 5090',\n    '5080': 'RTX 5080'\n  };\n  const mapped = nameMap[gpu_name.toLowerCase()] || gpu_name;\n  q.gpu_name = { in: [mapped] };\n}\n\n// Num GPUs\nif (num_gpus > 1) {\n  q.num_gpus = { gte: num_gpus };\n}\n\n// Max price\nif (max_price) {\n  q.dph_total = { lte: max_price };\n}\n\n// Min RAM (user gives GB, API wants MB)\nif (min_ram) {\n  q.gpu_ram = { gte: min_ram * 1024 };\n}\n\nreturn [{ json: { searchBody: q, limit: limit } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        -500
+      ],
+      "name": "Build Search Body",
+      "id": "7a625a25-d3ea-4991-a924-a0aeb0ea5a86"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://console.vast.ai/api/v0/bundles/",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.searchBody) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        600,
+        -500
+      ],
+      "name": "Search Offers",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${VASTAI_API_KEY}"
+        }
+      },
+      "id": "390f0f49-24db-47a4-bb2e-788cfef2f3b7"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.item.json;\nconst offers = response.offers || [];\nconst limit = $('Build Search Body').item.json.limit || 10;\n\nif (!offers || offers.length === 0) {\n  return [{ json: { message: 'No GPU offers found matching your criteria. Try broadening your search.', offers: [] } }];\n}\n\nconst limited = offers.slice(0, limit);\n\nconst formatted = limited.map((o, idx) => {\n  const gpuRamGB = o.gpu_ram ? Math.round(o.gpu_ram / 1024) : 0;\n  const priceStr = o.dph_total ? '$' + o.dph_total.toFixed(2) + '/hr' : 'N/A';\n  return {\n    number: idx + 1,\n    offer_id: o.id,\n    gpu_name: o.gpu_name || 'Unknown',\n    num_gpus: o.num_gpus || 1,\n    gpu_ram_gb: gpuRamGB,\n    price_per_hour: priceStr,\n    dph_total: o.dph_total,\n    geolocation: o.geolocation || 'Unknown',\n    reliability: o.reliability ? (o.reliability * 100).toFixed(1) + '%' : 'N/A',\n    inet_down: o.inet_down ? o.inet_down.toFixed(0) + ' Mbps' : 'N/A',\n    cuda_vers: o.cuda_max_good || 'N/A'\n  };\n});\n\nlet message = `Found ${offers.length} GPU offer${offers.length === 1 ? '' : 's'}. `;\nformatted.forEach(o => {\n  message += `${o.number}. ${o.gpu_name}`;\n  if (o.num_gpus > 1) message += ` x${o.num_gpus}`;\n  message += ` - ${o.price_per_hour}, ${o.gpu_ram_gb}GB RAM, ${o.geolocation}. `;\n});\n\nreturn [{ json: { message: message.trim(), count: offers.length, offers: formatted } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        -550
+      ],
+      "name": "Format Search",
+      "id": "99344960-4cac-4d06-a54c-204cdf1d2245"
+    },
+    {
+      "parameters": {
+        "url": "https://console.vast.ai/api/v0/instances/",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        -350
+      ],
+      "name": "List Instances",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${VASTAI_API_KEY}"
+        }
+      },
+      "id": "3ccb89f0-d669-4674-9264-b14eb72b1e39"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.item.json;\nconst instances = response.instances || [];\n\nif (!instances || instances.length === 0) {\n  return [{ json: { message: 'You have no active instances.', count: 0, instances: [] } }];\n}\n\nconst formatted = instances.map(i => ({\n  id: i.id,\n  status: i.actual_status || i.status_msg || 'unknown',\n  gpu_name: i.gpu_name || 'Unknown',\n  num_gpus: i.num_gpus || 1,\n  label: i.label || '',\n  price_per_hour: i.dph_total ? '$' + i.dph_total.toFixed(2) + '/hr' : 'N/A'\n}));\n\nconst running = formatted.filter(i => i.status === 'running').length;\nconst stopped = formatted.filter(i => i.status === 'stopped' || i.status === 'exited').length;\n\nlet message = `You have ${instances.length} instance${instances.length === 1 ? '' : 's'}.`;\nif (running > 0) message += ` ${running} running.`;\nif (stopped > 0) message += ` ${stopped} stopped.`;\n\nreturn [{ json: { message, count: instances.length, instances: formatted } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        -400
+      ],
+      "name": "Format List",
+      "id": "39461e08-a08b-4fab-a52e-aaa3be81fb8c"
+    },
+    {
+      "parameters": {
+        "url": "=https://console.vast.ai/api/v0/instances/{{ $json.instance_id }}/",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        -200
+      ],
+      "name": "Show Instance",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${VASTAI_API_KEY}"
+        }
+      },
+      "id": "f1f1e797-4b6c-4756-9438-ba7d4b35eab1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.item.json;\nconst i = raw.instances || raw;\n\nconst gpuRamGB = i.gpu_ram ? Math.round(i.gpu_ram / 1024) : 0;\nconst priceStr = i.dph_total ? '$' + i.dph_total.toFixed(2) + '/hr' : 'N/A';\nconst uptimeHrs = i.duration ? Math.round(i.duration / 3600) : 0;\n\nconst detail = {\n  id: i.id,\n  status: i.actual_status || i.status_msg || 'unknown',\n  gpu_name: i.gpu_name || 'Unknown',\n  num_gpus: i.num_gpus || 1,\n  gpu_ram_gb: gpuRamGB,\n  disk_space_gb: i.disk_space ? Math.round(i.disk_space) : 0,\n  ssh_host: i.ssh_host || '',\n  ssh_port: i.ssh_port || '',\n  price_per_hour: priceStr,\n  label: i.label || '',\n  uptime_hours: uptimeHrs,\n  image: i.image_uuid || '',\n  public_ip: i.public_ipaddr || '',\n  geolocation: i.geolocation || ''\n};\n\nlet message = `Instance ${i.id}: ${detail.gpu_name}`;\nif (detail.num_gpus > 1) message += ` x${detail.num_gpus}`;\nmessage += `, ${detail.gpu_ram_gb}GB RAM. Status: ${detail.status}. Price: ${priceStr}.`;\nif (detail.label) message += ` Label: ${detail.label}.`;\nif (detail.ssh_host && detail.ssh_port) message += ` SSH: ssh -p ${detail.ssh_port} root@${detail.ssh_host}.`;\nif (detail.geolocation) message += ` Location: ${detail.geolocation}.`;\nif (uptimeHrs > 0) message += ` Uptime: ${uptimeHrs} hours.`;\n\nreturn [{ json: { message, instance: detail } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        -250
+      ],
+      "name": "Format Show",
+      "id": "9abbaee7-5be6-4821-becb-a8536675764a"
+    },
+    {
+      "parameters": {
+        "url": "https://console.vast.ai/api/v0/users/current/",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        -50
+      ],
+      "name": "Get Balance",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${VASTAI_API_KEY}"
+        }
+      },
+      "id": "def099eb-7dee-42fa-a3e5-1240d24c2c2e"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\n\nconst credit = data.credit || data.balance || 0;\nconst balance = typeof credit === 'number' ? credit.toFixed(2) : credit;\n\nreturn [{ json: { message: `Your Vast.ai balance is $${balance}.`, balance: parseFloat(balance) } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        -100
+      ],
+      "name": "Format Balance",
+      "id": "e980b527-9e25-4bb9-8a88-ec3c4caa5459"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\n\nif (!data.offer_id) {\n  return [{ json: { error: true, message: 'offer_id is required for create_instance. Search for offers first using search_offers.' } }];\n}\n\n// Default image if not specified\nif (!data.image) {\n  data.image = 'vastai/pytorch:@vastai-automatic-tag';\n}\n\nreturn [{ json: data }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        100
+      ],
+      "name": "Validate Create",
+      "id": "71131436-af19-4d14-ba5f-9aa978599119"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "vast-err-create-cond",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        400,
+        100
+      ],
+      "name": "If Error Create",
+      "id": "24370359-eea7-47d8-a441-ff66c408a8ed"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://console.vast.ai/api/v0/asks/{{ $json.offer_id }}/",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ image: $json.image, disk: $json.disk || 100, label: $json.label || '' }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        600,
+        50
+      ],
+      "name": "Create Instance",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${VASTAI_API_KEY}"
+        }
+      },
+      "id": "60668ba8-5b76-44d4-82c9-f90a21429e9f"
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.item.json;\nconst contractId = result.new_contract || result.contract_id || result.id || 'unknown';\n\nreturn [{ json: { message: `Instance created. Contract ID: ${contractId}. It will be ready in a few moments.`, contract_id: contractId, success: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        0
+      ],
+      "name": "Format Create",
+      "id": "edb9e2dd-eaa4-4b2c-9937-745a434a3382"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://console.vast.ai/api/v0/instances/{{ $json.instance_id }}/",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"state\": \"running\" }",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        250
+      ],
+      "name": "Start Instance",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${VASTAI_API_KEY}"
+        }
+      },
+      "id": "70c230b0-968a-4550-a385-b79c23a99e40"
+    },
+    {
+      "parameters": {
+        "jsCode": "const instanceId = $('Parse Parameters').item.json.instance_id;\nreturn [{ json: { message: `Instance ${instanceId} started.`, instance_id: instanceId, success: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        200
+      ],
+      "name": "Format Start",
+      "id": "e7bbf48a-545e-4012-b419-76645b07979b"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://console.vast.ai/api/v0/instances/{{ $json.instance_id }}/",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"state\": \"stopped\" }",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        400
+      ],
+      "name": "Stop Instance",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${VASTAI_API_KEY}"
+        }
+      },
+      "id": "2a196b7a-3d47-4c45-be3f-5b54c26818c6"
+    },
+    {
+      "parameters": {
+        "jsCode": "const instanceId = $('Parse Parameters').item.json.instance_id;\nreturn [{ json: { message: `Instance ${instanceId} stopped.`, instance_id: instanceId, success: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        350
+      ],
+      "name": "Format Stop",
+      "id": "be9d4c38-5854-4dde-9b32-4d45e2d48296"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://console.vast.ai/api/v0/instances/reboot/{{ $json.instance_id }}/",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        550
+      ],
+      "name": "Reboot Instance",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${VASTAI_API_KEY}"
+        }
+      },
+      "id": "6a00db22-6ad0-449c-8337-83a0d84f2a1a"
+    },
+    {
+      "parameters": {
+        "jsCode": "const instanceId = $('Parse Parameters').item.json.instance_id;\nreturn [{ json: { message: `Instance ${instanceId} is rebooting.`, instance_id: instanceId, success: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        500
+      ],
+      "name": "Format Reboot",
+      "id": "0030c910-9f9b-4363-a488-d5f2dc456a9f"
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://console.vast.ai/api/v0/instances/{{ $json.instance_id }}/",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        700
+      ],
+      "name": "Destroy Instance",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${VASTAI_API_KEY}"
+        }
+      },
+      "id": "df3d46aa-a949-4545-ab0c-5521d7b24f3a"
+    },
+    {
+      "parameters": {
+        "jsCode": "const instanceId = $('Parse Parameters').item.json.instance_id;\nreturn [{ json: { message: `Instance ${instanceId} has been destroyed.`, instance_id: instanceId, success: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        650
+      ],
+      "name": "Format Destroy",
+      "id": "b9094e8c-4c51-46b2-85e3-9afc9518beb5"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://console.vast.ai/api/v0/instances/request_logs/{{ $json.instance_id }}/",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        850
+      ],
+      "name": "Get Logs",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${VASTAI_API_KEY}"
+        }
+      },
+      "id": "9026611f-c083-4641-9f31-7bbc43c062da"
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.item.json;\nconst instanceId = $('Parse Parameters').item.json.instance_id;\n\nlet logs = result.result || result.logs || result.log || JSON.stringify(result);\n\nif (typeof logs === 'object') {\n  logs = JSON.stringify(logs);\n}\n\n// Truncate if very long\nif (logs.length > 3000) {\n  logs = logs.substring(logs.length - 3000);\n  logs = '... (truncated) ...\\n' + logs;\n}\n\nreturn [{ json: { message: `Logs for instance ${instanceId}:`, instance_id: instanceId, logs: logs } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        800
+      ],
+      "name": "Format Logs",
+      "id": "fee6cf07-4264-4b60-a0e1-234b7c9d69cb"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://console.vast.ai/api/v0/instances/{{ $json.instance_id }}/",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ label: $json.label }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        1000
+      ],
+      "name": "Label Instance",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${VASTAI_API_KEY}"
+        }
+      },
+      "id": "8c506415-e922-4011-9300-5694a25e8690"
+    },
+    {
+      "parameters": {
+        "jsCode": "const instanceId = $('Parse Parameters').item.json.instance_id;\nconst label = $('Parse Parameters').item.json.label;\nreturn [{ json: { message: `Instance ${instanceId} labeled as '${label}'.`, instance_id: instanceId, label: label, success: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        950
+      ],
+      "name": "Format Label",
+      "id": "55437c66-eaf4-4cb9-bf85-827250b13c2c"
+    },
+    {
+      "parameters": {
+        "jsCode": "const errorData = $input.item.json;\n\n// If it's already a formatted error from a Code node\nif (errorData.error === true && errorData.message) {\n  return [{ json: { message: errorData.message, error: true } }];\n}\n\n// Otherwise it's from an n8n node error output\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\n\nif (typeof errorMsg === 'object') {\n  errorMsg = errorMsg.message || JSON.stringify(errorMsg);\n}\n\n// Make error voice-friendly\nif (errorMsg.includes('authorization') || errorMsg.includes('403') || errorMsg.includes('401') || errorMsg.includes('Unauthorized')) {\n  errorMsg = 'Vast.ai authentication failed. Please check your API key.';\n} else if (errorMsg.includes('rate limit') || errorMsg.includes('429')) {\n  errorMsg = 'Vast.ai rate limit reached. Try again in a few minutes.';\n} else if (errorMsg.includes('404') || errorMsg.includes('Not Found') || errorMsg.includes('not found')) {\n  errorMsg = 'Resource not found. The instance or offer ID may be invalid.';\n} else if (errorMsg.includes('400') || errorMsg.includes('Bad Request')) {\n  errorMsg = 'Bad request. Please check your parameters.';\n} else if (errorMsg.includes('402') || errorMsg.includes('insufficient')) {\n  errorMsg = 'Insufficient balance. Please add funds to your Vast.ai account.';\n} else if (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ETIMEDOUT')) {\n  errorMsg = 'Cannot connect to Vast.ai. Check your internet connection.';\n}\n\nreturn [{ json: { message: 'Vast.ai error: ' + errorMsg, error: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        200
+      ],
+      "name": "Format Error",
+      "id": "5c0d690c-c408-4032-a122-5582e755f567"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        200
+      ],
+      "name": "Respond to Webhook",
+      "id": "4977e39a-8102-4ecb-9efe-80eae22bc141"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** vast-ai\n**Description:** Vast.ai - search GPU offers, rent and manage cloud GPU instances.\n**version:** v1.0.0\n**id:** (pending)\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/cloud/vast-ai)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -784,
+        -288
+      ],
+      "typeVersion": 1,
+      "id": "ad243f33-6c86-46da-b5a5-3c61aa715d53",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Parameters": {
+      "main": [
+        [
+          {
+            "node": "If Error Parse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error Parse": {
+      "main": [
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Category Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Category Switch": {
+      "main": [
+        [
+          {
+            "node": "Read Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validate Create",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Manage Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Switch": {
+      "main": [
+        [
+          {
+            "node": "Build Search Body",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "List Instances",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Show Instance",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Balance",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Search Body": {
+      "main": [
+        [
+          {
+            "node": "Search Offers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Offers": {
+      "main": [
+        [
+          {
+            "node": "Format Search",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Search": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Instances": {
+      "main": [
+        [
+          {
+            "node": "Format List",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format List": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Show Instance": {
+      "main": [
+        [
+          {
+            "node": "Format Show",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Show": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Balance": {
+      "main": [
+        [
+          {
+            "node": "Format Balance",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Balance": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Create": {
+      "main": [
+        [
+          {
+            "node": "If Error Create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error Create": {
+      "main": [
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Instance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Instance": {
+      "main": [
+        [
+          {
+            "node": "Format Create",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Create": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manage Switch": {
+      "main": [
+        [
+          {
+            "node": "Start Instance",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stop Instance",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reboot Instance",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Destroy Instance",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Logs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Label Instance",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Instance": {
+      "main": [
+        [
+          {
+            "node": "Format Start",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Start": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stop Instance": {
+      "main": [
+        [
+          {
+            "node": "Format Stop",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Stop": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reboot Instance": {
+      "main": [
+        [
+          {
+            "node": "Format Reboot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Reboot": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Destroy Instance": {
+      "main": [
+        [
+          {
+            "node": "Format Destroy",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Destroy": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Logs": {
+      "main": [
+        [
+          {
+            "node": "Format Logs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Logs": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Label Instance": {
+      "main": [
+        [
+          {
+            "node": "Format Label",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Label": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
