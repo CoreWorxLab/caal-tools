@@ -308,5 +308,43 @@
       ],
       "updated": "2026-02-21"
     }
+  ],
+  "vast-ai": [
+    {
+      "id": "AqH_6oxoqajm82hhTHdRAg",
+      "name": "vast-ai",
+      "friendlyName": "Vast.ai",
+      "version": "1.0.0",
+      "description": "Vast.ai - search GPU offers, rent and manage cloud GPU instances.",
+      "category": "utilities",
+      "path": "tools/utilities/vast-ai",
+      "icon": "vast-ai.svg",
+      "voice_triggers": [
+        "Find me a cheap 4090",
+        "Search for GPU offers",
+        "What instances do I have running?",
+        "Show me my GPU instance",
+        "How much credit do I have on Vast?",
+        "Rent a GPU",
+        "Start my instance",
+        "Stop my instance",
+        "Reboot the GPU server",
+        "Destroy my instance",
+        "Show me the instance logs",
+        "Label that instance"
+      ],
+      "required_services": [
+        "vast-ai"
+      ],
+      "tier": "coreworxlab",
+      "author": "cmac86",
+      "tags": [
+        "cloud",
+        "gpu",
+        "vast-ai",
+        "compute"
+      ],
+      "updated": "2026-03-06"
+    }
   ]
 }
