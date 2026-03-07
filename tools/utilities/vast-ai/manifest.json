@@ -52,7 +52,7 @@
     {
       "name": "CAAL_ANNOUNCE_URL",
       "description": "Your CAAL announcement service URL",
-      "example": "http://192.168.1.50:8889"
+      "example": "http://YOUR_CAAL_HOST:8889"
     }
   ],
   "author": {
