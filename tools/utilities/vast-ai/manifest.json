@@ -3,7 +3,7 @@
   "friendlyName": "Vast.ai",
   "version": "1.0.0",
   "description": "Vast.ai - search GPU offers, rent and manage cloud GPU instances.",
-  "category": "cloud",
+  "category": "utilities",
   "toolSuite": true,
   "actions": [
     "search_offers",
