@@ -1,0 +1,66 @@
+{
+  "name": "vast-ai",
+  "friendlyName": "Vast.ai",
+  "version": "1.0.0",
+  "description": "Vast.ai - search GPU offers, rent and manage cloud GPU instances.",
+  "category": "cloud",
+  "toolSuite": true,
+  "actions": [
+    "search_offers",
+    "list_instances",
+    "show_instance",
+    "get_balance",
+    "create_instance",
+    "start_instance",
+    "stop_instance",
+    "reboot_instance",
+    "destroy_instance",
+    "get_logs",
+    "label_instance"
+  ],
+  "icon": "vast-ai.svg",
+  "voice_triggers": [
+    "Find me a cheap 4090",
+    "Search for GPU offers",
+    "What instances do I have running?",
+    "Show me my GPU instance",
+    "How much credit do I have on Vast?",
+    "Rent a GPU",
+    "Start my instance",
+    "Stop my instance",
+    "Reboot the GPU server",
+    "Destroy my instance",
+    "Show me the instance logs",
+    "Label that instance"
+  ],
+  "required_services": [
+    "vast-ai"
+  ],
+  "required_credentials": [
+    {
+      "credential_type": "httpHeaderAuth",
+      "name": "VASTAI_API_KEY",
+      "description": "Vast.ai API key (Header Auth with 'Authorization: Bearer YOUR_API_KEY')"
+    }
+  ],
+  "required_variables": [
+    {
+      "name": "VASTAI_SEARCH_REGION",
+      "description": "Comma-separated ISO country codes to filter GPU search results (e.g. US,CA for North America)",
+      "example": "US,CA"
+    }
+  ],
+  "author": {
+    "github": "cmac86"
+  },
+  "tier": "coreworxlab",
+  "tags": [
+    "cloud",
+    "gpu",
+    "vast-ai",
+    "compute"
+  ],
+  "dependencies": [],
+  "created": "2026-03-06",
+  "updated": "2026-03-06"
+}
