@@ -1,7 +1,7 @@
 {
   "name": "vast-ai",
   "friendlyName": "Vast.ai",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Vast.ai - search GPU offers, rent and manage cloud GPU instances.",
   "category": "utilities",
   "toolSuite": true,
@@ -48,6 +48,11 @@
       "name": "VASTAI_SEARCH_REGION",
       "description": "Comma-separated ISO country codes to filter GPU search results (e.g. US,CA for North America)",
       "example": "US,CA"
+    },
+    {
+      "name": "CAAL_ANNOUNCE_URL",
+      "description": "Your CAAL announcement service URL",
+      "example": "http://192.168.1.50:8889"
     }
   ],
   "author": {
