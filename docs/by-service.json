@@ -314,7 +314,7 @@
       "id": "AqH_6oxoqajm82hhTHdRAg",
       "name": "vast-ai",
       "friendlyName": "Vast.ai",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "description": "Vast.ai - search GPU offers, rent and manage cloud GPU instances.",
       "category": "utilities",
       "path": "tools/utilities/vast-ai",
