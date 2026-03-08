@@ -2,13 +2,14 @@
   "id": "ndPj-EJI58ABJvg0drlAgw",
   "name": "google-calendar",
   "friendlyName": "Google Calendar",
-  "version": "1.1.0",
-  "description": "Google Calendar — view, create, or delete events.",
+  "version": "1.2.0",
+  "description": "Google Calendar — view, create, update, or delete events.",
   "category": "productivity",
   "toolSuite": true,
   "actions": [
     "get",
     "create",
+    "update",
     "delete"
   ],
   "icon": "google-calendar.svg",
@@ -43,5 +44,5 @@
   ],
   "dependencies": [],
   "created": "2026-02-01",
-  "updated": "2026-02-21"
+  "updated": "2026-03-08"
 }
