@@ -45,7 +45,7 @@ def get_existing_workflow(headers: dict, name: str) -> dict | None:
     if resp.status_code != 200:
         return None
     for wf in resp.json().get("data", []):
-        if wf["name"] == name:
+        if wf["name"] == name and not wf.get("isArchived"):
             return wf
     return None
 

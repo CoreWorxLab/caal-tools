@@ -16,12 +16,12 @@
       ],
       "name": "Webhook",
       "webhookId": "radarr",
-      "notes": "Radarr — movie library. Use for movies and films. Not for TV shows — use sonarr for TV shows.\n\nActions:\n  search — search for a movie in the library. Use for \"is Inception on Radarr\", \"search for The Matrix\".\n  calendar — upcoming movie releases. Use for \"any movies coming out\", \"new releases this month\".\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: calendar, search\",\n    \"required\": true\n  },\n  \"query\": {\n    \"type\": \"string\",\n    \"description\": \"Movie name, e.g. Interstellar, The Matrix. For: search\"\n  },\n  \"days\": {\n    \"type\": \"integer\",\n    \"description\": \"Calendar lookahead days. Default 30. For: calendar\"\n  }\n}",
+      "notes": "Radarr \u2014 movie library. Use for movies and films. Not for TV shows \u2014 use sonarr for TV shows.\n\nActions:\n  search \u2014 search for a movie in the library. Use for \"is Inception on Radarr\", \"search for The Matrix\".\n  calendar \u2014 upcoming movie releases. Use for \"any movies coming out\", \"new releases this month\".\n  library \u2014 list all movies in your library. Use for \"what movies do I have\", \"how many movies\".\n  history \u2014 recent download and import activity. Use for \"what was recently downloaded\", \"recent activity\".\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: calendar, search, library, history\",\n    \"required\": true\n  },\n  \"query\": {\n    \"type\": \"string\",\n    \"description\": \"Movie name, e.g. Interstellar, The Matrix. For: search\"\n  },\n  \"days\": {\n    \"type\": \"integer\",\n    \"description\": \"Calendar lookahead days. Default 30. For: calendar\"\n  },\n  \"limit\": {\n    \"type\": \"integer\",\n    \"description\": \"Max items to return. Default 20. For: library, history\"\n  }\n}",
       "id": "2a79d0c4-d5f4-4f9b-a977-2ab5b4154a45"
     },
     {
       "parameters": {
-        "jsCode": "// Parse input and extract action + parameters\nlet data;\nconst input = $input.item.json;\n\nif (typeof input.body === 'string') {\n  data = JSON.parse(input.body);\n} else if (typeof input.body === 'object') {\n  data = input.body;\n} else {\n  data = input;\n}\n\nconst action = (data.action || '').toLowerCase();\nconst query = data.query || '';\nconst days = parseInt(data.days) || 30;\n\n// For calendar, calculate date range\nconst start = new Date();\nstart.setHours(0, 0, 0, 0);\nconst end = new Date(start);\nend.setDate(end.getDate() + days);\n\nreturn [{\n  json: {\n    action: action,\n    query: query,\n    queryLower: query.toLowerCase(),\n    days: days,\n    start: start.toISOString().split('T')[0],\n    end: end.toISOString().split('T')[0]\n  }\n}];"
+        "jsCode": "// Parse input and extract action + parameters\nlet data;\nconst input = $input.item.json;\n\nif (typeof input.body === 'string') {\n  data = JSON.parse(input.body);\n} else if (typeof input.body === 'object') {\n  data = input.body;\n} else {\n  data = input;\n}\n\nconst action = (data.action || '').toLowerCase();\nconst query = data.query || '';\nconst days = parseInt(data.days) || 30;\nconst limit = parseInt(data.limit) || 20;\n\n// For calendar, calculate date range\nconst start = new Date();\nstart.setHours(0, 0, 0, 0);\nconst end = new Date(start);\nend.setDate(end.getDate() + days);\n\nreturn [{\n  json: {\n    action: action,\n    query: query,\n    queryLower: query.toLowerCase(),\n    days: days,\n    limit: limit,\n    start: start.toISOString().split('T')[0],\n    end: end.toISOString().split('T')[0]\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -77,6 +77,48 @@
               },
               "renameOutput": true,
               "outputKey": "search"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "library",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "library"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "history",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "history"
             }
           ]
         },
@@ -167,7 +209,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Format error for voice\nconst errorData = $input.item.json;\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\n\nif (errorMsg.includes('401') || errorMsg.includes('403') || errorMsg.includes('Unauthorized')) {\n  errorMsg = 'Radarr authentication failed. Check the API key in n8n.';\n} else if (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ETIMEDOUT')) {\n  errorMsg = 'Cannot connect to Radarr. Is it running?';\n} else if (errorMsg.includes('Credential')) {\n  errorMsg = 'Radarr credentials not found in n8n.';\n}\n\nreturn { message: `Error with Radarr: ${errorMsg}`, error: true };"
+        "jsCode": "const errorData = $input.item.json;\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\nif (typeof errorMsg === 'object') {\n  errorMsg = errorMsg.message || JSON.stringify(errorMsg);\n}\nerrorMsg = String(errorMsg);\n\nif (errorMsg.includes('401') || errorMsg.includes('403') || errorMsg.includes('Unauthorized')) {\n  errorMsg = 'Radarr authentication failed. Check the API key in n8n.';\n} else if (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ETIMEDOUT')) {\n  errorMsg = 'Cannot connect to Radarr. Is it running?';\n} else if (errorMsg.includes('Credential')) {\n  errorMsg = 'Radarr credentials not found in n8n.';\n}\n\nreturn [{ json: { message: `Error with Radarr: ${errorMsg}`, error: true } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -180,7 +222,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Handle invalid action\nconst action = $input.item.json.action || 'unknown';\nreturn {\n  message: `Invalid action: \"${action}\". Use 'calendar' or 'search'.`,\n  error: true\n};"
+        "jsCode": "// Handle invalid action\nconst action = $input.item.json.action || 'unknown';\nreturn {\n  message: `Invalid action: \"${action}\". Use 'calendar', 'search', 'library', or 'history'.`,\n  error: true\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -204,7 +246,7 @@
     },
     {
       "parameters": {
-        "content": "## CAAL Registry Tracking\n**Tool Name:** radarr\n**Description:** Radarr — movie library. Use for movies and films. Not for TV shows — use sonarr for TV shows.\n**version:** v1.1.0\n**id:** 9fGeS8i9FH-7OHxAHAYB1A\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/media/radarr)\n\n### (Do not delete this sticky)",
+        "content": "## CAAL Registry Tracking\n**Tool Name:** radarr\n**Description:** Radarr \u2014 movie library. Use for movies and films. Not for TV shows \u2014 use sonarr for TV shows.\n**version:** v1.2.0\n**id:** 9fGeS8i9FH-7OHxAHAYB1A\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/media/radarr)\n\n### (Do not delete this sticky)",
         "height": 260,
         "width": 360
       },
@@ -216,6 +258,78 @@
       "typeVersion": 1,
       "id": "4188bfe4-586e-46b6-9a05-66718f392ed9",
       "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "url": "${RADARR_URL}/api/v3/movie",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        500
+      ],
+      "name": "Get Library",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${HTTPHEADERAUTH_CREDENTIAL}"
+        }
+      },
+      "id": "radarr-lib-0001"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format library overview for voice\nconst allMovies = $input.all();\nconst limit = $('Parse Parameters').item.json.limit;\n\nconst total = allMovies.length;\nconst withFiles = allMovies.filter(item => item.json.hasFile).length;\nconst monitored = allMovies.filter(item => item.json.monitored).length;\n\n// Sort alphabetically and limit\nconst sorted = allMovies\n  .map(item => {\n    const m = item.json;\n    const sizeGB = m.sizeOnDisk ? (m.sizeOnDisk / 1073741824).toFixed(1) : 0;\n    return {\n      title: m.title || 'Unknown',\n      year: m.year,\n      quality: m.movieFile?.quality?.quality?.name || 'N/A',\n      has_file: m.hasFile || false,\n      monitored: m.monitored || false,\n      size_gb: parseFloat(sizeGB)\n    };\n  })\n  .sort((a, b) => a.title.localeCompare(b.title))\n  .slice(0, limit);\n\nlet message = `You have ${total} movies in your library. ${withFiles} have files, ${monitored} are monitored.`;\nif (sorted.length > 0) {\n  const preview = sorted.slice(0, 5).map(m => `${m.title} (${m.year})`).join(', ');\n  message += ` Including: ${preview}`;\n  if (total > 5) message += `, and more.`;\n}\n\nreturn { message, count: total, with_files: withFiles, monitored, movies: sorted };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        500
+      ],
+      "name": "Format Library",
+      "id": "radarr-lib-0002"
+    },
+    {
+      "parameters": {
+        "url": "=${RADARR_URL}/api/v3/history?page=1&pageSize={{ $('Parse Parameters').item.json.limit }}&sortKey=date&sortDirection=descending&includeMovie=true",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        700
+      ],
+      "name": "Get History",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${HTTPHEADERAUTH_CREDENTIAL}"
+        }
+      },
+      "id": "radarr-hist-0001"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.item.json;\nconst limit = $('Parse Parameters').item.json.limit;\n\nconst eventTypeMap = {\n  'grabbed': 'Grabbed',\n  'downloadFolderImported': 'Imported',\n  'movieFileDeleted': 'Deleted',\n  'downloadFailed': 'Failed',\n  'movieFileRenamed': 'Renamed'\n};\n\nconst records = (input.records || []).slice(0, limit);\n\nif (records.length === 0) {\n  return [{ json: { message: 'No recent history found.', count: 0, history: [] } }];\n}\n\nconst history = records.map(r => {\n  const title = r.movie?.title || r.sourceTitle || 'Unknown';\n  const quality = r.quality?.quality?.name || 'Unknown';\n  const event = eventTypeMap[r.eventType] || r.eventType || 'Unknown';\n  const date = r.date ? new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Unknown';\n  return { title, quality, event, date };\n});\n\nconst lines = history.slice(0, 5).map((h, i) => `${i + 1}. ${h.event} ${h.title} in ${h.quality}`);\nlet message = 'Recent activity: ' + lines.join('. ') + '.';\nif (history.length > 5) message += ` And ${history.length - 5} more.`;\n\nreturn [{ json: { message, count: history.length, history } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        700
+      ],
+      "name": "Format History",
+      "id": "radarr-hist-0002"
     }
   ],
   "connections": {
@@ -253,6 +367,20 @@
         [
           {
             "node": "Get All Movies",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Library",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get History",
             "type": "main",
             "index": 0
           }
@@ -302,6 +430,42 @@
         ]
       ]
     },
+    "Get Library": {
+      "main": [
+        [
+          {
+            "node": "Format Library",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get History": {
+      "main": [
+        [
+          {
+            "node": "Format History",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Format Calendar": {
       "main": [
         [
@@ -336,6 +500,28 @@
       ]
     },
     "Invalid Action": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Library": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format History": {
       "main": [
         [
           {
