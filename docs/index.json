@@ -253,6 +253,39 @@
     "updated": "2026-03-08"
   },
   {
+    "id": null,
+    "name": "sabnzbd",
+    "friendlyName": "SABnzbd",
+    "version": "1.0.0",
+    "description": "SABnzbd - monitor and control your Usenet download client.",
+    "category": "media",
+    "path": "tools/media/sabnzbd",
+    "icon": "sabnzbd.svg",
+    "voice_triggers": [
+      "What's downloading?",
+      "Download progress",
+      "What finished downloading?",
+      "Any failed downloads?",
+      "Pause downloads",
+      "Resume downloads",
+      "Download speed",
+      "Limit download speed to 5 megabytes"
+    ],
+    "required_services": [
+      "sabnzbd"
+    ],
+    "tier": "coreworxlab",
+    "author": "cmac86",
+    "tags": [
+      "media",
+      "downloads",
+      "usenet",
+      "sabnzbd",
+      "nzb"
+    ],
+    "updated": "2026-03-08"
+  },
+  {
     "id": "2C0NDLTMywwXQp7wU8OZgQ",
     "name": "seerr",
     "friendlyName": "Seerr",
