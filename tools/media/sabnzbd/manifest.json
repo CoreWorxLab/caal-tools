@@ -1,0 +1,58 @@
+{
+  "name": "sabnzbd",
+  "friendlyName": "SABnzbd",
+  "version": "1.0.0",
+  "description": "SABnzbd - monitor and control your Usenet download client.",
+  "category": "media",
+  "toolSuite": true,
+  "actions": [
+    "queue",
+    "history",
+    "status",
+    "pause",
+    "resume",
+    "speed_limit"
+  ],
+  "icon": "sabnzbd.svg",
+  "voice_triggers": [
+    "What's downloading?",
+    "Download progress",
+    "What finished downloading?",
+    "Any failed downloads?",
+    "Pause downloads",
+    "Resume downloads",
+    "Download speed",
+    "Limit download speed to 5 megabytes"
+  ],
+  "required_services": [
+    "sabnzbd"
+  ],
+  "required_credentials": [
+    {
+      "credential_type": "httpQueryAuth",
+      "name": "SABNZBD_API_KEY",
+      "description": "SABnzbd API key (Query Auth with name 'apikey' and value your API key)"
+    }
+  ],
+  "required_variables": [
+    {
+      "name": "SABNZBD_URL",
+      "description": "Your SABnzbd server URL",
+      "example": "http://YOUR_SABNZBD_HOST:8080"
+    }
+  ],
+  "author": {
+    "github": "cmac86"
+  },
+  "tier": "coreworxlab",
+  "tags": [
+    "media",
+    "downloads",
+    "usenet",
+    "sabnzbd",
+    "nzb"
+  ],
+  "dependencies": [],
+  "created": "2026-03-08",
+  "updated": "2026-03-08"
+}

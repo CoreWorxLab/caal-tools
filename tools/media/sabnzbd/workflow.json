@@ -1,0 +1,758 @@
+{
+  "name": "sabnzbd",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sabnzbd",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -600,
+        0
+      ],
+      "name": "Webhook",
+      "webhookId": "sabnzbd",
+      "notes": "SABnzbd \u2014 download client status and control. Use for checking downloads, speed, and managing the download queue.\n\nActions:\n  queue \u2014 current downloads with progress, speed, and ETA. Use for \"what's downloading\", \"download progress\", \"download queue\".\n  history \u2014 recently completed and failed downloads. Use for \"what finished downloading\", \"recent downloads\", \"any failed downloads\".\n  status \u2014 overall download status including speed, disk space, and queue state. Use for \"download speed\", \"disk space\", \"is downloading paused\".\n  pause \u2014 pause the download queue. Use for \"pause downloads\", \"stop downloading\".\n  resume \u2014 resume the download queue. Use for \"resume downloads\", \"start downloading again\".\n  speed_limit \u2014 set download speed limit. Use for \"limit download speed\", \"set speed to 5MB\", \"remove speed limit\".\n\nRules:\n- speed_limit value can be a percentage (e.g. \"50\" for 50%), absolute (e.g. \"5M\" for 5 MB/s, \"500K\" for 500 KB/s), or \"0\" to remove the limit.\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: queue, history, status, pause, resume, speed_limit\",\n    \"required\": true\n  },\n  \"limit\": {\n    \"type\": \"integer\",\n    \"description\": \"Max items to return. Default 10. For: queue, history\"\n  },\n  \"speed\": {\n    \"type\": \"string\",\n    \"description\": \"Speed limit value. Examples: '50' (50%), '5M' (5 MB/s), '500K' (500 KB/s), '0' (unlimited). For: speed_limit\"\n  }\n}",
+      "id": "sabnzbd-wbhk-0001-0000-000000000001"
+    },
+    {
+      "parameters": {
+        "jsCode": "let data;\nconst input = $input.item.json;\n\nif (typeof input.body === 'string') {\n  data = JSON.parse(input.body);\n} else if (typeof input.body === 'object') {\n  data = input.body;\n} else {\n  data = input;\n}\n\nconst action = (data.action || '').toLowerCase().trim();\n\nif (!action) {\n  return [{ json: { error: true, message: 'Action is required. Use one of: queue, history, status, pause, resume, speed_limit.' } }];\n}\n\nconst validActions = ['queue', 'history', 'status', 'pause', 'resume', 'speed_limit'];\nif (!validActions.includes(action)) {\n  return [{ json: { error: true, message: `Unknown action: ${action}. Use one of: queue, history, status, pause, resume, speed_limit.` } }];\n}\n\nconst limit = parseInt(data.limit) || 10;\nconst speed = data.speed || '0';\n\nreturn [{ json: { action, limit, speed } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        0
+      ],
+      "name": "Parse Parameters",
+      "id": "sabnzbd-prse-0002-0000-000000000002"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "sabnzbd-err-parse-cond",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -200,
+        0
+      ],
+      "name": "If Error Parse",
+      "id": "sabnzbd-iep0-0003-0000-000000000003"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "queue",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "queue"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "history",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "history"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "status",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "status"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "pause",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "pause"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "resume",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "resume"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "speed_limit",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "speed_limit"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        0,
+        0
+      ],
+      "name": "Action Switch",
+      "id": "sabnzbd-swch-0004-0000-000000000004"
+    },
+    {
+      "parameters": {
+        "url": "=${SABNZBD_URL}/api?output=json&mode=queue&limit={{ $json.limit }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        200,
+        -500
+      ],
+      "name": "Get Queue",
+      "id": "sabnzbd-gque-0005-0000-000000000005",
+      "credentials": {
+        "httpQueryAuth": {
+          "id": null,
+          "name": "${SABNZBD_API_KEY}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=${SABNZBD_URL}/api?output=json&mode=history&limit={{ $json.limit }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        200,
+        -300
+      ],
+      "name": "Get History",
+      "id": "sabnzbd-ghst-0006-0000-000000000006",
+      "credentials": {
+        "httpQueryAuth": {
+          "id": null,
+          "name": "${SABNZBD_API_KEY}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "${SABNZBD_URL}/api?output=json&mode=queue&limit=0",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        200,
+        -100
+      ],
+      "name": "Get Status",
+      "id": "sabnzbd-gsts-0007-0000-000000000007",
+      "credentials": {
+        "httpQueryAuth": {
+          "id": null,
+          "name": "${SABNZBD_API_KEY}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "${SABNZBD_URL}/api?output=json&mode=pause",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        200,
+        100
+      ],
+      "name": "Pause",
+      "id": "sabnzbd-paus-0008-0000-000000000008",
+      "credentials": {
+        "httpQueryAuth": {
+          "id": null,
+          "name": "${SABNZBD_API_KEY}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "${SABNZBD_URL}/api?output=json&mode=resume",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        200,
+        300
+      ],
+      "name": "Resume",
+      "id": "sabnzbd-resm-0009-0000-000000000009",
+      "credentials": {
+        "httpQueryAuth": {
+          "id": null,
+          "name": "${SABNZBD_API_KEY}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=${SABNZBD_URL}/api?output=json&mode=config&name=speedlimit&value={{ $json.speed }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        200,
+        500
+      ],
+      "name": "Set Speed Limit",
+      "id": "sabnzbd-sspd-0010-0000-000000000010",
+      "credentials": {
+        "httpQueryAuth": {
+          "id": null,
+          "name": "${SABNZBD_API_KEY}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst q = data.queue || data;\nconst slots = q.slots || [];\n\nif (slots.length === 0) {\n  return [{ json: { message: 'Download queue is empty.', count: 0, speed: q.speed || '0', downloads: [] } }];\n}\n\nconst downloads = slots.map((s, i) => ({\n  number: i + 1,\n  name: s.filename,\n  status: s.status,\n  progress: parseInt(s.percentage) || 0,\n  size: s.size || 'Unknown',\n  remaining: s.sizeleft || 'Unknown',\n  eta: s.timeleft || 'Unknown',\n  category: s.cat || 'None'\n}));\n\nlet message = `${slots.length} download${slots.length !== 1 ? 's' : ''} in queue at ${q.speed || '0'}/s. `;\ndownloads.slice(0, 5).forEach(d => {\n  message += `${d.number}. ${d.name} - ${d.progress}% (${d.remaining} left). `;\n});\n\nreturn [{ json: { message: message.trim(), count: slots.length, speed: q.speed || '0', paused: q.paused || false, downloads } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        -500
+      ],
+      "name": "Format Queue",
+      "id": "sabnzbd-fmtq-0011-0000-000000000011"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst h = data.history || data;\nconst slots = h.slots || [];\n\nif (slots.length === 0) {\n  return [{ json: { message: 'No recent download history.', count: 0, history: [] } }];\n}\n\nconst history = slots.map((s, i) => {\n  const completed = s.completed ? new Date(s.completed * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Unknown';\n  return {\n    number: i + 1,\n    name: s.name,\n    status: s.status,\n    size: s.size || 'Unknown',\n    completed: completed,\n    category: s.category || 'None',\n    fail_message: s.fail_message || null\n  };\n});\n\nconst completed = history.filter(h => h.status === 'Completed').length;\nconst failed = history.filter(h => h.status === 'Failed').length;\n\nlet message = `${history.length} recent downloads. `;\nif (completed > 0) message += `${completed} completed. `;\nif (failed > 0) message += `${failed} failed. `;\nhistory.slice(0, 5).forEach(h => {\n  message += `${h.number}. ${h.name} - ${h.status}`;\n  if (h.fail_message) message += ` (${h.fail_message})`;\n  message += '. ';\n});\n\nreturn [{ json: { message: message.trim(), count: history.length, completed_count: completed, failed_count: failed, history } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        -300
+      ],
+      "name": "Format History",
+      "id": "sabnzbd-fmth-0012-0000-000000000012"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst q = data.queue || data;\n\nconst paused = q.paused || false;\nconst speed = q.speed || '0';\nconst status = q.status || 'Unknown';\nconst queueSize = q.sizeleft || '0 B';\nconst queueCount = parseInt(q.noofslots_total) || 0;\nconst disk1 = q.diskspace1 ? parseFloat(q.diskspace1).toFixed(1) : 'Unknown';\nconst disk1Total = q.diskspacetotal1 ? parseFloat(q.diskspacetotal1).toFixed(1) : 'Unknown';\nconst disk2 = q.diskspace2 ? parseFloat(q.diskspace2).toFixed(1) : 'Unknown';\nconst disk2Total = q.diskspacetotal2 ? parseFloat(q.diskspacetotal2).toFixed(1) : 'Unknown';\nconst speedLimit = q.speedlimit || '0';\nconst eta = q.timeleft || '0:00:00';\n\nlet message = `SABnzbd is ${paused ? 'paused' : status.toLowerCase()}. `;\nif (!paused && speed !== '0') message += `Speed: ${speed}/s. `;\nif (speedLimit !== '0' && speedLimit !== '100') message += `Speed limit: ${speedLimit}%. `;\nmessage += `${queueCount} item${queueCount !== 1 ? 's' : ''} in queue`;\nif (queueCount > 0) message += ` (${queueSize} remaining, ETA ${eta})`;\nmessage += `. Download disk: ${disk1} GB free of ${disk1Total} GB. Complete disk: ${disk2} GB free of ${disk2Total} GB.`;\n\nreturn [{ json: { message, status, paused, speed, speed_limit: speedLimit, queue_count: queueCount, queue_remaining: queueSize, eta, disk_download_free_gb: disk1, disk_complete_free_gb: disk2 } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        -100
+      ],
+      "name": "Format Status",
+      "id": "sabnzbd-fmts-0013-0000-000000000013"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { message: 'Download queue has been paused.', success: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        100
+      ],
+      "name": "Format Pause",
+      "id": "sabnzbd-fmtp-0014-0000-000000000014"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { message: 'Download queue has been resumed.', success: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ],
+      "name": "Format Resume",
+      "id": "sabnzbd-fmtr-0015-0000-000000000015"
+    },
+    {
+      "parameters": {
+        "jsCode": "const speed = $('Parse Parameters').item.json.speed;\nconst message = speed === '0' ? 'Speed limit removed. Downloading at full speed.' : `Speed limit set to ${speed}.`;\nreturn [{ json: { message, success: true, speed_limit: speed } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        500
+      ],
+      "name": "Format Speed Limit",
+      "id": "sabnzbd-fmtl-0016-0000-000000000016"
+    },
+    {
+      "parameters": {
+        "jsCode": "const errorData = $input.item.json;\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\nif (typeof errorMsg === 'object') {\n  errorMsg = errorMsg.message || JSON.stringify(errorMsg);\n}\nerrorMsg = String(errorMsg);\n\nif (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ETIMEDOUT')) {\n  errorMsg = 'Cannot connect to SABnzbd. Is it running?';\n} else if (errorMsg.includes('401') || errorMsg.includes('api-key')) {\n  errorMsg = 'SABnzbd authentication failed. Check the API key.';\n}\n\nreturn [{ json: { message: 'SABnzbd error: ' + errorMsg, error: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        0
+      ],
+      "name": "Format Error",
+      "id": "sabnzbd-fmte-0017-0000-000000000017"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1000,
+        0
+      ],
+      "name": "Respond to Webhook",
+      "id": "sabnzbd-resp-0018-0000-000000000018"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** sabnzbd\n**Description:** SABnzbd \u2014 download client status and control.\n**version:** v1.0.0\n**id:** (pending)\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/media/sabnzbd)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -984,
+        -288
+      ],
+      "typeVersion": 1,
+      "id": "sabnzbd-note-0019-0000-000000000019",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Parameters": {
+      "main": [
+        [
+          {
+            "node": "If Error Parse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error Parse": {
+      "main": [
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Action Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Action Switch": {
+      "main": [
+        [
+          {
+            "node": "Get Queue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get History",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pause",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Resume",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Speed Limit",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Queue": {
+      "main": [
+        [
+          {
+            "node": "Format Queue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get History": {
+      "main": [
+        [
+          {
+            "node": "Format History",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Status": {
+      "main": [
+        [
+          {
+            "node": "Format Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pause": {
+      "main": [
+        [
+          {
+            "node": "Format Pause",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resume": {
+      "main": [
+        [
+          {
+            "node": "Format Resume",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Speed Limit": {
+      "main": [
+        [
+          {
+            "node": "Format Speed Limit",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Queue": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format History": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Status": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Pause": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Resume": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Speed Limit": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
