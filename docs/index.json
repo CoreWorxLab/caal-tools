@@ -250,6 +250,39 @@
     "updated": "2026-02-21"
   },
   {
+    "id": null,
+    "name": "seerr",
+    "friendlyName": "Seerr",
+    "version": "1.0.0",
+    "description": "Seerr - search and request movies and TV shows for your media library.",
+    "category": "media",
+    "path": "tools/media/seerr",
+    "icon": "seerr.svg",
+    "voice_triggers": [
+      "Download Inception",
+      "Search for Breaking Bad",
+      "What's trending?",
+      "What movies are coming out?",
+      "What have I requested?",
+      "Request that movie",
+      "Cancel my last request"
+    ],
+    "required_services": [
+      "seerr"
+    ],
+    "tier": "coreworxlab",
+    "author": "cmac86",
+    "tags": [
+      "media",
+      "movies",
+      "tv",
+      "seerr",
+      "overseerr",
+      "jellyseerr"
+    ],
+    "updated": "2026-03-07"
+  },
+  {
     "id": "dXkRDDTIOPPE8sYAtNs6NQ",
     "name": "sonarr",
     "friendlyName": "Sonarr",
