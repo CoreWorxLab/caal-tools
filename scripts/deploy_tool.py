@@ -9,7 +9,7 @@ Mimics the production install path:
 5. Activates the workflow
 
 Usage:
-    python scripts/deploy_draft.py draft-tools/seerr
+    python scripts/deploy_tool.py draft-tools/seerr
 """
 
 import json
@@ -45,15 +45,15 @@ def get_existing_workflow(headers: dict, name: str) -> dict | None:
     if resp.status_code != 200:
         return None
     for wf in resp.json().get("data", []):
-        if wf["name"] == name:
+        if wf["name"] == name and not wf.get("isArchived"):
             return wf
     return None
 
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: deploy_draft.py <draft-tool-dir>")
-        print("  e.g. deploy_draft.py draft-tools/seerr")
+        print("Usage: deploy_tool.py <draft-tool-dir>")
+        print("  e.g. deploy_tool.py draft-tools/seerr")
         sys.exit(1)
 
     tool_dir = Path(sys.argv[1])

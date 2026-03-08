@@ -16,12 +16,12 @@
       ],
       "name": "Webhook",
       "webhookId": "sonarr",
-      "notes": "Sonarr — TV show library. Use for TV shows, series, and episodes. Not for movies — use radarr for movies.\n\nActions:\n  search — search for a TV show in the library. Use for \"is Breaking Bad on Sonarr\", \"search for Bluey\".\n  calendar — upcoming episodes airing soon. Use for \"what's coming up\", \"any new episodes this week\".\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: calendar, search\",\n    \"required\": true\n  },\n  \"query\": {\n    \"type\": \"string\",\n    \"description\": \"TV show name, e.g. Bluey, Breaking Bad. For: search\"\n  },\n  \"days\": {\n    \"type\": \"integer\",\n    \"description\": \"Calendar lookahead days. Default 7. For: calendar\"\n  }\n}",
+      "notes": "Sonarr \u2014 TV show library. Use for TV shows, series, and episodes. Not for movies \u2014 use radarr for movies.\n\nActions:\n  search \u2014 search for a TV show in the library. Use for \"is Breaking Bad on Sonarr\", \"search for Bluey\".\n  calendar \u2014 upcoming episodes airing soon. Use for \"what's coming up\", \"any new episodes this week\".\n  library \u2014 list all series in your library. Use for \"what shows do I have\", \"how many series\".\n  history \u2014 recent download and import activity. Use for \"what was recently downloaded\", \"recent activity\".\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: calendar, search, library, history\",\n    \"required\": true\n  },\n  \"query\": {\n    \"type\": \"string\",\n    \"description\": \"TV show name, e.g. Bluey, Breaking Bad. For: search\"\n  },\n  \"days\": {\n    \"type\": \"integer\",\n    \"description\": \"Calendar lookahead days. Default 7. For: calendar\"\n  },\n  \"limit\": {\n    \"type\": \"integer\",\n    \"description\": \"Max items to return. Default 20. For: library, history\"\n  }\n}",
       "id": "38146e85-af33-4ef4-8ca6-f4221907c174"
     },
     {
       "parameters": {
-        "jsCode": "// Parse input and extract action + parameters\nlet data;\nconst input = $input.item.json;\n\nif (typeof input.body === 'string') {\n  data = JSON.parse(input.body);\n} else if (typeof input.body === 'object') {\n  data = input.body;\n} else {\n  data = input;\n}\n\nconst action = (data.action || '').toLowerCase();\nconst query = data.query || '';\nconst days = parseInt(data.days) || 7;\n\n// For calendar, calculate date range\nconst start = new Date();\nstart.setHours(0, 0, 0, 0);\nconst end = new Date(start);\nend.setDate(end.getDate() + days);\n\nreturn [{\n  json: {\n    action: action,\n    query: query,\n    queryLower: query.toLowerCase(),\n    days: days,\n    start: start.toISOString().split('T')[0],\n    end: end.toISOString().split('T')[0]\n  }\n}];"
+        "jsCode": "// Parse input and extract action + parameters\nlet data;\nconst input = $input.item.json;\n\nif (typeof input.body === 'string') {\n  data = JSON.parse(input.body);\n} else if (typeof input.body === 'object') {\n  data = input.body;\n} else {\n  data = input;\n}\n\nconst action = (data.action || '').toLowerCase();\nconst query = data.query || '';\nconst days = parseInt(data.days) || 7;\nconst limit = parseInt(data.limit) || 20;\n\n// For calendar, calculate date range\nconst start = new Date();\nstart.setHours(0, 0, 0, 0);\nconst end = new Date(start);\nend.setDate(end.getDate() + days);\n\nreturn [{\n  json: {\n    action: action,\n    query: query,\n    queryLower: query.toLowerCase(),\n    days: days,\n    limit: limit,\n    start: start.toISOString().split('T')[0],\n    end: end.toISOString().split('T')[0]\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -77,6 +77,48 @@
               },
               "renameOutput": true,
               "outputKey": "search"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "library",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "library"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "history",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "history"
             }
           ]
         },
@@ -154,7 +196,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Filter and format results\nconst allSeries = $input.all();\nconst query = $('Parse Parameters').item.json.queryLower;\n\nconst matches = allSeries.filter(item => {\n  const title = (item.json.title || '').toLowerCase();\n  return title.includes(query);\n});\n\nif (matches.length === 0) {\n  return {\n    message: `No shows found matching \"${$('Parse Parameters').item.json.query}\".`,\n    found: false,\n    shows: []\n  };\n}\n\nconst shows = matches.map(item => {\n  const s = item.json;\n  const episodeCount = s.statistics?.episodeFileCount || 0;\n  const totalEpisodes = s.statistics?.episodeCount || 0;\n  const percentComplete = totalEpisodes > 0 ? Math.round((episodeCount / totalEpisodes) * 100) : 0;\n  \n  return {\n    title: s.title,\n    year: s.year,\n    seasons: s.statistics?.seasonCount || 0,\n    episodesDownloaded: episodeCount,\n    totalEpisodes: totalEpisodes,\n    percentComplete: percentComplete,\n    status: s.status,\n    network: s.network || 'Unknown'\n  };\n});\n\nlet message = '';\nif (shows.length === 1) {\n  const s = shows[0];\n  message = `Yes, you have ${s.title}. ${s.episodesDownloaded} of ${s.totalEpisodes} episodes downloaded, ${s.percentComplete}% complete.`;\n} else {\n  message = `Found ${shows.length} shows matching your search. `;\n  const titles = shows.slice(0, 3).map(s => s.title);\n  message += titles.join(', ');\n  if (shows.length > 3) message += `, and ${shows.length - 3} more.`;\n}\n\nreturn { message, found: true, count: shows.length, shows };"
+        "jsCode": "const allSeries = $input.all();\nconst query = $('Parse Parameters').item.json.queryLower;\n\nconst matches = allSeries.filter(item => {\n  const title = (item.json.title || '').toLowerCase();\n  return title.includes(query);\n});\n\nif (matches.length === 0) {\n  return [{ json: {\n    message: `No shows found matching \"${$('Parse Parameters').item.json.query}\".`,\n    found: false,\n    shows: []\n  }}];\n}\n\nconst shows = matches.map(item => {\n  const s = item.json;\n  const stats = s.statistics || {};\n  const episodeFileCount = stats.episodeFileCount || 0;\n  const totalEpisodeCount = stats.totalEpisodeCount || stats.episodeCount || 0;\n  const seasonCount = stats.seasonCount || 0;\n\n  // Figure out which seasons have downloaded episodes\n  const seasonsWithFiles = (s.seasons || [])\n    .filter(sn => sn.statistics && sn.statistics.episodeFileCount > 0 && sn.seasonNumber > 0)\n    .map(sn => sn.seasonNumber);\n\n  return {\n    title: s.title,\n    year: s.year,\n    total_seasons: seasonCount,\n    seasons_downloaded: seasonsWithFiles,\n    episodes_downloaded: episodeFileCount,\n    episodes_total: totalEpisodeCount,\n    status: s.status,\n    network: s.network || 'Unknown'\n  };\n});\n\nlet message = '';\nif (shows.length === 1) {\n  const s = shows[0];\n  const dl = s.seasons_downloaded;\n  if (s.episodes_downloaded === 0) {\n    message = `Yes, ${s.title} is in your library but no episodes are downloaded. ${s.total_seasons} season${s.total_seasons !== 1 ? 's' : ''} available.`;\n  } else if (dl.length === s.total_seasons) {\n    message = `Yes, you have ${s.title}. All ${s.total_seasons} seasons downloaded. ${s.episodes_downloaded} of ${s.episodes_total} episodes.`;\n  } else {\n    const seasonList = dl.length <= 3 ? dl.join(', ') : dl.slice(0, 3).join(', ') + ` and ${dl.length - 3} more`;\n    message = `Yes, you have ${s.title}. Season${dl.length !== 1 ? 's' : ''} ${seasonList} downloaded (${s.episodes_downloaded} episodes). The show has ${s.total_seasons} seasons total.`;\n  }\n} else {\n  message = `Found ${shows.length} shows matching your search. `;\n  const preview = shows.slice(0, 3).map(s => s.title);\n  message += preview.join(', ');\n  if (shows.length > 3) message += `, and ${shows.length - 3} more.`;\n}\n\nreturn [{ json: { message, found: true, count: shows.length, shows } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -167,7 +209,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Format error for voice\nconst errorData = $input.item.json;\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\n\nif (errorMsg.includes('401') || errorMsg.includes('403') || errorMsg.includes('Unauthorized')) {\n  errorMsg = 'Sonarr authentication failed. Check the API key in n8n.';\n} else if (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ETIMEDOUT')) {\n  errorMsg = 'Cannot connect to Sonarr. Is it running?';\n} else if (errorMsg.includes('Credential')) {\n  errorMsg = 'Sonarr credentials not found in n8n.';\n}\n\nreturn { message: `Error with Sonarr: ${errorMsg}`, error: true };"
+        "jsCode": "const errorData = $input.item.json;\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\nif (typeof errorMsg === 'object') {\n  errorMsg = errorMsg.message || JSON.stringify(errorMsg);\n}\nerrorMsg = String(errorMsg);\n\nif (errorMsg.includes('401') || errorMsg.includes('403') || errorMsg.includes('Unauthorized')) {\n  errorMsg = 'Sonarr authentication failed. Check the API key in n8n.';\n} else if (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ETIMEDOUT')) {\n  errorMsg = 'Cannot connect to Sonarr. Is it running?';\n} else if (errorMsg.includes('Credential')) {\n  errorMsg = 'Sonarr credentials not found in n8n.';\n}\n\nreturn [{ json: { message: `Error with Sonarr: ${errorMsg}`, error: true } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -191,7 +233,7 @@
     },
     {
       "parameters": {
-        "content": "## CAAL Registry Tracking\n**Tool Name:** sonarr\n**Description:** Sonarr — TV show library. Use for TV shows, series, and episodes. Not for movies — use radarr for movies.\n**version:** v1.1.0\n**id:** dXkRDDTIOPPE8sYAtNs6NQ\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/media/sonarr)\n\n### (Do not delete this sticky)",
+        "content": "## CAAL Registry Tracking\n**Tool Name:** sonarr\n**Description:** Sonarr \u2014 TV show library. Use for TV shows, series, and episodes. Not for movies \u2014 use radarr for movies.\n**version:** v1.2.0\n**id:** dXkRDDTIOPPE8sYAtNs6NQ\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/media/sonarr)\n\n### (Do not delete this sticky)",
         "height": 260,
         "width": 360
       },
@@ -203,6 +245,78 @@
       "typeVersion": 1,
       "id": "87c2a3b3-c1fd-4bae-95bc-1c15a4d4de9b",
       "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "url": "${SONARR_URL}/api/v3/series",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        400
+      ],
+      "name": "Get Library",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${HTTPHEADERAUTH_CREDENTIAL}"
+        }
+      },
+      "id": "sonarr-lib-0001"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format library summary for voice\nconst allSeries = $input.all();\nconst limit = $('Parse Parameters').item.json.limit;\n\nconst totalSeries = allSeries.length;\nlet totalEpisodes = 0;\nlet totalMonitored = 0;\n\nconst series = allSeries.map(item => {\n  const s = item.json;\n  const episodes = s.statistics?.episodeFileCount || 0;\n  totalEpisodes += episodes;\n  if (s.monitored) totalMonitored++;\n\n  return {\n    title: s.title,\n    seasons: s.statistics?.seasonCount || 0,\n    episodes: episodes,\n    status: s.status || 'unknown',\n    monitored: s.monitored || false\n  };\n});\n\n// Sort alphabetically and limit\nseries.sort((a, b) => a.title.localeCompare(b.title));\nconst limited = series.slice(0, limit);\n\nlet message = `You have ${totalSeries} series in your library. ${totalMonitored} are monitored.`;\nif (totalSeries > 0) {\n  const preview = limited.slice(0, 5).map(s => s.title).join(', ');\n  message += ` Including: ${preview}`;\n  if (totalSeries > 5) message += `, and ${totalSeries - 5} more.`;\n}\n\nreturn { message, count: totalSeries, monitored: totalMonitored, series: limited };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        400
+      ],
+      "name": "Format Library",
+      "id": "sonarr-lib-0002"
+    },
+    {
+      "parameters": {
+        "url": "=${SONARR_URL}/api/v3/history?page=1&pageSize={{ $('Parse Parameters').item.json.limit }}&sortKey=date&sortDirection=descending&includeSeries=true&includeEpisode=true",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        650
+      ],
+      "name": "Get History",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${HTTPHEADERAUTH_CREDENTIAL}"
+        }
+      },
+      "id": "sonarr-hist-0001"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.item.json;\nconst records = input.records || [];\nconst limit = $('Parse Parameters').item.json.limit;\n\nconst eventTypeMap = {\n  'grabbed': 'Grabbed',\n  'downloadFolderImported': 'Imported',\n  'episodeFileDeleted': 'Deleted',\n  'downloadFailed': 'Failed',\n  'episodeFileRenamed': 'Renamed',\n  'seriesFolderImported': 'Imported'\n};\n\nconst history = records.slice(0, limit).map(r => {\n  const series = r.series?.title || 'Unknown';\n  const season = r.episode?.seasonNumber || 0;\n  const episode = r.episode?.episodeNumber || 0;\n  const epTitle = r.episode?.title || '';\n  const quality = r.quality?.quality?.name || 'Unknown';\n  const event = eventTypeMap[r.eventType] || r.eventType || 'Unknown';\n  const date = r.date ? new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Unknown';\n\n  return {\n    series,\n    season,\n    episode,\n    episode_title: epTitle,\n    quality,\n    event,\n    date\n  };\n});\n\nif (history.length === 0) {\n  return [{ json: { message: 'No recent activity in Sonarr.', count: 0, history: [] } }];\n}\n\nconst lines = history.slice(0, 5).map((h, i) => {\n  const ep = `S${String(h.season).padStart(2, '0')}E${String(h.episode).padStart(2, '0')}`;\n  return `${i + 1}. ${h.event} ${h.series} ${ep} in ${h.quality}`;\n});\nlet message = 'Recent activity: ' + lines.join('. ') + '.';\nif (history.length > 5) message += ` And ${history.length - 5} more.`;\n\nreturn [{ json: { message, count: history.length, history } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        650
+      ],
+      "name": "Format History",
+      "id": "sonarr-hist-0002"
     }
   ],
   "connections": {
@@ -240,6 +354,27 @@
         [
           {
             "node": "Get All Series",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Library",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get History",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
             "type": "main",
             "index": 0
           }
@@ -282,6 +417,42 @@
         ]
       ]
     },
+    "Get Library": {
+      "main": [
+        [
+          {
+            "node": "Format Library",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get History": {
+      "main": [
+        [
+          {
+            "node": "Format History",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Format Calendar": {
       "main": [
         [
@@ -305,6 +476,28 @@
       ]
     },
     "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Library": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format History": {
       "main": [
         [
           {
