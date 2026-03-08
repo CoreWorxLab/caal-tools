@@ -1,0 +1,59 @@
+{
+  "name": "seerr",
+  "friendlyName": "Seerr",
+  "version": "1.0.0",
+  "description": "Seerr - search and request movies and TV shows for your media library.",
+  "category": "media",
+  "toolSuite": true,
+  "actions": [
+    "search",
+    "request",
+    "my_requests",
+    "trending",
+    "upcoming",
+    "details",
+    "cancel_request"
+  ],
+  "icon": "seerr.svg",
+  "voice_triggers": [
+    "Download Inception",
+    "Search for Breaking Bad",
+    "What's trending?",
+    "What movies are coming out?",
+    "What have I requested?",
+    "Request that movie",
+    "Cancel my last request"
+  ],
+  "required_services": [
+    "seerr"
+  ],
+  "required_credentials": [
+    {
+      "credential_type": "httpHeaderAuth",
+      "name": "SEERR_API_KEY",
+      "description": "Seerr API key (Header Auth with 'X-Api-Key: YOUR_API_KEY')"
+    }
+  ],
+  "required_variables": [
+    {
+      "name": "SEERR_URL",
+      "description": "Your Seerr server URL",
+      "example": "http://YOUR_SEERR_HOST:5055"
+    }
+  ],
+  "author": {
+    "github": "cmac86"
+  },
+  "tier": "coreworxlab",
+  "tags": [
+    "media",
+    "movies",
+    "tv",
+    "seerr",
+    "overseerr",
+    "jellyseerr"
+  ],
+  "dependencies": [],
+  "created": "2026-03-07",
+  "updated": "2026-03-07"
+}

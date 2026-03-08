@@ -1,0 +1,1071 @@
+{
+  "name": "seerr",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "seerr",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -600,
+        0
+      ],
+      "name": "Webhook",
+      "webhookId": "seerr",
+      "notes": "Seerr - search and request movies and TV shows for your media library.\n\nActions:\n  search - search for movies or TV shows by title. Use for \"search for Inception\", \"find Breaking Bad\".\n  request - request a movie or TV show for download. Requires media_id and media_type from a prior search. For TV, optionally specify seasons.\n  my_requests - check status of your media requests. Use for \"what have I requested\", \"my requests\".\n  trending - see what's trending. Use for \"what's trending\", \"popular movies\", \"trending TV shows\".\n  upcoming - see upcoming movie releases. Use for \"what movies are coming out\", \"upcoming releases\".\n  details - get full details on a movie or TV show. Requires media_id and media_type from a prior search.\n  cancel_request - cancel a pending request. Requires request_id from my_requests.\n\nRules:\n- media_id and media_type come from search results. Never fabricate IDs.\n- media_type is either \"movie\" or \"tv\".\n- request_id comes from my_requests. Never fabricate request IDs.\n- Always search first before requesting.\n\nChaining:\n- \"Download Inception\" -> search \"inception\" -> request with media_id and media_type from results\n- \"What's trending on TV?\" -> trending with media_type \"tv\"\n- \"Cancel my last request\" -> my_requests -> cancel_request with request_id\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: search, request, my_requests, trending, upcoming, details, cancel_request\",\n    \"required\": true\n  },\n  \"query\": {\n    \"type\": \"string\",\n    \"description\": \"Search term, e.g. Inception, Breaking Bad. For: search\"\n  },\n  \"media_id\": {\n    \"type\": \"integer\",\n    \"description\": \"TMDB media ID from search results. For: request, details\"\n  },\n  \"media_type\": {\n    \"type\": \"string\",\n    \"description\": \"One of: movie, tv. For: request, details, trending (optional filter)\"\n  },\n  \"request_id\": {\n    \"type\": \"integer\",\n    \"description\": \"Request ID from my_requests. For: cancel_request\"\n  },\n  \"filter\": {\n    \"type\": \"string\",\n    \"description\": \"Filter requests. One of: all, pending, approved, available, declined. For: my_requests\"\n  },\n  \"seasons\": {\n    \"type\": \"array|string\",\n    \"description\": \"Season numbers to request, e.g. [1, 2] or 'all'. Omit for all seasons. For: request (TV only)\"\n  }\n}",
+      "id": "a1b2c3d4-seerr-wbhk-0001-000000000001"
+    },
+    {
+      "parameters": {
+        "jsCode": "let data;\nconst input = $input.item.json;\n\nif (typeof input.body === 'string') {\n  data = JSON.parse(input.body);\n} else if (typeof input.body === 'object') {\n  data = input.body;\n} else {\n  data = input;\n}\n\nconst action = (data.action || '').toLowerCase().trim();\n\nif (!action) {\n  return [{ json: { error: true, message: 'Action is required. Use one of: search, request, my_requests, trending, upcoming, details, cancel_request.' } }];\n}\n\nconst validActions = ['search', 'request', 'my_requests', 'trending', 'upcoming', 'details', 'cancel_request'];\nif (!validActions.includes(action)) {\n  return [{ json: { error: true, message: `Unknown action: ${action}. Use one of: search, request, my_requests, trending, upcoming, details, cancel_request.` } }];\n}\n\nconst query = data.query || '';\nconst media_id = parseInt(data.media_id) || null;\nconst media_type = (data.media_type || '').toLowerCase().trim();\nconst request_id = parseInt(data.request_id) || null;\nconst filter = (data.filter || '').toLowerCase().trim();\n\n// Parse seasons: accept array of numbers, single number, or \"all\"\nlet seasons = data.seasons || null;\nif (seasons !== null && seasons !== 'all') {\n  if (Array.isArray(seasons)) {\n    seasons = seasons.map(s => parseInt(s)).filter(s => !isNaN(s));\n  } else {\n    const parsed = parseInt(seasons);\n    seasons = isNaN(parsed) ? null : [parsed];\n  }\n}\n\nif (action === 'cancel_request' && !request_id) {\n  return [{ json: { error: true, message: 'request_id is required for cancel_request. Check my_requests first.' } }];\n}\n\nreturn [{ json: { action, query, media_id, media_type, request_id, filter, seasons } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        0
+      ],
+      "name": "Parse Parameters",
+      "id": "a1b2c3d4-seerr-prse-0002-000000000002"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "seerr-err-parse-cond",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -200,
+        0
+      ],
+      "name": "If Error Parse",
+      "id": "a1b2c3d4-seerr-iep0-0003-000000000003"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "search",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "search"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "request",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "request"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "my_requests",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "my_requests"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "trending",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "trending"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "upcoming",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "upcoming"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "details",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "details"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "cancel_request",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "cancel_request"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        0,
+        0
+      ],
+      "name": "Action Switch",
+      "id": "a1b2c3d4-seerr-swch-0004-000000000004"
+    },
+    {
+      "parameters": {
+        "url": "=${SEERR_URL}/api/v1/search?query={{ encodeURIComponent($json.query) }}&page=1&language=en",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        200,
+        -400
+      ],
+      "name": "Search",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${SEERR_API_KEY}"
+        }
+      },
+      "id": "a1b2c3d4-seerr-srch-0005-000000000005"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.item.json;\nconst results = response.results || [];\nconst mediaTypeFilter = $('Parse Parameters').item.json.media_type;\n\nlet filtered = results.filter(r => r.mediaType === 'movie' || r.mediaType === 'tv');\nif (mediaTypeFilter) {\n  filtered = filtered.filter(r => r.mediaType === mediaTypeFilter);\n}\n\nif (filtered.length === 0) {\n  return [{ json: { message: 'No results found.', results: [] } }];\n}\n\nconst limited = filtered.slice(0, 10);\nconst formatted = limited.map((r, idx) => {\n  const title = r.title || r.name || 'Unknown';\n  const year = (r.releaseDate || r.firstAirDate || '').substring(0, 4);\n  const type = r.mediaType === 'movie' ? 'Movie' : 'TV Show';\n  const status = r.mediaInfo ? (r.mediaInfo.status === 5 ? 'Available' : r.mediaInfo.status === 3 ? 'Requested' : 'Not Available') : 'Not Requested';\n  return {\n    number: idx + 1,\n    media_id: r.id,\n    title: title,\n    year: year,\n    media_type: r.mediaType,\n    status: status,\n    overview: (r.overview || '').substring(0, 100)\n  };\n});\n\nlet message = `Found ${filtered.length} result${filtered.length === 1 ? '' : 's'}. `;\nformatted.forEach(r => {\n  message += `${r.number}. ${r.title}`;\n  if (r.year) message += ` (${r.year})`;\n  message += ` - ${r.media_type === 'movie' ? 'Movie' : 'TV Show'} - ${r.status}. `;\n});\n\nreturn [{ json: { message: message.trim(), count: filtered.length, results: formatted } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        -400
+      ],
+      "name": "Format Search",
+      "id": "a1b2c3d4-seerr-fmts-0006-000000000006"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nif (!data.media_id) {\n  return [{ json: { error: true, message: 'media_id is required for request. Search first to find the media ID.' } }];\n}\nif (!data.media_type || !['movie', 'tv'].includes(data.media_type)) {\n  return [{ json: { error: true, message: 'media_type is required for request. Must be \"movie\" or \"tv\".' } }];\n}\nreturn [{ json: data }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        -200
+      ],
+      "name": "Validate Request",
+      "id": "a1b2c3d4-seerr-valr-0007-000000000007"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "seerr-err-request-cond",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        400,
+        -200
+      ],
+      "name": "If Error Request",
+      "id": "a1b2c3d4-seerr-ierq-0008-000000000008"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "${SEERR_URL}/api/v1/request",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (() => {\n  const body = { mediaId: $json.media_id, mediaType: $json.media_type };\n  const seasons = $('Parse Parameters').item.json.seasons;\n  if (seasons) body.seasons = seasons;\n  return JSON.stringify(body);\n})() }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        600,
+        -200
+      ],
+      "name": "Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${SEERR_API_KEY}"
+        }
+      },
+      "id": "a1b2c3d4-seerr-rqst-0009-000000000009"
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.item.json;\nconst params = $('Parse Parameters').item.json;\nconst mediaType = params.media_type === 'movie' ? 'Movie' : 'TV show';\nconst seasons = params.seasons;\nlet message = `${mediaType} has been requested.`;\nif (seasons && seasons !== 'all' && Array.isArray(seasons)) {\n  message = `${mediaType} season${seasons.length > 1 ? 's' : ''} ${seasons.join(', ')} ha${seasons.length > 1 ? 've' : 's'} been requested.`;\n}\nmessage += ' It will be processed shortly.';\nreturn [{ json: { message, success: true, request_id: result.id } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        -250
+      ],
+      "name": "Format Request",
+      "id": "a1b2c3d4-seerr-fmtr-0010-000000000010"
+    },
+    {
+      "parameters": {
+        "url": "=${SEERR_URL}/api/v1/request?take=20&sort=added{{ $json.filter ? '&filter=' + $json.filter : '' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        200,
+        0
+      ],
+      "name": "My Requests",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${SEERR_API_KEY}"
+        }
+      },
+      "id": "a1b2c3d4-seerr-myrq-0011-000000000011"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.item.json;\nconst results = response.results || [];\n\nif (results.length === 0) {\n  return [{ json: { message: 'You have no requests.', count: 0, requests: [] } }];\n}\n\nfunction titleFromSlug(slug) {\n  if (!slug) return null;\n  const cleaned = slug.replace(/-\\d{4}$/, '');\n  return cleaned.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');\n}\n\nconst formatted = results.map((r, idx) => {\n  const media = r.media || {};\n  const slug = media.externalServiceSlug || media.externalServiceSlug4k || '';\n  const title = titleFromSlug(slug) || null;\n  const type = r.type === 'movie' ? 'Movie' : 'TV Show';\n  const statusMap = { 1: 'Pending', 2: 'Approved', 3: 'Declined' };\n  const mediaStatusMap = { 1: 'Unknown', 2: 'Pending', 3: 'Processing', 4: 'Partially Available', 5: 'Available' };\n  const reqStatus = statusMap[r.status] || 'Unknown';\n  const availability = mediaStatusMap[media.status] || 'Unknown';\n  return {\n    number: idx + 1,\n    request_id: r.id,\n    title: title,\n    type: type,\n    request_status: reqStatus,\n    availability: availability,\n    media_id: media.tmdbId,\n    media_type: r.type\n  };\n});\n\nlet message = `You have ${results.length} request${results.length === 1 ? '' : 's'}. `;\nformatted.forEach(r => {\n  message += `${r.number}. `;\n  if (r.title) {\n    message += `${r.title} - ${r.type}`;\n  } else {\n    message += `${r.type} (ID: ${r.media_id})`;\n  }\n  message += ` - ${r.request_status}`;\n  if (r.availability === 'Available') message += ' (Available)';\n  else if (r.availability === 'Partially Available') message += ' (Partially Available)';\n  message += '. ';\n});\n\nmessage += 'Use details with media_id and media_type to get the title of any item.';\n\nreturn [{ json: { message: message.trim(), count: results.length, requests: formatted } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        0
+      ],
+      "name": "Format My Requests",
+      "id": "a1b2c3d4-seerr-fmmr-0012-000000000012"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst mediaType = data.media_type;\nlet url;\nif (mediaType === 'movie') {\n  url = '${SEERR_URL}/api/v1/discover/movies';\n} else if (mediaType === 'tv') {\n  url = '${SEERR_URL}/api/v1/discover/tv';\n} else {\n  url = '${SEERR_URL}/api/v1/discover/trending';\n}\nreturn [{ json: { url, media_type: mediaType } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        200
+      ],
+      "name": "Build Trending URL",
+      "id": "a1b2c3d4-seerr-btru-0013-000000000013"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        200
+      ],
+      "name": "Trending",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${SEERR_API_KEY}"
+        }
+      },
+      "id": "a1b2c3d4-seerr-trnd-0014-000000000014"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.item.json;\nconst results = response.results || [];\n\nif (results.length === 0) {\n  return [{ json: { message: 'Nothing trending right now.', results: [] } }];\n}\n\nconst limited = results.slice(0, 10);\nconst formatted = limited.map((r, idx) => {\n  const title = r.title || r.name || 'Unknown';\n  const year = (r.releaseDate || r.firstAirDate || '').substring(0, 4);\n  const type = r.mediaType === 'movie' ? 'Movie' : 'TV Show';\n  return {\n    number: idx + 1,\n    media_id: r.id,\n    title: title,\n    year: year,\n    media_type: r.mediaType,\n    overview: (r.overview || '').substring(0, 100)\n  };\n});\n\nlet message = 'Trending now: ';\nformatted.forEach(r => {\n  message += `${r.number}. ${r.title}`;\n  if (r.year) message += ` (${r.year})`;\n  message += ` - ${r.media_type === 'movie' ? 'Movie' : 'TV Show'}. `;\n});\n\nreturn [{ json: { message: message.trim(), count: results.length, results: formatted } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        150
+      ],
+      "name": "Format Trending",
+      "id": "a1b2c3d4-seerr-fmtt-0015-000000000015"
+    },
+    {
+      "parameters": {
+        "url": "${SEERR_URL}/api/v1/discover/movies/upcoming",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        200,
+        400
+      ],
+      "name": "Upcoming",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${SEERR_API_KEY}"
+        }
+      },
+      "id": "a1b2c3d4-seerr-upcm-0016-000000000016"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.item.json;\nconst results = response.results || [];\n\nif (results.length === 0) {\n  return [{ json: { message: 'No upcoming movies found.', results: [] } }];\n}\n\nconst limited = results.slice(0, 10);\nconst formatted = limited.map((r, idx) => ({\n  number: idx + 1,\n  media_id: r.id,\n  title: r.title || 'Unknown',\n  release_date: r.releaseDate || 'TBD',\n  overview: (r.overview || '').substring(0, 100)\n}));\n\nlet message = 'Upcoming movies: ';\nformatted.forEach(r => {\n  message += `${r.number}. ${r.title} - ${r.release_date}. `;\n});\n\nreturn [{ json: { message: message.trim(), count: results.length, results: formatted } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        350
+      ],
+      "name": "Format Upcoming",
+      "id": "a1b2c3d4-seerr-fmtu-0017-000000000017"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nif (!data.media_id) {\n  return [{ json: { error: true, message: 'media_id is required for details. Search first.' } }];\n}\nif (!data.media_type || !['movie', 'tv'].includes(data.media_type)) {\n  return [{ json: { error: true, message: 'media_type is required for details. Must be \"movie\" or \"tv\".' } }];\n}\nconst url = data.media_type === 'movie'\n  ? '${SEERR_URL}/api/v1/movie/' + data.media_id\n  : '${SEERR_URL}/api/v1/tv/' + data.media_id;\nreturn [{ json: { url, media_id: data.media_id, media_type: data.media_type } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        600
+      ],
+      "name": "Build Details URL",
+      "id": "a1b2c3d4-seerr-bdtu-0018-000000000018"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "seerr-err-details-cond",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        400,
+        600
+      ],
+      "name": "If Error Details",
+      "id": "a1b2c3d4-seerr-ierd-0019-000000000019"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        600,
+        600
+      ],
+      "name": "Details",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${SEERR_API_KEY}"
+        }
+      },
+      "id": "a1b2c3d4-seerr-dtls-0020-000000000020"
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $input.item.json;\nconst mediaType = $('Build Details URL').item.json.media_type;\n\nconst title = r.title || r.name || 'Unknown';\nconst year = (r.releaseDate || r.firstAirDate || '').substring(0, 4);\nconst rating = r.voteAverage ? r.voteAverage.toFixed(1) + '/10' : 'N/A';\nconst genres = (r.genres || []).map(g => g.name).join(', ') || 'N/A';\nconst overview = r.overview || 'No overview available.';\n\nlet details = `${title}`;\nif (year) details += ` (${year})`;\ndetails += `. Rating: ${rating}. Genres: ${genres}.`;\n\nif (mediaType === 'movie') {\n  const runtime = r.runtime ? `${r.runtime} minutes` : 'N/A';\n  details += ` Runtime: ${runtime}.`;\n} else {\n  const seasons = r.numberOfSeasons || 'N/A';\n  const episodes = r.numberOfEpisodes || 'N/A';\n  details += ` ${seasons} season${seasons !== 1 ? 's' : ''}, ${episodes} episodes.`;\n  const status = r.status || 'Unknown';\n  details += ` Status: ${status}.`;\n}\n\ndetails += ` ${overview}`;\n\nconst mediaInfo = r.mediaInfo;\nlet availability = 'Not requested';\nif (mediaInfo) {\n  if (mediaInfo.status === 5) availability = 'Available';\n  else if (mediaInfo.status === 4) availability = 'Processing';\n  else if (mediaInfo.status === 3) availability = 'Requested';\n}\ndetails += ` Availability: ${availability}.`;\n\nreturn [{ json: { message: details, media_id: r.id, media_type: mediaType, title, year } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        550
+      ],
+      "name": "Format Details",
+      "id": "a1b2c3d4-seerr-fmtd-0021-000000000021"
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=${SEERR_URL}/api/v1/request/{{ $json.request_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        200,
+        800
+      ],
+      "name": "Cancel",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${SEERR_API_KEY}"
+        }
+      },
+      "id": "a1b2c3d4-seerr-cncl-0022-000000000022"
+    },
+    {
+      "parameters": {
+        "jsCode": "const requestId = $('Parse Parameters').item.json.request_id;\nreturn [{ json: { message: `Request ${requestId} has been cancelled.`, success: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        750
+      ],
+      "name": "Format Cancel",
+      "id": "a1b2c3d4-seerr-fmtc-0023-000000000023"
+    },
+    {
+      "parameters": {
+        "jsCode": "const errorData = $input.item.json;\n\nif (errorData.error === true && errorData.message) {\n  return [{ json: { message: errorData.message, error: true } }];\n}\n\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\nif (typeof errorMsg === 'object') {\n  errorMsg = errorMsg.message || JSON.stringify(errorMsg);\n}\n\nif (errorMsg.includes('401') || errorMsg.includes('Unauthorized')) {\n  errorMsg = 'Seerr authentication failed. Check your API key.';\n} else if (errorMsg.includes('404') || errorMsg.includes('Not Found')) {\n  errorMsg = 'Not found. The media or request ID may be invalid.';\n} else if (errorMsg.includes('409')) {\n  errorMsg = 'This media has already been requested.';\n} else if (errorMsg.includes('ECONNREFUSED')) {\n  errorMsg = 'Cannot connect to Seerr. Check the URL and make sure Seerr is running.';\n}\n\nreturn [{ json: { message: 'Seerr error: ' + errorMsg, error: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        200
+      ],
+      "name": "Format Error",
+      "id": "a1b2c3d4-seerr-fmte-0024-000000000024"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        200
+      ],
+      "name": "Respond to Webhook",
+      "id": "a1b2c3d4-seerr-rspd-0025-000000000025"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** seerr\n**Description:** Seerr - search and request movies and TV shows for your media library.\n**version:** v1.0.0\n**id:** (pending)\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/media/seerr)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -784,
+        -288
+      ],
+      "typeVersion": 1,
+      "id": "a1b2c3d4-seerr-stky-0026-000000000026",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Parameters": {
+      "main": [
+        [
+          {
+            "node": "If Error Parse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error Parse": {
+      "main": [
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Action Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Action Switch": {
+      "main": [
+        [
+          {
+            "node": "Search",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validate Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "My Requests",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Trending URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Upcoming",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Details URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Cancel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search": {
+      "main": [
+        [
+          {
+            "node": "Format Search",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Search": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Request": {
+      "main": [
+        [
+          {
+            "node": "If Error Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error Request": {
+      "main": [
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request": {
+      "main": [
+        [
+          {
+            "node": "Format Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Request": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "My Requests": {
+      "main": [
+        [
+          {
+            "node": "Format My Requests",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format My Requests": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Trending URL": {
+      "main": [
+        [
+          {
+            "node": "Trending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trending": {
+      "main": [
+        [
+          {
+            "node": "Format Trending",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Trending": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upcoming": {
+      "main": [
+        [
+          {
+            "node": "Format Upcoming",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Upcoming": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Details URL": {
+      "main": [
+        [
+          {
+            "node": "If Error Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error Details": {
+      "main": [
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Details": {
+      "main": [
+        [
+          {
+            "node": "Format Details",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Details": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cancel": {
+      "main": [
+        [
+          {
+            "node": "Format Cancel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Cancel": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
