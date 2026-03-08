@@ -31,14 +31,17 @@
       "id": "9fGeS8i9FH-7OHxAHAYB1A",
       "name": "radarr",
       "friendlyName": "Radarr",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "description": "Radarr — movie library. Use for movies and films. Not for TV shows — use sonarr for TV shows.",
       "category": "media",
       "path": "tools/media/radarr",
       "icon": "radarr.svg",
       "voice_triggers": [
         "What movies are coming out?",
-        "Search for Dune on Radarr"
+        "Search for Dune on Radarr",
+        "What movies do I have?",
+        "How many movies in my library?",
+        "What was recently downloaded?"
       ],
       "required_services": [
         "radarr"
@@ -49,7 +52,7 @@
         "media",
         "radarr"
       ],
-      "updated": "2026-02-21"
+      "updated": "2026-03-08"
     },
     {
       "id": "2C0NDLTMywwXQp7wU8OZgQ",
@@ -88,14 +91,17 @@
       "id": "dXkRDDTIOPPE8sYAtNs6NQ",
       "name": "sonarr",
       "friendlyName": "Sonarr",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "description": "Sonarr — TV show library. Use for TV shows, series, and episodes. Not for movies — use radarr for movies.",
       "category": "media",
       "path": "tools/media/sonarr",
       "icon": "sonarr.svg",
       "voice_triggers": [
         "What TV shows are coming up?",
-        "Search for Breaking Bad on Sonarr"
+        "Search for Breaking Bad on Sonarr",
+        "What shows do I have?",
+        "How many series in my library?",
+        "What was recently downloaded?"
       ],
       "required_services": [
         "sonarr"
@@ -106,7 +112,7 @@
         "media",
         "sonarr"
       ],
-      "updated": "2026-02-21"
+      "updated": "2026-03-08"
     },
     {
       "id": "ymrWW0bBJCq_d-KSgbJFlw",
