@@ -221,8 +221,8 @@
       "id": "ndPj-EJI58ABJvg0drlAgw",
       "name": "google-calendar",
       "friendlyName": "Google Calendar",
-      "version": "1.1.0",
-      "description": "Google Calendar — view, create, or delete events.",
+      "version": "1.2.0",
+      "description": "Google Calendar — view, create, update, or delete events.",
       "category": "productivity",
       "path": "tools/productivity/google-calendar",
       "icon": "google-calendar.svg",
@@ -239,7 +239,7 @@
         "productivity",
         "google calendar"
       ],
-      "updated": "2026-02-21"
+      "updated": "2026-03-08"
     }
   ],
   "google contacts": [
