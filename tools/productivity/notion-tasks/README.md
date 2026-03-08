@@ -27,18 +27,10 @@ notion
 
 ## Installation
 
-### Via CAAL Tools Panel (Recommended)
-
 1. Open CAAL web interface
 2. Click Tools panel (wrench icon)
 3. Search for "notion-tasks"
 4. Click Install and follow prompts
-
-### Via Command Line
-
-```bash
-curl -s https://raw.githubusercontent.com/CoreWorxLab/caal-tools/main/scripts/install.sh | bash -s notion-tasks
-```
 
 ## Usage
 

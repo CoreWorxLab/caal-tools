@@ -24,18 +24,10 @@ This tool requires no API keys or credentials. It uses ESPN's public API endpoin
 
 ## Installation
 
-### Via CAAL Tools Panel (Recommended)
-
 1. Open CAAL web interface
 2. Click Tools panel (wrench icon)
 3. Search for "espn"
 4. Click Install and follow prompts
-
-### Via Command Line
-
-```bash
-curl -s https://raw.githubusercontent.com/CoreWorxLab/caal-tools/main/scripts/install.sh | bash -s espn
-```
 
 ## Usage
 
