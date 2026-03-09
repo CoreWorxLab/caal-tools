@@ -16,12 +16,12 @@
       ],
       "name": "Webhook",
       "webhookId": "google_contacts",
-      "notes": "Google Contacts — look up email addresses and phone numbers. Call this before sending an email via gmail or a DM via x_twitter when you only have a person's name.\n\nActions:\n  search — find a contact by name. Use when you need someone's email or phone number.\n  list — list all contacts.\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: search, list\",\n    \"required\": true\n  },\n  \"query\": {\n    \"type\": \"string\",\n    \"description\": \"Name to search for, e.g. Corey, Mom, John Smith. For: search\"\n  },\n  \"limit\": {\n    \"type\": \"integer\",\n    \"description\": \"Max contacts to return. Default 10. For: list\"\n  }\n}",
+      "notes": "Google Contacts — manage contacts including lookup, create, update, and delete.\n\nActions:\n  search — find a contact by name. Use when you need someone's email, phone, or contact_id.\n  list — list all contacts.\n  create — add a new contact. Use for \"add contact\", \"save this number\".\n  update — modify an existing contact. Requires contact_id from a prior search. Only include fields you want to change.\n  delete — remove a contact. Requires contact_id from a prior search.\n\nRules:\n- contact_id comes from search or list results. Do not fabricate contact IDs.\n- For update, only send fields that should change. Omitted fields remain unchanged.\n- first_name is required for create.\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: search, list, create, update, delete\",\n    \"required\": true\n  },\n  \"query\": {\n    \"type\": \"string\",\n    \"description\": \"Name to search for. For: search\"\n  },\n  \"limit\": {\n    \"type\": \"integer\",\n    \"description\": \"Max contacts to return. Default 10. For: list\"\n  },\n  \"first_name\": {\n    \"type\": \"string\",\n    \"description\": \"First/given name. For: create, update\"\n  },\n  \"last_name\": {\n    \"type\": \"string\",\n    \"description\": \"Last/family name. For: create, update\"\n  },\n  \"email\": {\n    \"type\": \"string\",\n    \"description\": \"Email address. For: create, update\"\n  },\n  \"phone\": {\n    \"type\": \"string\",\n    \"description\": \"Phone number. For: create, update\"\n  },\n  \"company\": {\n    \"type\": \"string\",\n    \"description\": \"Company/organization name. For: create, update\"\n  },\n  \"contact_id\": {\n    \"type\": \"string\",\n    \"description\": \"Contact resource name from search/list results (e.g. people/c1234). For: update, delete\"\n  }\n}",
       "id": "cea51df3-39b9-4bcb-b5b2-4de2d33f07ce"
     },
     {
       "parameters": {
-        "jsCode": "const body = $input.item.json.body || {};\n\nlet data;\nif (typeof body === 'string') {\n  data = JSON.parse(body);\n} else if (typeof body === 'object') {\n  data = body;\n} else {\n  data = $input.item.json;\n}\n\nconst action = (data.action || 'search').toLowerCase();\nconst query = data.query || data.name || '';\nconst limit = parseInt(data.limit) || 10;\n\nreturn [{ json: { action, query, queryLower: query.toLowerCase(), limit } }];"
+        "jsCode": "const body = $input.item.json.body || {};\n\nlet data;\nif (typeof body === 'string') {\n  data = JSON.parse(body);\n} else if (typeof body === 'object') {\n  data = body;\n} else {\n  data = $input.item.json;\n}\n\nconst action = (data.action || 'search').toLowerCase();\nconst query = data.query || data.name || '';\nconst limit = parseInt(data.limit) || 10;\nconst first_name = data.first_name || '';\nconst last_name = data.last_name || '';\nconst email = data.email || '';\nconst phone = data.phone || '';\nconst company = data.company || '';\nconst contact_id = (data.contact_id || '').replace('people/', '');\n\nreturn [{ json: { action, query, queryLower: query.toLowerCase(), limit, first_name, last_name, email, phone, company, contact_id } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -77,6 +77,69 @@
               },
               "renameOutput": true,
               "outputKey": "list"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "create",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "create"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "update",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "update"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "delete",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "delete"
             }
           ]
         },
@@ -125,7 +188,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const contacts = items;\nconst query = $('Parse Parameters').first().json.queryLower;\n\nif (!query) {\n  return { message: 'Please provide a name to search for.', found: false, contacts: [] };\n}\n\n// Filter contacts by name match\n// names is an object with displayName, not an array\nconst matches = contacts.filter(item => {\n  const c = item.json;\n  const displayName = (c.names?.displayName || '').toLowerCase();\n  // nicknames might be object with type keys containing arrays of strings\n  let nicknames = [];\n  if (c.nicknames) {\n    for (const vals of Object.values(c.nicknames)) {\n      if (Array.isArray(vals)) {\n        vals.forEach(v => { if (typeof v === 'string') nicknames.push(v.toLowerCase()); });\n      } else if (typeof vals === 'string') {\n        nicknames.push(vals.toLowerCase());\n      }\n    }\n  }\n  const allNames = [displayName, ...nicknames];\n  return allNames.some(name => name.includes(query));\n});\n\nif (matches.length === 0) {\n  return { message: `No contacts found matching \"${$('Parse Parameters').first().json.query}\".`, found: false, contacts: [] };\n}\n\n// Format matches\n// emailAddresses is object like {\"other\": [\"email@example.com\"], \"home\": [\"email2@example.com\"]}\nconst formatted = matches.map(item => {\n  const c = item.json;\n  const name = c.names?.displayName || 'Unknown';\n  \n  // Extract emails from object structure\n  const emailObj = c.emailAddresses || {};\n  const emails = [];\n  for (const [type, addrs] of Object.entries(emailObj)) {\n    if (Array.isArray(addrs)) {\n      addrs.forEach(email => emails.push({ email, type }));\n    }\n  }\n  \n  // Extract phones from object structure\n  const phoneObj = c.phoneNumbers || {};\n  const phones = [];\n  for (const [type, nums] of Object.entries(phoneObj)) {\n    if (Array.isArray(nums)) {\n      nums.forEach(phone => phones.push({ phone, type }));\n    }\n  }\n  \n  const primaryEmail = emails[0]?.email || null;\n  const primaryPhone = phones[0]?.phone || null;\n  \n  return {\n    name,\n    email: primaryEmail,\n    phone: primaryPhone,\n    emails,\n    phones\n  };\n});\n\n// Build voice message\nlet message = '';\nif (formatted.length === 1) {\n  const c = formatted[0];\n  const parts = [c.name];\n  if (c.email) parts.push(`email ${c.email}`);\n  if (c.phone) parts.push(`phone ${c.phone}`);\n  message = parts.join(', ') + '.';\n} else {\n  message = `Found ${formatted.length} contacts matching \"${$('Parse Parameters').first().json.query}\": `;\n  const names = formatted.slice(0, 3).map(c => c.name);\n  message += names.join(', ');\n  if (formatted.length > 3) message += `, and ${formatted.length - 3} more`;\n  message += '.';\n}\n\nreturn { message, found: true, count: formatted.length, contacts: formatted };"
+        "jsCode": "const contacts = items;\nconst query = $('Parse Parameters').first().json.queryLower;\n\nif (!query) {\n  return { message: 'Please provide a name to search for.', found: false, contacts: [] };\n}\n\nconst matches = contacts.filter(item => {\n  const c = item.json;\n  const displayName = (c.names?.displayName || '').toLowerCase();\n  let nicknames = [];\n  if (c.nicknames) {\n    for (const vals of Object.values(c.nicknames)) {\n      if (Array.isArray(vals)) {\n        vals.forEach(v => { if (typeof v === 'string') nicknames.push(v.toLowerCase()); });\n      } else if (typeof vals === 'string') {\n        nicknames.push(vals.toLowerCase());\n      }\n    }\n  }\n  const allNames = [displayName, ...nicknames];\n  return allNames.some(name => name.includes(query));\n});\n\nif (matches.length === 0) {\n  return { message: `No contacts found matching \"${$('Parse Parameters').first().json.query}\".`, found: false, contacts: [] };\n}\n\nconst formatted = matches.map(item => {\n  const c = item.json;\n  const name = c.names?.displayName || 'Unknown';\n  const contact_id = c.resourceName || null;\n  \n  const emailObj = c.emailAddresses || {};\n  const emails = [];\n  for (const [type, addrs] of Object.entries(emailObj)) {\n    if (Array.isArray(addrs)) {\n      addrs.forEach(email => emails.push({ email, type }));\n    }\n  }\n  \n  const phoneObj = c.phoneNumbers || {};\n  const phones = [];\n  for (const [type, nums] of Object.entries(phoneObj)) {\n    if (Array.isArray(nums)) {\n      nums.forEach(phone => phones.push({ phone, type }));\n    }\n  }\n  \n  const primaryEmail = emails[0]?.email || null;\n  const primaryPhone = phones[0]?.phone || null;\n  \n  return { contact_id, name, email: primaryEmail, phone: primaryPhone, emails, phones };\n});\n\nlet message = '';\nif (formatted.length === 1) {\n  const c = formatted[0];\n  const parts = [c.name];\n  if (c.email) parts.push(`email ${c.email}`);\n  if (c.phone) parts.push(`phone ${c.phone}`);\n  message = parts.join(', ') + '.';\n} else {\n  message = `Found ${formatted.length} contacts matching \"${$('Parse Parameters').first().json.query}\": `;\n  const names = formatted.slice(0, 3).map(c => c.name);\n  message += names.join(', ');\n  if (formatted.length > 3) message += `, and ${formatted.length - 3} more`;\n  message += '.';\n}\n\nreturn { message, found: true, count: formatted.length, contacts: formatted };"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -168,7 +231,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const contacts = items;\nconst limit = $('Parse Parameters').first().json.limit;\n\nif (contacts.length === 0) {\n  return { message: 'No contacts found.', count: 0, contacts: [] };\n}\n\n// Format contacts\n// emailAddresses is object like {\"other\": [\"email@example.com\"], \"home\": [\"email2@example.com\"]}\nconst formatted = contacts.map(item => {\n  const c = item.json;\n  const name = c.names?.displayName || 'Unknown';\n  \n  // Extract emails from object structure\n  const emailObj = c.emailAddresses || {};\n  const emails = [];\n  for (const [type, addrs] of Object.entries(emailObj)) {\n    if (Array.isArray(addrs)) {\n      addrs.forEach(email => emails.push({ email, type }));\n    }\n  }\n  \n  // Extract phones from object structure\n  const phoneObj = c.phoneNumbers || {};\n  const phones = [];\n  for (const [type, nums] of Object.entries(phoneObj)) {\n    if (Array.isArray(nums)) {\n      nums.forEach(phone => phones.push({ phone, type }));\n    }\n  }\n  \n  const primaryEmail = emails[0]?.email || null;\n  const primaryPhone = phones[0]?.phone || null;\n  \n  return {\n    name,\n    email: primaryEmail,\n    phone: primaryPhone,\n    emails,\n    phones\n  };\n});\n\n// Build voice message\nlet message = '';\nif (formatted.length === 1) {\n  message = `You have 1 contact: ${formatted[0].name}.`;\n} else {\n  message = `Listing ${formatted.length} contacts: `;\n  const names = formatted.slice(0, 5).map(c => c.name);\n  message += names.join(', ');\n  if (formatted.length > 5) message += `, and ${formatted.length - 5} more`;\n  message += '.';\n}\n\nreturn { message, count: formatted.length, contacts: formatted };"
+        "jsCode": "const contacts = items;\nconst limit = $('Parse Parameters').first().json.limit;\n\nif (contacts.length === 0) {\n  return { message: 'No contacts found.', count: 0, contacts: [] };\n}\n\nconst formatted = contacts.map(item => {\n  const c = item.json;\n  const name = c.names?.displayName || 'Unknown';\n  const contact_id = c.resourceName || null;\n  \n  const emailObj = c.emailAddresses || {};\n  const emails = [];\n  for (const [type, addrs] of Object.entries(emailObj)) {\n    if (Array.isArray(addrs)) {\n      addrs.forEach(email => emails.push({ email, type }));\n    }\n  }\n  \n  const phoneObj = c.phoneNumbers || {};\n  const phones = [];\n  for (const [type, nums] of Object.entries(phoneObj)) {\n    if (Array.isArray(nums)) {\n      nums.forEach(phone => phones.push({ phone, type }));\n    }\n  }\n  \n  const primaryEmail = emails[0]?.email || null;\n  const primaryPhone = phones[0]?.phone || null;\n  \n  return { contact_id, name, email: primaryEmail, phone: primaryPhone, emails, phones };\n});\n\nlet message = '';\nif (formatted.length === 1) {\n  message = `You have 1 contact: ${formatted[0].name}.`;\n} else {\n  message = `Listing ${formatted.length} contacts: `;\n  const names = formatted.slice(0, 5).map(c => c.name);\n  message += names.join(', ');\n  if (formatted.length > 5) message += `, and ${formatted.length - 5} more`;\n  message += '.';\n}\n\nreturn { message, count: formatted.length, contacts: formatted };"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -181,13 +244,140 @@
     },
     {
       "parameters": {
-        "jsCode": "const errorData = $input.item.json;\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\n\nif (errorMsg.includes('authorization') || errorMsg.includes('token') || errorMsg.includes('invalid_grant')) {\n  errorMsg = 'Google Contacts authentication failed. Please re-authorize in n8n.';\n} else if (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ETIMEDOUT')) {\n  errorMsg = 'Cannot connect to Google Contacts. Check your internet connection.';\n} else if (errorMsg.includes('Credential')) {\n  errorMsg = 'Google Contacts credentials not found in n8n.';\n}\n\nreturn { message: 'Error: ' + errorMsg, error: true };"
+        "operation": "create",
+        "givenName": "={{ $json.first_name }}",
+        "familyName": "={{ $json.last_name }}",
+        "additionalFields": {
+          "emailsUi": {
+            "emailsValues": "={{ $json.email ? [{ email: $json.email }] : [] }}"
+          },
+          "phoneNumbersUi": {
+            "phoneNumbersValues": "={{ $json.phone ? [{ phoneNumber: $json.phone }] : [] }}"
+          },
+          "organizationsUi": {
+            "organizationsValues": "={{ $json.company ? [{ name: $json.company }] : [] }}"
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.googleContacts",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ],
+      "name": "Create Contact",
+      "credentials": {
+        "googleContactsOAuth2Api": {
+          "id": null,
+          "name": "${GOOGLECONTACTSOAUTH2API_CREDENTIAL}"
+        }
+      },
+      "id": "gcon-crea-0001-0000-000000000001"
+    },
+    {
+      "parameters": {
+        "jsCode": "const c = $input.item.json;\nconst params = $('Parse Parameters').first().json;\nconst name = [params.first_name, params.last_name].filter(Boolean).join(' ') || 'contact';\n\nconst parts = [`Done. Created ${name}`];\nif (params.email) parts.push(`email ${params.email}`);\nif (params.phone) parts.push(`phone ${params.phone}`);\nif (params.company) parts.push(`at ${params.company}`);\n\nreturn [{ json: { message: parts.join(', ') + '.', action: 'create', contact_id: c.resourceName || null } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         400,
         300
+      ],
+      "name": "Format Create",
+      "id": "gcon-fmtc-0002-0000-000000000002"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "contactId": "={{ $json.contact_id }}",
+        "updateFields": {
+          "givenName": "={{ $json.first_name || undefined }}",
+          "familyName": "={{ $json.last_name || undefined }}",
+          "emailsUi": {
+            "emailsValues": "={{ $json.email ? [{ email: $json.email }] : [] }}"
+          },
+          "phoneNumbersUi": {
+            "phoneNumbersValues": "={{ $json.phone ? [{ phoneNumber: $json.phone }] : [] }}"
+          },
+          "organizationsUi": {
+            "organizationsValues": "={{ $json.company ? [{ name: $json.company }] : [] }}"
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.googleContacts",
+      "typeVersion": 1,
+      "position": [
+        200,
+        500
+      ],
+      "name": "Update Contact",
+      "credentials": {
+        "googleContactsOAuth2Api": {
+          "id": null,
+          "name": "${GOOGLECONTACTSOAUTH2API_CREDENTIAL}"
+        }
+      },
+      "id": "gcon-updt-0003-0000-000000000003"
+    },
+    {
+      "parameters": {
+        "jsCode": "const c = $input.item.json;\nconst params = $('Parse Parameters').first().json;\nconst name = c.names?.displayName || [params.first_name, params.last_name].filter(Boolean).join(' ') || 'contact';\n\nconst changes = [];\nif (params.first_name || params.last_name) changes.push('name');\nif (params.email) changes.push('email');\nif (params.phone) changes.push('phone');\nif (params.company) changes.push('company');\nconst what = changes.length > 0 ? changes.join(', ') : 'details';\n\nreturn [{ json: { message: `Done. Updated ${what} for ${name}.`, action: 'update', contact_id: c.resourceName || params.contact_id } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        500
+      ],
+      "name": "Format Update",
+      "id": "gcon-fmtu-0004-0000-000000000004"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "contactId": "={{ $json.contact_id }}"
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.googleContacts",
+      "typeVersion": 1,
+      "position": [
+        200,
+        700
+      ],
+      "name": "Delete Contact",
+      "credentials": {
+        "googleContactsOAuth2Api": {
+          "id": null,
+          "name": "${GOOGLECONTACTSOAUTH2API_CREDENTIAL}"
+        }
+      },
+      "id": "gcon-delt-0005-0000-000000000005"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { message: 'Done. Contact deleted.', action: 'delete', deleted: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        700
+      ],
+      "name": "Format Delete",
+      "id": "gcon-fmtd-0006-0000-000000000006"
+    },
+    {
+      "parameters": {
+        "jsCode": "const errorData = $input.item.json;\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\nif (typeof errorMsg === 'object') {\n  errorMsg = errorMsg.message || JSON.stringify(errorMsg);\n}\nerrorMsg = String(errorMsg);\n\nif (errorMsg.includes('authorization') || errorMsg.includes('token') || errorMsg.includes('invalid_grant')) {\n  errorMsg = 'Google Contacts authentication failed. Please re-authorize in n8n.';\n} else if (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ETIMEDOUT')) {\n  errorMsg = 'Cannot connect to Google Contacts. Check your internet connection.';\n} else if (errorMsg.includes('Credential')) {\n  errorMsg = 'Google Contacts credentials not found in n8n.';\n} else if (errorMsg.includes('not found') || errorMsg.includes('404')) {\n  errorMsg = 'Contact not found. It may have been deleted.';\n}\n\nreturn [{ json: { message: 'Error: ' + errorMsg, error: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        400
       ],
       "name": "Format Error",
       "id": "6fbccf2a-8e47-4839-b676-c29365fc6bc4"
@@ -205,7 +395,7 @@
     },
     {
       "parameters": {
-        "content": "## CAAL Registry Tracking\n**Tool Name:** google-contacts\n**Description:** Google Contacts — look up email addresses and phone numbers. Call this before sending an email via gmail or a DM via x_twitter when you only have a person's name.\n**version:** v1.1.0\n**id:** IugRPxb-3ekQ0b-Bfpx6wA\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/productivity/google-contacts)\n\n### (Do not delete this sticky)",
+        "content": "## CAAL Registry Tracking\n**Tool Name:** google-contacts\n**Description:** Google Contacts — manage contacts including lookup, create, update, and delete.\n**version:** v1.2.0\n**id:** IugRPxb-3ekQ0b-Bfpx6wA\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/productivity/google-contacts)\n\n### (Do not delete this sticky)",
         "height": 260,
         "width": 360
       },
@@ -254,6 +444,27 @@
         [
           {
             "node": "Get Contacts Limited",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Contact",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Contact",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Delete Contact",
             "type": "main",
             "index": 0
           }
@@ -315,6 +526,93 @@
       ]
     },
     "Format List": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Contact": {
+      "main": [
+        [
+          {
+            "node": "Format Create",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Create": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Contact": {
+      "main": [
+        [
+          {
+            "node": "Format Update",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Update": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Contact": {
+      "main": [
+        [
+          {
+            "node": "Format Delete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Delete": {
       "main": [
         [
           {
