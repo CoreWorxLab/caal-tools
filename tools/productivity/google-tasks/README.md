@@ -1,6 +1,6 @@
 # google-tasks
 
-Manage Google Tasks - get, add, complete, and delete tasks with optional due dates and notes.
+Manage Google Tasks - get, add, update, complete, and delete tasks with optional due dates and notes.
 
 ## Voice Triggers
 
@@ -30,7 +30,7 @@ No environment variables required.
 
 ## Usage
 
-Google Tasks suite - manage tasks. Parameters: action (required) - 'get', 'add', 'complete', or 'delete'; title (required for add) - task name; task_id (required for complete/delete) - task ID; notes (optional for add); due (optional for add) - YYYY-MM-DD; show_completed (optional for get, default false). Examples: 'what's on my task list', 'add task buy groceries', 'mark the groceries task done'.
+Google Tasks suite - manage tasks. Parameters: action (required) - 'get', 'add', 'update', 'complete', or 'delete'; title (required for add, optional for update) - task name; task_id (required for update/complete/delete) - task ID; notes (optional for add/update); due (optional for add/update) - YYYY-MM-DD; show_completed (optional for get, default false). For update, only send fields you want to change. Examples: 'what's on my task list', 'add task buy groceries', 'change the groceries task to due tomorrow', 'mark the groceries task done'.
 
 ## Author
 
