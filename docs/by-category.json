@@ -236,14 +236,17 @@
       "id": "IugRPxb-3ekQ0b-Bfpx6wA",
       "name": "google-contacts",
       "friendlyName": "Google Contacts",
-      "version": "1.1.0",
-      "description": "Google Contacts — look up email addresses and phone numbers. Call this before sending an email via gmail or a DM via x_twitter when you only have a person's name.",
+      "version": "1.2.0",
+      "description": "Google Contacts — manage contacts including lookup, create, update, and delete.",
       "category": "productivity",
       "path": "tools/productivity/google-contacts",
       "icon": "google-contacts.svg",
       "voice_triggers": [
         "Find Mom's email",
-        "Lookup John Smith"
+        "Lookup John Smith",
+        "Add a new contact for Jane Doe",
+        "Update John's phone number",
+        "Delete the contact for Bob"
       ],
       "required_services": [
         "google contacts"
@@ -254,7 +257,7 @@
         "productivity",
         "google contacts"
       ],
-      "updated": "2026-02-21"
+      "updated": "2026-03-08"
     },
     {
       "id": "JLBpNNUkMXzOZDojN3VdrA",
