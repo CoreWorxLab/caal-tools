@@ -1,11 +1,13 @@
 # google-contacts
 
-Search and list Google Contacts with support for filtering by name and retrieving contact details including emails and phone numbers.
+Manage Google Contacts - search, list, create, update, and delete contacts with support for names, emails, phone numbers, and companies.
 
 ## Voice Triggers
 
 - "Hey Cal, Find Mom's email"
 - "Hey Cal, Lookup John Smith"
+- "Hey Cal, Add a contact for Jane Doe"
+- "Hey Cal, Update John's phone number"
 
 ## Required Services
 
@@ -30,7 +32,7 @@ No environment variables required.
 
 ## Usage
 
-Google Contacts suite - lookup contact information. Parameters: action (required) - 'search' or 'list'; query (required for search) - name to search for; limit (optional for list, default 10) - max contacts to return. Examples: 'find Mom's email', 'lookup John Smith', 'list my contacts'.
+Google Contacts suite - manage contacts. Parameters: action (required) - 'search', 'list', 'create', 'update', or 'delete'; query (required for search) - name to search for; limit (optional for list, default 10) - max contacts to return; first_name (required for create, optional for update); last_name (optional for create/update); email (optional for create/update); phone (optional for create/update); company (optional for create/update); contact_id (required for update/delete) - from search/list results. For update, only send fields you want to change. Examples: 'find Mom's email', 'add contact Jane Doe with email jane@example.com', 'update John's phone to 555-1234', 'delete the contact for Bob'.
 
 ## Author
 
