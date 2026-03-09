@@ -16,7 +16,7 @@
         0
       ],
       "webhookId": "google_tasks",
-      "notes": "Google Tasks — view, add, complete, or delete tasks.\n\nActions:\n  get — list tasks. Use for \"what are my tasks\", \"show my to-do list\".\n  add — create a new task. Use for \"add a task\", \"remind me to\".\n  complete — mark a task done. Requires task_id from a prior get call.\n  delete — remove a task. Requires task_id from a prior get call.\n\nRules:\n- task_id comes from a prior get call. Do not fabricate task IDs.\n- due is YYYY-MM-DD format.\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: get, add, complete, delete\",\n    \"required\": true\n  },\n  \"title\": {\n    \"type\": \"string\",\n    \"description\": \"Task title. For: add\"\n  },\n  \"notes\": {\n    \"type\": \"string\",\n    \"description\": \"Task notes or details. For: add\"\n  },\n  \"due\": {\n    \"type\": \"string\",\n    \"description\": \"Due date YYYY-MM-DD. For: add\"\n  },\n  \"task_id\": {\n    \"type\": \"string\",\n    \"description\": \"Task ID from a prior get call. For: complete, delete\"\n  },\n  \"show_completed\": {\n    \"type\": \"boolean\",\n    \"description\": \"Include completed tasks. Default false. For: get\"\n  }\n}",
+      "notes": "Google Tasks — view, add, update, complete, or delete tasks.\n\nActions:\n  get — list tasks. Use for \"what are my tasks\", \"show my to-do list\".\n  add — create a new task. Use for \"add a task\", \"remind me to\".\n  update — modify a task's title, notes, or due date. Requires task_id from a prior get call. Only include fields you want to change.\n  complete — mark a task done. Requires task_id from a prior get call.\n  delete — remove a task. Requires task_id from a prior get call.\n\nRules:\n- task_id comes from a prior get call. Do not fabricate task IDs.\n- due is YYYY-MM-DD format.\n- For update, only send fields that should change. Omitted fields remain unchanged.\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: get, add, update, complete, delete\",\n    \"required\": true\n  },\n  \"title\": {\n    \"type\": \"string\",\n    \"description\": \"Task title. For: add, update\"\n  },\n  \"notes\": {\n    \"type\": \"string\",\n    \"description\": \"Task notes or details. For: add, update\"\n  },\n  \"due\": {\n    \"type\": \"string\",\n    \"description\": \"Due date YYYY-MM-DD. For: add, update\"\n  },\n  \"task_id\": {\n    \"type\": \"string\",\n    \"description\": \"Task ID from a prior get call. For: update, complete, delete\"\n  },\n  \"show_completed\": {\n    \"type\": \"boolean\",\n    \"description\": \"Include completed tasks. Default false. For: get\"\n  }\n}",
       "id": "82193e8e-6dde-46bf-88c6-c8188a2c0fae"
     },
     {
@@ -77,6 +77,27 @@
               },
               "renameOutput": true,
               "outputKey": "add"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": ""
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "update",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "update"
             },
             {
               "conditions": {
@@ -288,6 +309,46 @@
     },
     {
       "parameters": {
+        "operation": "update",
+        "task": "@default",
+        "taskId": "={{ $('Parse Parameters').item.json.taskId }}",
+        "updateFields": {
+          "title": "={{ $('Parse Parameters').item.json.title || undefined }}",
+          "notes": "={{ $('Parse Parameters').item.json.notes || undefined }}",
+          "dueDate": "={{ $('Parse Parameters').item.json.due || undefined }}"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.googleTasks",
+      "typeVersion": 1,
+      "position": [
+        0,
+        500
+      ],
+      "name": "Update Task",
+      "credentials": {
+        "googleTasksOAuth2Api": {
+          "id": null,
+          "name": "${GOOGLETASKSOAUTH2API_CREDENTIAL}"
+        }
+      },
+      "id": "gtask-updt-0001-0000-000000000001"
+    },
+    {
+      "parameters": {
+        "jsCode": "const task = $input.item.json;\nconst params = $('Parse Parameters').item.json;\nconst title = task.title || params.title || 'the task';\n\nconst changes = [];\nif (params.title) changes.push('title');\nif (params.notes) changes.push('notes');\nif (params.due) changes.push('due date');\nconst what = changes.length > 0 ? changes.join(', ') : 'details';\n\nreturn [{ json: { message: `Done. Updated ${what} for ${title}.`, action: 'update', task: { id: task.id, title: task.title, notes: task.notes || '', due: task.due || null } } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        500
+      ],
+      "name": "Format Update",
+      "id": "gtask-fmtu-0002-0000-000000000002"
+    },
+    {
+      "parameters": {
         "jsCode": "// Format error for voice\nconst errorData = items[0].json;\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\n\nif (errorMsg.includes('authorization') || errorMsg.includes('token') || errorMsg.includes('invalid_grant')) {\n  errorMsg = 'Google Tasks authentication failed. Please re-authorize in n8n.';\n} else if (errorMsg.includes('Credential')) {\n  errorMsg = 'Google Tasks credentials not found in n8n.';\n} else if (errorMsg.includes('not found') || errorMsg.includes('404')) {\n  errorMsg = 'Task not found. It may have been deleted.';\n}\n\nreturn [{ json: {\n  message: `Error: ${errorMsg}`,\n  error: true\n}}];"
       },
       "type": "n8n-nodes-base.code",
@@ -301,7 +362,7 @@
     },
     {
       "parameters": {
-        "jsCode": "return { message: \"Unknown action. Use 'get', 'add', 'complete', or 'delete'.\", error: true };"
+        "jsCode": "return { message: \"Unknown action. Use 'get', 'add', 'update', 'complete', or 'delete'.\", error: true };"
       },
       "name": "Unknown Action",
       "type": "n8n-nodes-base.code",
@@ -325,7 +386,7 @@
     },
     {
       "parameters": {
-        "content": "## CAAL Registry Tracking\n**Tool Name:** google-tasks\n**Description:** Google Tasks — view, add, complete, or delete tasks.\n**version:** v1.1.0\n**id:** JLBpNNUkMXzOZDojN3VdrA\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/productivity/google-tasks)\n\n### (Do not delete this sticky)",
+        "content": "## CAAL Registry Tracking\n**Tool Name:** google-tasks\n**Description:** Google Tasks — view, add, update, complete, or delete tasks.\n**version:** v1.2.0\n**id:** JLBpNNUkMXzOZDojN3VdrA\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/productivity/google-tasks)\n\n### (Do not delete this sticky)",
         "height": 260,
         "width": 360
       },
@@ -374,6 +435,13 @@
         [
           {
             "node": "Create Task",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Task",
             "type": "main",
             "index": 0
           }
@@ -431,6 +499,35 @@
         [
           {
             "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Task": {
+      "main": [
+        [
+          {
+            "node": "Format Update",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Update": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
             "type": "main",
             "index": 0
           }
