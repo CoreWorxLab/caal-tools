@@ -11,7 +11,7 @@
     "schedule",
     "standings"
   ],
-  "icon": "",
+  "icon": "espn.svg",
   "voice_triggers": [
     "What's the score of the Lakers game?",
     "When do the Seahawks play next?"
