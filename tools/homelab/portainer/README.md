@@ -18,7 +18,7 @@ portainer
 ### Environment Variables
 
 - **PORTAINER_URL** - Your Portainer server URL (e.g. `https://YOUR_PORTAINER_HOST:9443`)
-- **PORTAINER_ENV_ID** - Portainer environment/endpoint ID (usually `1`)
+- **PORTAINER_ENV_ID** - Portainer environment/endpoint ID. Find this in Portainer: go to Environments, click your environment, and check the number in the URL (e.g. `#!/endpoints/3` means ID is `3`)
 
 ### n8n Credentials
 
