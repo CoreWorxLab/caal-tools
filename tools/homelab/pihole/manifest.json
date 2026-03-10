@@ -1,0 +1,54 @@
+{
+  "name": "pihole",
+  "friendlyName": "Pi-hole",
+  "version": "1.0.0",
+  "description": "Pi-hole - DNS ad blocker status, control, and query logs.",
+  "category": "homelab",
+  "toolSuite": true,
+  "actions": [
+    "status",
+    "top_blocked",
+    "top_clients",
+    "enable",
+    "disable",
+    "query_log"
+  ],
+  "icon": "pi-hole.svg",
+  "voice_triggers": [
+    "How many ads has Pi-hole blocked?",
+    "What's the top blocked domain?",
+    "Disable Pi-hole for 5 minutes",
+    "Enable Pi-hole",
+    "Show recent DNS queries"
+  ],
+  "required_services": [
+    "pihole"
+  ],
+  "required_credentials": [],
+  "required_variables": [
+    {
+      "name": "PIHOLE_URL",
+      "description": "Your Pi-hole server URL",
+      "example": "http://YOUR_PIHOLE_HOST"
+    },
+    {
+      "name": "PIHOLE_PASSWORD",
+      "description": "Pi-hole app password (Settings > API > App Passwords)",
+      "example": "your_app_password_here"
+    }
+  ],
+  "author": {
+    "github": "cmac86"
+  },
+  "tier": "coreworxlab",
+  "tags": [
+    "homelab",
+    "dns",
+    "ad-blocker",
+    "pi-hole",
+    "network"
+  ],
+  "dependencies": [],
+  "created": "2026-03-09",
+  "updated": "2026-03-09"
+}
