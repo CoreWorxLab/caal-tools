@@ -1,0 +1,61 @@
+{
+  "name": "portainer",
+  "friendlyName": "Portainer",
+  "version": "1.0.0",
+  "description": "Portainer - Docker container and stack management.",
+  "category": "homelab",
+  "toolSuite": true,
+  "actions": [
+    "containers",
+    "start",
+    "stop",
+    "restart",
+    "logs",
+    "stacks",
+    "prune_images"
+  ],
+  "icon": "portainer.svg",
+  "voice_triggers": [
+    "What containers are running?",
+    "Restart the sonarr container",
+    "Show me logs for jellyfin",
+    "Stop the minecraft server",
+    "What stacks do I have?"
+  ],
+  "required_services": [
+    "portainer"
+  ],
+  "required_credentials": [
+    {
+      "credential_type": "httpHeaderAuth",
+      "name": "PORTAINER_API_KEY",
+      "description": "Portainer API key (Header Auth with 'X-API-KEY: YOUR_API_KEY')"
+    }
+  ],
+  "required_variables": [
+    {
+      "name": "PORTAINER_URL",
+      "description": "Your Portainer server URL",
+      "example": "https://YOUR_PORTAINER_HOST:9443 (use https if SSL enabled)"
+    },
+    {
+      "name": "PORTAINER_ENV_ID",
+      "description": "Portainer environment/endpoint ID (usually 1)",
+      "example": "1"
+    }
+  ],
+  "author": {
+    "github": "cmac86"
+  },
+  "tier": "coreworxlab",
+  "tags": [
+    "homelab",
+    "docker",
+    "containers",
+    "portainer",
+    "devops"
+  ],
+  "dependencies": [],
+  "created": "2026-03-10",
+  "updated": "2026-03-10"
+}
