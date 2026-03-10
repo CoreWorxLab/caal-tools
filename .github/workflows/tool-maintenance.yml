@@ -1,13 +1,15 @@
-name: Ensure Registry ID
+name: Tool Maintenance
 
 on:
   push:
     branches: [main]
     paths:
       - 'tools/**'
+      - 'scripts/generate-index.js'
+  workflow_dispatch:
 
 jobs:
-  ensure-id:
+  maintain:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -24,20 +26,24 @@ jobs:
       - name: Get changed tool files
         id: changed
         run: |
-          changed=$(git diff --name-only HEAD~1 -- 'tools/')
+          changed=$(git diff --name-only HEAD~1 -- 'tools/' 2>/dev/null || echo "")
           echo "files<<EOF" >> $GITHUB_OUTPUT
           echo "$changed" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Ensure registry IDs and tracking
+        if: steps.changed.outputs.files != ''
         run: node scripts/ensure-registry-id.js --changed "${{ steps.changed.outputs.files }}"
 
-      - name: Commit if changed
+      - name: Generate index
+        run: node scripts/generate-index.js
+
+      - name: Commit and push if changed
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add tools/
+          git add tools/ docs/
           if ! git diff --staged --quiet; then
-            git commit -m "chore: ensure registry tracking [skip ci]"
+            git commit -m "chore: tool maintenance [skip ci]"
             git push
           fi
