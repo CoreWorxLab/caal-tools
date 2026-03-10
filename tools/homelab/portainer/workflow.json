@@ -1,0 +1,857 @@
+{
+  "name": "portainer",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "portainer",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -600,
+        0
+      ],
+      "name": "Webhook",
+      "webhookId": "portainer",
+      "notes": "Portainer \u2014 Docker container management. Use for listing containers, starting/stopping/restarting containers, viewing logs, and managing stacks.\n\nActions:\n  containers \u2014 list all Docker containers with status. Use for \"list containers\", \"what containers are running\", \"show docker containers\".\n  start \u2014 start a stopped container. Use for \"start container\", \"bring up container\".\n  stop \u2014 stop a running container. Use for \"stop container\", \"shut down container\".\n  restart \u2014 restart a container. Use for \"restart container\", \"reboot container\".\n  logs \u2014 view recent container logs. Use for \"show logs\", \"container logs\", \"what happened in container\".\n  stacks \u2014 list all Docker Compose stacks. Use for \"list stacks\", \"show stacks\", \"what stacks are deployed\".\n  prune_images \u2014 remove unused Docker images to free disk space. Use for \"clean up images\", \"prune unused images\", \"free up docker space\".\n\nRules:\n- container name or ID is required for start, stop, restart, and logs actions.\n- logs accepts an optional tail parameter (default 50) to limit the number of lines returned.\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: containers, start, stop, restart, logs, stacks, prune_images\",\n    \"required\": true\n  },\n  \"container\": {\n    \"type\": \"string\",\n    \"description\": \"Container name or ID. Required for: start, stop, restart, logs\"\n  },\n  \"tail\": {\n    \"type\": \"integer\",\n    \"description\": \"Number of log lines to return. Default 50. For: logs\"\n  }\n}",
+      "id": "portainer-wbhk-0001-0000-000000000001"
+    },
+    {
+      "parameters": {
+        "jsCode": "let data;\nconst input = $input.item.json;\n\nif (typeof input.body === 'string') {\n  data = JSON.parse(input.body);\n} else if (typeof input.body === 'object') {\n  data = input.body;\n} else {\n  data = input;\n}\n\nconst action = (data.action || '').toLowerCase().trim();\n\nif (!action) {\n  return [{ json: { error: true, message: 'Action is required. Use one of: containers, start, stop, restart, logs, stacks.' } }];\n}\n\nconst validActions = ['containers', 'start', 'stop', 'restart', 'logs', 'stacks', 'prune_images'];\nif (!validActions.includes(action)) {\n  return [{ json: { error: true, message: `Unknown action: ${action}. Use one of: containers, start, stop, restart, logs, stacks, prune_images.` } }];\n}\n\n// Require container name for start/stop/restart/logs\nif (['start', 'stop', 'restart', 'logs'].includes(action) && !data.container) {\n  return [{ json: { error: true, message: `Container name or ID is required for ${action}.` } }];\n}\n\nconst container = (data.container || '').trim();\nconst tail = parseInt(data.tail) || 50;\n\nreturn [{ json: { action, container, tail } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        0
+      ],
+      "name": "Parse Parameters",
+      "id": "portainer-prse-0002-0000-000000000002"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "portainer-err-parse-cond",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -200,
+        0
+      ],
+      "name": "If Error Parse",
+      "id": "portainer-iep0-0003-0000-000000000003"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "containers",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "containers"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "start",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "start"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "stop",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "stop"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "restart",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "restart"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "logs",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "logs"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "stacks",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "stacks"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "prune_images",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "prune_images"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        0,
+        0
+      ],
+      "name": "Action Switch",
+      "id": "portainer-swch-0004-0000-000000000004"
+    },
+    {
+      "parameters": {
+        "url": "${PORTAINER_URL}/api/endpoints/${PORTAINER_ENV_ID}/docker/containers/json?all=true",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": { "allowUnauthorizedCerts": true }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        200,
+        -500
+      ],
+      "name": "List Containers",
+      "id": "portainer-lstc-0005-0000-000000000005",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${PORTAINER_API_KEY}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=${PORTAINER_URL}/api/endpoints/${PORTAINER_ENV_ID}/docker/containers/{{ $json.container }}/start",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": { "allowUnauthorizedCerts": true }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        200,
+        -300
+      ],
+      "name": "Start Container",
+      "id": "portainer-strt-0006-0000-000000000006",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${PORTAINER_API_KEY}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=${PORTAINER_URL}/api/endpoints/${PORTAINER_ENV_ID}/docker/containers/{{ $json.container }}/stop",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": { "allowUnauthorizedCerts": true }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        200,
+        -100
+      ],
+      "name": "Stop Container",
+      "id": "portainer-stop-0007-0000-000000000007",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${PORTAINER_API_KEY}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=${PORTAINER_URL}/api/endpoints/${PORTAINER_ENV_ID}/docker/containers/{{ $json.container }}/restart",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": { "allowUnauthorizedCerts": true }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        200,
+        100
+      ],
+      "name": "Restart Container",
+      "id": "portainer-rstr-0008-0000-000000000008",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${PORTAINER_API_KEY}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=${PORTAINER_URL}/api/endpoints/${PORTAINER_ENV_ID}/docker/containers/{{ $json.container }}/logs?stdout=true&stderr=true&tail={{ $json.tail }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": { "allowUnauthorizedCerts": true }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        200,
+        300
+      ],
+      "name": "Get Logs",
+      "id": "portainer-glgs-0009-0000-000000000009",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${PORTAINER_API_KEY}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "${PORTAINER_URL}/api/stacks",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": { "allowUnauthorizedCerts": true }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "alwaysOutputData": true,
+      "position": [
+        200,
+        500
+      ],
+      "name": "List Stacks",
+      "id": "portainer-lstk-0010-0000-000000000010",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${PORTAINER_API_KEY}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "${PORTAINER_URL}/api/endpoints/${PORTAINER_ENV_ID}/docker/images/prune?filters={\"dangling\":[\"false\"]}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": { "allowUnauthorizedCerts": true }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        200,
+        700
+      ],
+      "name": "Prune Images",
+      "id": "portainer-prun-0011-0000-000000000011",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${PORTAINER_API_KEY}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst deleted = data.ImagesDeleted || [];\nconst spaceReclaimed = data.SpaceReclaimed || 0;\n\nconst untagged = deleted.filter(d => d.Untagged).length;\nconst removed = deleted.filter(d => d.Deleted).length;\n\nconst mb = (spaceReclaimed / 1024 / 1024).toFixed(1);\nconst gb = (spaceReclaimed / 1024 / 1024 / 1024).toFixed(2);\nconst sizeStr = spaceReclaimed > 1073741824 ? `${gb} GB` : `${mb} MB`;\n\nif (removed === 0 && untagged === 0) {\n  return [{ json: { message: 'No unused images to remove.', removed: 0, space_reclaimed: '0 MB' } }];\n}\n\nconst message = `Pruned ${removed} images (${untagged} untagged). Reclaimed ${sizeStr}.`;\nreturn [{ json: { message, removed, untagged, space_reclaimed: sizeStr, bytes_reclaimed: spaceReclaimed } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        700
+      ],
+      "name": "Format Prune",
+      "id": "portainer-fmpr-0012-0000-000000000012"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst containers = Array.isArray(data) ? data : (Array.isArray($input.all().map(i => i.json)) ? $input.all().map(i => i.json) : []);\n\nif (containers.length === 0) {\n  return [{ json: { message: 'No containers found.', count: 0, containers: [] } }];\n}\n\nconst formatted = containers.map((c, i) => {\n  const name = (c.Names && c.Names[0]) ? c.Names[0].replace(/^\\//, '') : c.Id?.substring(0, 12) || 'unknown';\n  const image = (c.Image || '').split(':')[0].split('/').pop();\n  const state = (c.State || 'unknown').toLowerCase();\n  const status = c.Status || '';\n  return { number: i + 1, name, image, state, status };\n});\n\nconst running = formatted.filter(c => c.state === 'running').length;\nconst stopped = formatted.filter(c => c.state !== 'running').length;\n\nlet message = `${formatted.length} containers (${running} running, ${stopped} stopped): `;\nformatted.forEach(c => {\n  message += `${c.number}. ${c.name} [${c.image}] (${c.state}). `;\n});\n\nreturn [{ json: { message: message.trim(), count: formatted.length, running, stopped, containers: formatted } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        -500
+      ],
+      "name": "Format Containers",
+      "id": "portainer-fmtc-0011-0000-000000000011"
+    },
+    {
+      "parameters": {
+        "jsCode": "const container = $('Parse Parameters').item.json.container;\nreturn [{ json: { message: `Container ${container} started.`, success: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        -300
+      ],
+      "name": "Format Start",
+      "id": "portainer-fmst-0012-0000-000000000012"
+    },
+    {
+      "parameters": {
+        "jsCode": "const container = $('Parse Parameters').item.json.container;\nreturn [{ json: { message: `Container ${container} stopped.`, success: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        -100
+      ],
+      "name": "Format Stop",
+      "id": "portainer-fmsp-0013-0000-000000000013"
+    },
+    {
+      "parameters": {
+        "jsCode": "const container = $('Parse Parameters').item.json.container;\nreturn [{ json: { message: `Container ${container} restarted.`, success: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        100
+      ],
+      "name": "Format Restart",
+      "id": "portainer-fmrs-0014-0000-000000000014"
+    },
+    {
+      "parameters": {
+        "jsCode": "const container = $('Parse Parameters').item.json.container;\nconst tail = $('Parse Parameters').item.json.tail;\nconst rawData = $input.item.json;\n\nlet logText = '';\nif (typeof rawData === 'string') {\n  logText = rawData;\n} else if (rawData.data) {\n  logText = rawData.data;\n} else {\n  logText = JSON.stringify(rawData);\n}\n\n// Clean Docker log stream header bytes (8-byte prefix per line)\nconst lines = logText.split('\\n').map(line => {\n  if (line.length > 8) {\n    const cleaned = line.substring(8);\n    return cleaned;\n  }\n  return line;\n}).filter(l => l.trim());\n\nconst limited = lines.slice(-tail);\nconst message = `Last ${limited.length} log lines for ${container}:\\n${limited.join('\\n')}`;\n\nreturn [{ json: { message, container, line_count: limited.length, logs: limited } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ],
+      "name": "Format Logs",
+      "id": "portainer-fmlg-0015-0000-000000000015"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst stacks = Array.isArray(data) ? data : [];\n\nif (stacks.length === 0) {\n  return [{ json: { message: 'No stacks found.', count: 0, stacks: [] } }];\n}\n\nconst formatted = stacks.map((s, i) => ({\n  number: i + 1,\n  name: s.Name || 'unknown',\n  id: s.Id,\n  status: s.Status === 1 ? 'active' : 'inactive',\n  type: s.Type === 1 ? 'swarm' : s.Type === 2 ? 'compose' : 'unknown'\n}));\n\nconst active = formatted.filter(s => s.status === 'active').length;\nlet message = `${formatted.length} stacks (${active} active): `;\nformatted.forEach(s => {\n  message += `${s.number}. ${s.name} (${s.status}, ${s.type}). `;\n});\n\nreturn [{ json: { message: message.trim(), count: formatted.length, stacks: formatted } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        500
+      ],
+      "name": "Format Stacks",
+      "id": "portainer-fmsk-0016-0000-000000000016"
+    },
+    {
+      "parameters": {
+        "jsCode": "const errorData = $input.item.json;\n\nif (errorData.error === true && errorData.message) {\n  return [{ json: { message: errorData.message, error: true } }];\n}\n\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\nif (typeof errorMsg === 'object') {\n  errorMsg = errorMsg.message || JSON.stringify(errorMsg);\n}\nerrorMsg = String(errorMsg);\n\nif (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ETIMEDOUT')) {\n  errorMsg = 'Cannot connect to Portainer. Is it running?';\n} else if (errorMsg.includes('401') || errorMsg.includes('Unauthorized') || errorMsg.includes('auth')) {\n  errorMsg = 'Portainer authentication failed. Check the API key.';\n} else if (errorMsg.includes('404') || errorMsg.includes('not found') || errorMsg.includes('No such container')) {\n  errorMsg = 'Container not found. Check the name or ID.';\n}\n\nreturn [{ json: { message: 'Portainer error: ' + errorMsg, error: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        0
+      ],
+      "name": "Format Error",
+      "id": "portainer-fmte-0017-0000-000000000017"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        0
+      ],
+      "name": "Respond to Webhook",
+      "id": "portainer-resp-0018-0000-000000000018"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** portainer\n**Description:** Portainer \u2014 Docker container management.\n**version:** v1.0.0\n**id:** (pending)\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/homelab/portainer)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -984,
+        -288
+      ],
+      "typeVersion": 1,
+      "id": "portainer-note-0019-0000-000000000019",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Parameters": {
+      "main": [
+        [
+          {
+            "node": "If Error Parse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error Parse": {
+      "main": [
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Action Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Action Switch": {
+      "main": [
+        [
+          {
+            "node": "List Containers",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Start Container",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stop Container",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Restart Container",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Logs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "List Stacks",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prune Images",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Containers": {
+      "main": [
+        [
+          {
+            "node": "Format Containers",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Container": {
+      "main": [
+        [
+          {
+            "node": "Format Start",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stop Container": {
+      "main": [
+        [
+          {
+            "node": "Format Stop",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restart Container": {
+      "main": [
+        [
+          {
+            "node": "Format Restart",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Logs": {
+      "main": [
+        [
+          {
+            "node": "Format Logs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Stacks": {
+      "main": [
+        [
+          {
+            "node": "Format Stacks",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prune Images": {
+      "main": [
+        [
+          {
+            "node": "Format Prune",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Containers": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Start": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Stop": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Restart": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Logs": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Stacks": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Prune": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
