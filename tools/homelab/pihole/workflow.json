@@ -1,0 +1,907 @@
+{
+  "name": "pihole",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pihole",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -600,
+        0
+      ],
+      "name": "Webhook",
+      "webhookId": "pihole",
+      "notes": "Pi-hole v6 \u2014 DNS sinkhole status and control. Use for checking DNS blocking stats, managing blocklists, and controlling Pi-hole.\n\nActions:\n  status \u2014 overall Pi-hole stats including queries, blocked count, and client count. Use for \"Pi-hole status\", \"how many queries blocked\", \"DNS stats\".\n  top_blocked \u2014 most frequently blocked domains. Use for \"what domains are blocked most\", \"top blocked domains\".\n  top_clients \u2014 clients making the most DNS queries. Use for \"which devices query most\", \"top DNS clients\".\n  enable \u2014 enable Pi-hole DNS blocking. Use for \"enable Pi-hole\", \"turn on blocking\", \"resume blocking\".\n  disable \u2014 disable Pi-hole DNS blocking, optionally for a duration. Use for \"disable Pi-hole\", \"pause blocking\", \"disable for 5 minutes\".\n  query_log \u2014 recent DNS queries with status. Use for \"recent DNS queries\", \"what was queried\", \"DNS log\".\n\nRules:\n- disable accepts an optional duration in seconds. If omitted, blocking is disabled permanently until re-enabled.\n- top_blocked and top_clients accept a limit parameter (default 10).\n- query_log accepts a limit parameter (default 20).\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: status, top_blocked, top_clients, enable, disable, query_log\",\n    \"required\": true\n  },\n  \"limit\": {\n    \"type\": \"integer\",\n    \"description\": \"Max items to return. Default 10 for top_blocked/top_clients, 20 for query_log. For: top_blocked, top_clients, query_log\"\n  },\n  \"duration\": {\n    \"type\": \"integer\",\n    \"description\": \"Seconds to disable blocking. Omit for permanent disable. For: disable\"\n  }\n}",
+      "id": "pihole-wbhk-0001-0000-000000000001"
+    },
+    {
+      "parameters": {
+        "jsCode": "let data;\nconst input = $input.item.json;\n\nif (typeof input.body === 'string') {\n  data = JSON.parse(input.body);\n} else if (typeof input.body === 'object') {\n  data = input.body;\n} else {\n  data = input;\n}\n\nconst action = (data.action || '').toLowerCase().trim();\n\nif (!action) {\n  return [{ json: { error: true, message: 'Action is required. Use one of: status, top_blocked, top_clients, enable, disable, query_log.' } }];\n}\n\nconst validActions = ['status', 'top_blocked', 'top_clients', 'enable', 'disable', 'query_log'];\nif (!validActions.includes(action)) {\n  return [{ json: { error: true, message: `Unknown action: ${action}. Use one of: status, top_blocked, top_clients, enable, disable, query_log.` } }];\n}\n\nconst limit = parseInt(data.limit) || (action === 'query_log' ? 20 : 10);\nconst duration = parseInt(data.duration) || 0;\n\nreturn [{ json: { action, limit, duration } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        0
+      ],
+      "name": "Parse Parameters",
+      "id": "pihole-prse-0002-0000-000000000002"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "pihole-err-parse-cond",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -200,
+        0
+      ],
+      "name": "If Error Parse",
+      "id": "pihole-iep0-0003-0000-000000000003"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "${PIHOLE_URL}/api/auth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"password\": \"${PIHOLE_PASSWORD}\"}",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        0
+      ],
+      "name": "Authenticate",
+      "id": "pihole-auth-0021-0000-000000000021"
+    },
+    {
+      "parameters": {
+        "jsCode": "const authData = $input.item.json;\nconst params = $('Parse Parameters').item.json;\n\n// Extract SID from auth response\nlet sid = '';\nif (authData.session && authData.session.sid) {\n  sid = authData.session.sid;\n} else if (authData.sid) {\n  sid = authData.sid;\n}\n\nif (!sid) {\n  return [{ json: { error: true, message: 'Pi-hole authentication failed. Check your app password.' } }];\n}\n\nreturn [{ json: { ...params, sid } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        0
+      ],
+      "name": "Merge Auth",
+      "id": "pihole-mrga-0022-0000-000000000022"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "pihole-err-auth-cond",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        400,
+        0
+      ],
+      "name": "If Error Auth",
+      "id": "pihole-ieah-0023-0000-000000000023"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "status",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "status"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "top_blocked",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "top_blocked"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "top_clients",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "top_clients"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "enable",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "enable"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "disable",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "disable"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "query_log",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "query_log"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        600,
+        0
+      ],
+      "name": "Action Switch",
+      "id": "pihole-swch-0004-0000-000000000004"
+    },
+    {
+      "parameters": {
+        "url": "${PIHOLE_URL}/api/stats/summary",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-FTL-SID",
+              "value": "={{ $('Merge Auth').item.json.sid }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        -500
+      ],
+      "name": "Get Status",
+      "id": "pihole-gsts-0005-0000-000000000005"
+    },
+    {
+      "parameters": {
+        "url": "=${PIHOLE_URL}/api/stats/top_domains?blocked=true&count={{ $json.limit }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-FTL-SID",
+              "value": "={{ $('Merge Auth').item.json.sid }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        -300
+      ],
+      "name": "Get Top Blocked",
+      "id": "pihole-gtpb-0006-0000-000000000006"
+    },
+    {
+      "parameters": {
+        "url": "=${PIHOLE_URL}/api/stats/top_clients?count={{ $json.limit }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-FTL-SID",
+              "value": "={{ $('Merge Auth').item.json.sid }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        -100
+      ],
+      "name": "Get Top Clients",
+      "id": "pihole-gtpc-0007-0000-000000000007"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "${PIHOLE_URL}/api/dns/blocking",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-FTL-SID",
+              "value": "={{ $('Merge Auth').item.json.sid }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"blocking\": true}",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        100
+      ],
+      "name": "Enable Blocking",
+      "id": "pihole-enbl-0008-0000-000000000008"
+    },
+    {
+      "parameters": {
+        "jsCode": "const duration = $('Parse Parameters').item.json.duration;\nconst body = { blocking: false };\nif (duration && duration > 0) body.timer = duration;\nreturn [{ json: { body } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        300
+      ],
+      "name": "Build Disable Body",
+      "id": "pihole-bddb-0009-0000-000000000009"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "${PIHOLE_URL}/api/dns/blocking",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-FTL-SID",
+              "value": "={{ $('Merge Auth').item.json.sid }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1000,
+        300
+      ],
+      "name": "Disable Blocking",
+      "id": "pihole-dsbl-0010-0000-000000000010"
+    },
+    {
+      "parameters": {
+        "url": "=${PIHOLE_URL}/api/queries?length={{ $json.limit }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-FTL-SID",
+              "value": "={{ $('Merge Auth').item.json.sid }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        500
+      ],
+      "name": "Get Query Log",
+      "id": "pihole-gqlg-0011-0000-000000000011"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\n\n// Pi-hole v6 nests under queries, clients, gravity objects\nconst q = data.queries || {};\nconst c = data.clients || {};\nconst g = data.gravity || {};\n\nconst total = q.total || 0;\nconst blocked = q.blocked || 0;\nconst pctBlocked = q.percent_blocked || 0;\nconst uniqueDomains = q.unique_domains || 0;\nconst forwarded = q.forwarded || 0;\nconst cached = q.cached || 0;\nconst activeClients = c.active || 0;\nconst totalClients = c.total || 0;\nconst gravityDomains = g.domains_being_blocked || 0;\n\n// Check blocking status from the action field or infer\nconst pct = typeof pctBlocked === 'number' ? pctBlocked.toFixed(1) : parseFloat(pctBlocked).toFixed(1);\n\nconst qFmt = Number(total).toLocaleString();\nconst bFmt = Number(blocked).toLocaleString();\nconst dFmt = Number(gravityDomains).toLocaleString();\n\nconst message = `Pi-hole: ${qFmt} queries today, ${bFmt} blocked (${pct}%). ${dFmt} domains on blocklist. ${activeClients} active clients (${totalClients} total).`;\n\nreturn [{ json: { message, queries_total: total, blocked, percentage: parseFloat(pct), unique_domains: uniqueDomains, forwarded, cached, active_clients: activeClients, total_clients: totalClients, gravity_size: gravityDomains } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        -500
+      ],
+      "name": "Format Status",
+      "id": "pihole-fmts-0012-0000-000000000012"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst limit = $('Parse Parameters').item.json.limit;\n\n// Pi-hole v6 returns top_domains as an array of objects or as an object\nlet domains = [];\nif (data.top_domains) {\n  if (Array.isArray(data.top_domains)) {\n    domains = data.top_domains;\n  } else if (typeof data.top_domains === 'object') {\n    domains = Object.entries(data.top_domains).map(([domain, count]) => ({ domain, count }));\n  }\n} else if (data.domains) {\n  if (Array.isArray(data.domains)) {\n    domains = data.domains;\n  } else if (typeof data.domains === 'object') {\n    domains = Object.entries(data.domains).map(([domain, count]) => ({ domain, count }));\n  }\n}\n\nif (domains.length === 0) {\n  return [{ json: { message: 'No blocked domains found.', count: 0, domains: [] } }];\n}\n\nconst limited = domains.slice(0, limit);\nconst formatted = limited.map((d, i) => ({\n  number: i + 1,\n  domain: d.domain || d.name || Object.keys(d)[0] || 'unknown',\n  count: d.count || d.hits || d[Object.keys(d)[0]] || 0\n}));\n\nlet message = `Top ${formatted.length} blocked domains: `;\nformatted.forEach(d => {\n  message += `${d.number}. ${d.domain} (${Number(d.count).toLocaleString()} hits). `;\n});\n\nreturn [{ json: { message: message.trim(), count: formatted.length, domains: formatted } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        -300
+      ],
+      "name": "Format Top Blocked",
+      "id": "pihole-fmtb-0013-0000-000000000013"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst limit = $('Parse Parameters').item.json.limit;\n\nlet clients = [];\nif (data.top_clients) {\n  if (Array.isArray(data.top_clients)) {\n    clients = data.top_clients;\n  } else if (typeof data.top_clients === 'object') {\n    clients = Object.entries(data.top_clients).map(([client, count]) => ({ client, count }));\n  }\n} else if (data.clients) {\n  if (Array.isArray(data.clients)) {\n    clients = data.clients;\n  } else if (typeof data.clients === 'object') {\n    clients = Object.entries(data.clients).map(([client, count]) => ({ client, count }));\n  }\n}\n\nif (clients.length === 0) {\n  return [{ json: { message: 'No client data found.', count: 0, clients: [] } }];\n}\n\nconst limited = clients.slice(0, limit);\nconst formatted = limited.map((c, i) => ({\n  number: i + 1,\n  client: c.client || c.name || c.ip || Object.keys(c)[0] || 'unknown',\n  count: c.count || c.queries || c[Object.keys(c)[0]] || 0\n}));\n\nlet message = 'Top clients: ';\nformatted.forEach(c => {\n  message += `${c.number}. ${c.client} (${Number(c.count).toLocaleString()} queries). `;\n});\n\nreturn [{ json: { message: message.trim(), count: formatted.length, clients: formatted } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        -100
+      ],
+      "name": "Format Top Clients",
+      "id": "pihole-fmtc-0014-0000-000000000014"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { message: 'Pi-hole blocking enabled.', success: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        100
+      ],
+      "name": "Format Enable",
+      "id": "pihole-fmen-0015-0000-000000000015"
+    },
+    {
+      "parameters": {
+        "jsCode": "const duration = $('Parse Parameters').item.json.duration;\nlet message = 'Pi-hole blocking disabled.';\nif (duration && duration > 0) {\n  if (duration >= 3600) {\n    const hours = Math.floor(duration / 3600);\n    const mins = Math.floor((duration % 3600) / 60);\n    message = `Pi-hole blocking disabled for ${hours} hour${hours !== 1 ? 's' : ''}${mins > 0 ? ` ${mins} minute${mins !== 1 ? 's' : ''}` : ''}.`;\n  } else if (duration >= 60) {\n    const mins = Math.floor(duration / 60);\n    message = `Pi-hole blocking disabled for ${mins} minute${mins !== 1 ? 's' : ''}.`;\n  } else {\n    message = `Pi-hole blocking disabled for ${duration} second${duration !== 1 ? 's' : ''}.`;\n  }\n}\nreturn [{ json: { message, success: true, duration } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        300
+      ],
+      "name": "Format Disable",
+      "id": "pihole-fmdi-0016-0000-000000000016"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst limit = $('Parse Parameters').item.json.limit;\n\nlet queries = [];\nif (data.queries) {\n  queries = Array.isArray(data.queries) ? data.queries : [];\n} else if (data.data) {\n  queries = Array.isArray(data.data) ? data.data : [];\n}\n\nif (queries.length === 0) {\n  return [{ json: { message: 'No recent queries found.', count: 0, queries: [] } }];\n}\n\nconst limited = queries.slice(0, limit);\nconst formatted = limited.map((q, i) => {\n  const domain = q.domain || q.name || q[1] || 'unknown';\n  const client = (typeof q.client === 'object' && q.client !== null) ? (q.client.name || q.client.ip || 'unknown') : (q.client || q.upstream || q[3] || 'unknown');\n  const rawStatus = q.status || q.answer_type || q[4] || 'unknown';\n  let status = String(rawStatus);\n  if (['GRAVITY', 'REGEX', 'DENYLIST', 'EXTERNAL_BLOCKED'].includes(status)) {\n    status = 'blocked';\n  } else if (['FORWARDED', 'CACHE', 'CACHE_STALE', 'RETRIED', 'DBBUSY'].includes(status)) {\n    status = 'allowed';\n  }\n  return { number: i + 1, domain, client, status };\n});\n\nlet message = `Last ${formatted.length} queries: `;\nformatted.forEach(q => {\n  message += `${q.number}. ${q.domain} from ${q.client} (${q.status}). `;\n});\n\nreturn [{ json: { message: message.trim(), count: formatted.length, queries: formatted } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        500
+      ],
+      "name": "Format Query Log",
+      "id": "pihole-fmql-0017-0000-000000000017"
+    },
+    {
+      "parameters": {
+        "jsCode": "const errorData = $input.item.json;\n\nif (errorData.error === true && errorData.message) {\n  return [{ json: { message: errorData.message, error: true } }];\n}\n\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\nif (typeof errorMsg === 'object') {\n  errorMsg = errorMsg.message || JSON.stringify(errorMsg);\n}\nerrorMsg = String(errorMsg);\n\nif (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ETIMEDOUT')) {\n  errorMsg = 'Cannot connect to Pi-hole. Is it running?';\n} else if (errorMsg.includes('401') || errorMsg.includes('Unauthorized') || errorMsg.includes('auth')) {\n  errorMsg = 'Pi-hole authentication failed. Check the app password.';\n}\n\nreturn [{ json: { message: 'Pi-hole error: ' + errorMsg, error: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        0
+      ],
+      "name": "Format Error",
+      "id": "pihole-fmte-0018-0000-000000000018"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1600,
+        0
+      ],
+      "name": "Respond to Webhook",
+      "id": "pihole-resp-0019-0000-000000000019"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** pihole\n**Description:** Pi-hole v6 \u2014 DNS sinkhole status and control.\n**version:** v1.0.0\n**id:** (pending)\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/draft-tools/pihole)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -984,
+        -288
+      ],
+      "typeVersion": 1,
+      "id": "pihole-note-0020-0000-000000000020",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Parameters": {
+      "main": [
+        [
+          {
+            "node": "If Error Parse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error Parse": {
+      "main": [
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Authenticate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Authenticate": {
+      "main": [
+        [
+          {
+            "node": "Merge Auth",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Auth": {
+      "main": [
+        [
+          {
+            "node": "If Error Auth",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Error Auth": {
+      "main": [
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Action Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Action Switch": {
+      "main": [
+        [
+          {
+            "node": "Get Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Top Blocked",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Top Clients",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enable Blocking",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Disable Body",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Query Log",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Status": {
+      "main": [
+        [
+          {
+            "node": "Format Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Top Blocked": {
+      "main": [
+        [
+          {
+            "node": "Format Top Blocked",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Top Clients": {
+      "main": [
+        [
+          {
+            "node": "Format Top Clients",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enable Blocking": {
+      "main": [
+        [
+          {
+            "node": "Format Enable",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Disable Body": {
+      "main": [
+        [
+          {
+            "node": "Disable Blocking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Disable Blocking": {
+      "main": [
+        [
+          {
+            "node": "Format Disable",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Query Log": {
+      "main": [
+        [
+          {
+            "node": "Format Query Log",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Status": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Top Blocked": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Top Clients": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Enable": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Disable": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Query Log": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
