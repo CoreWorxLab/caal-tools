@@ -31,6 +31,38 @@
       "updated": "2026-03-09"
     }
   ],
+  "portainer": [
+    {
+      "id": null,
+      "name": "portainer",
+      "friendlyName": "Portainer",
+      "version": "1.0.0",
+      "description": "Portainer - Docker container and stack management.",
+      "category": "homelab",
+      "path": "tools/homelab/portainer",
+      "icon": "portainer.svg",
+      "voice_triggers": [
+        "What containers are running?",
+        "Restart the sonarr container",
+        "Show me logs for jellyfin",
+        "Stop the minecraft server",
+        "What stacks do I have?"
+      ],
+      "required_services": [
+        "portainer"
+      ],
+      "tier": "coreworxlab",
+      "author": "cmac86",
+      "tags": [
+        "homelab",
+        "docker",
+        "containers",
+        "portainer",
+        "devops"
+      ],
+      "updated": "2026-03-10"
+    }
+  ],
   "truenas": [
     {
       "id": "aQ8KoJ2Nc2Z8ftAqlp5S-w",
