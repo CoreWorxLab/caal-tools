@@ -548,7 +548,7 @@
     },
     {
       "parameters": {
-        "content": "## CAAL Registry Tracking\n**Tool Name:** pihole\n**Description:** Pi-hole v6 \u2014 DNS sinkhole status and control.\n**version:** v1.0.0\n**id:** (pending)\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/draft-tools/pihole)\n\n### (Do not delete this sticky)",
+        "content": "## CAAL Registry Tracking\n**Tool Name:** pihole\n**Description:** Pi-hole v6 \u2014 DNS sinkhole status and control.\n**version:** v1.0.0\n**id:** yjV5RcXtSwGBMdzcHwF3FQ\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/homelab/pihole)\n\n### (Do not delete this sticky)",
         "height": 260,
         "width": 360
       },
