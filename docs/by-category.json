@@ -2,6 +2,36 @@
   "developer": [],
   "homelab": [
     {
+      "id": null,
+      "name": "pihole",
+      "friendlyName": "Pi-hole",
+      "version": "1.0.0",
+      "description": "Pi-hole - DNS ad blocker status, control, and query logs.",
+      "category": "homelab",
+      "path": "tools/homelab/pihole",
+      "icon": "pi-hole.svg",
+      "voice_triggers": [
+        "How many ads has Pi-hole blocked?",
+        "What's the top blocked domain?",
+        "Disable Pi-hole for 5 minutes",
+        "Enable Pi-hole",
+        "Show recent DNS queries"
+      ],
+      "required_services": [
+        "pihole"
+      ],
+      "tier": "coreworxlab",
+      "author": "cmac86",
+      "tags": [
+        "homelab",
+        "dns",
+        "ad-blocker",
+        "pi-hole",
+        "network"
+      ],
+      "updated": "2026-03-09"
+    },
+    {
       "id": "aQ8KoJ2Nc2Z8ftAqlp5S-w",
       "name": "truenas",
       "friendlyName": "TrueNAS",
