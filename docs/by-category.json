@@ -411,7 +411,7 @@
       "description": "Get live scores, upcoming schedules, and league standings for NBA, NFL, NHL, EPL, MLS, and F1.",
       "category": "sports",
       "path": "tools/sports/espn",
-      "icon": null,
+      "icon": "espn.svg",
       "voice_triggers": [
         "What's the score of the Lakers game?",
         "When do the Seahawks play next?"
