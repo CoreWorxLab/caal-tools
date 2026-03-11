@@ -474,7 +474,7 @@
       "parameters": {
         "operation": "getAll",
         "returnAll": false,
-        "limit": "={{ $json.limit }}",
+        "limit": "={{ $('Parse Parameters').item.json.limit }}",
         "filters": {
           "labelIds": [
             "UNREAD"
@@ -501,7 +501,36 @@
     },
     {
       "parameters": {
-        "jsCode": "// Format emails for voice\nconst allItems = $input.all();\nconst emails = allItems.map(i => i.json).filter(e => e && e.id);\n\nif (!emails || emails.length === 0) {\n  return {\n    message: \"No unread emails.\",\n    count: 0,\n    emails: []\n  };\n}\n\n// Format emails - Gmail API returns capitalized fields: From, Subject, internalDate\nconst formatted = emails.map(email => {\n  // Get sender name (extract from \"Name <email>\" format)\n  let from = email.From || email.from || 'Unknown';\n  const nameMatch = from.match(/^([^<]+)/);\n  if (nameMatch) {\n    from = nameMatch[1].trim().replace(/\"/g, '');\n  }\n  \n  // Get date from internalDate (milliseconds since epoch)\n  const timestamp = email.internalDate || email.date;\n  const date = new Date(parseInt(timestamp));\n  const now = new Date();\n  const diffHours = Math.floor((now - date) / (1000 * 60 * 60));\n  let timeAgo = '';\n  if (diffHours < 1) {\n    const diffMins = Math.floor((now - date) / (1000 * 60));\n    timeAgo = diffMins <= 1 ? 'just now' : `${diffMins} minutes ago`;\n  } else if (diffHours < 24) {\n    timeAgo = diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`;\n  } else {\n    const diffDays = Math.floor(diffHours / 24);\n    timeAgo = diffDays === 1 ? 'yesterday' : `${diffDays} days ago`;\n  }\n  \n  return {\n    from: from,\n    subject: email.Subject || email.subject || '(no subject)',\n    snippet: email.snippet || '',\n    date: timeAgo,\n    id: email.id,\n    threadId: email.threadId || ''\n  };\n});\n\n// Build voice message\nlet message = '';\nif (formatted.length === 1) {\n  const e = formatted[0];\n  message = `You have one unread email from ${e.from}: ${e.subject}.`;\n} else {\n  message = `You have ${formatted.length} unread emails. `;\n  const summaries = formatted.slice(0, 3).map(e => `${e.from}: ${e.subject}`);\n  message += summaries.join('. ') + '.';\n  if (formatted.length > 3) {\n    message += ` Plus ${formatted.length - 3} more.`;\n  }\n}\n\nreturn {\n  message: message,\n  count: formatted.length,\n  emails: formatted\n};"
+        "url": "https://gmail.googleapis.com/gmail/v1/users/me/labels/INBOX",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        350,
+        -700
+      ],
+      "name": "Get Unread Count",
+      "id": "gmail-unrd-cnt0-0000-000000000001",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": null,
+          "name": "${GMAILOAUTH2_CREDENTIAL}"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format emails for voice\nconst allItems = $input.all();\nconst emails = allItems.map(i => i.json).filter(e => e && e.id);\n\nif (!emails || emails.length === 0) {\n  return {\n    message: \"No unread emails.\",\n    count: 0,\n    emails: []\n  };\n}\n\n// Format emails - Gmail API returns capitalized fields: From, Subject, internalDate\nconst formatted = emails.map(email => {\n  // Get sender name (extract from \"Name <email>\" format)\n  let from = email.From || email.from || 'Unknown';\n  const nameMatch = from.match(/^([^<]+)/);\n  if (nameMatch) {\n    from = nameMatch[1].trim().replace(/\"/g, '');\n  }\n  \n  // Get date from internalDate (milliseconds since epoch)\n  const timestamp = email.internalDate || email.date;\n  const date = new Date(parseInt(timestamp));\n  const now = new Date();\n  const diffHours = Math.floor((now - date) / (1000 * 60 * 60));\n  let timeAgo = '';\n  if (diffHours < 1) {\n    const diffMins = Math.floor((now - date) / (1000 * 60));\n    timeAgo = diffMins <= 1 ? 'just now' : `${diffMins} minutes ago`;\n  } else if (diffHours < 24) {\n    timeAgo = diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`;\n  } else {\n    const diffDays = Math.floor(diffHours / 24);\n    timeAgo = diffDays === 1 ? 'yesterday' : `${diffDays} days ago`;\n  }\n  \n  return {\n    from: from,\n    subject: email.Subject || email.subject || '(no subject)',\n    snippet: email.snippet || '',\n    date: timeAgo,\n    id: email.id,\n    threadId: email.threadId || ''\n  };\n});\n\n// Get total unread count from label API\nlet totalUnread = formatted.length;\ntry {\n  const labelData = $('Get Unread Count').item.json;\n  if (labelData && labelData.threadsUnread) {\n    totalUnread = labelData.threadsUnread;\n  }\n} catch(e) {}\n\n// Build voice message\nlet message = '';\nif (totalUnread === 0) {\n  message = 'No unread emails.';\n} else if (formatted.length === 1) {\n  const e = formatted[0];\n  message = `Your latest unread email is from ${e.from}: ${e.subject}.`;\n} else {\n  message = `Here are your latest ${formatted.length} unread emails. `;\n  const summaries = formatted.slice(0, 3).map(e => `${e.from}: ${e.subject}`);\n  message += summaries.join('. ') + '.';\n  if (formatted.length > 3) {\n    message += ` Plus ${formatted.length - 3} more.`;\n  }\n}\n\nreturn {\n  message: message,\n  count: formatted.length,\n  total_unread: totalUnread,\n  emails: formatted\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1192,7 +1221,7 @@
     },
     {
       "parameters": {
-        "content": "## CAAL Registry Tracking\n**Tool Name:** gmail\n**Description:** Gmail - read, send, reply, search, and manage emails.\n**version:** v2.0.0\n**id:** 7FUfsUz1RkqcEdvm_Vglnw\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/productivity/gmail)\n\n### (Do not delete this sticky)",
+        "content": "## CAAL Registry Tracking\n**Tool Name:** gmail\n**Description:** Gmail - read, send, reply, search, and manage emails.\n**version:** v2.1.0\n**id:** 7FUfsUz1RkqcEdvm_Vglnw\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/productivity/gmail)\n\n### (Do not delete this sticky)",
         "height": 260,
         "width": 360
       },
@@ -1400,7 +1429,7 @@
       "main": [
         [
           {
-            "node": "Get Unread Emails",
+            "node": "Get Unread Count",
             "type": "main",
             "index": 0
           }
@@ -1507,6 +1536,24 @@
         [
           {
             "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Unread Count": {
+      "main": [
+        [
+          {
+            "node": "Get Unread Emails",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Unread Emails",
             "type": "main",
             "index": 0
           }
