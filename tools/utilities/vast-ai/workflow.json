@@ -581,12 +581,41 @@
     },
     {
       "parameters": {
-        "jsCode": "const data = $input.item.json;\n\nconst credit = data.credit || data.balance || 0;\nconst balance = typeof credit === 'number' ? credit.toFixed(2) : credit;\n\nreturn [{ json: { message: `Your Vast.ai balance is $${balance}.`, balance: parseFloat(balance) } }];"
+        "url": "https://console.vast.ai/api/v0/instances/",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        600,
+        -50
+      ],
+      "name": "Get Usage Instances",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": null,
+          "name": "${VASTAI_API_KEY}"
+        }
+      },
+      "id": "a1b2c3d4-usage-inst-node"
+    },
+    {
+      "parameters": {
+        "jsCode": "const userData = $('Get Balance').item.json;\nconst instData = $input.item.json;\n\nconst credit = userData.credit || userData.balance || 0;\nconst balance = typeof credit === 'number' ? credit.toFixed(2) : credit;\n\n// Calculate usage from running instances\nconst instances = instData.instances || [];\nconst running = instances.filter(i => i.actual_status === 'running');\n\nlet gpuCostHr = 0;\nlet diskCostHr = 0;\n\nfor (const inst of running) {\n  const dphBase = inst.dph_base || 0;\n  const dphTotal = inst.dph_total || 0;\n  gpuCostHr += dphBase;\n  diskCostHr += (dphTotal - dphBase);\n}\n\nif (diskCostHr < 0) diskCostHr = 0;\n\nconst totalHr = gpuCostHr + diskCostHr;\nconst totalDay = totalHr * 24;\n\nlet timeRemaining = '';\nif (totalHr > 0) {\n  const hoursLeft = parseFloat(balance) / totalHr;\n  const days = Math.floor(hoursLeft / 24);\n  const hours = Math.floor(hoursLeft % 24);\n  const mins = Math.floor((hoursLeft * 60) % 60);\n  const parts = [];\n  if (days > 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);\n  if (hours > 0) parts.push(`${hours} hour${hours !== 1 ? 's' : ''}`);\n  if (mins > 0 && days === 0) parts.push(`${mins} minute${mins !== 1 ? 's' : ''}`);\n  timeRemaining = parts.join(', ');\n}\n\nlet message = `Your Vast.ai balance is $${balance}.`;\nif (totalHr > 0) {\n  message += ` Current usage is $${totalHr.toFixed(2)} per hour, or about $${Math.round(totalDay)} per day.`;\n  if (timeRemaining) message += ` Credits will last approximately ${timeRemaining}.`;\n}\n\nconst totalSpent = userData.total_spend ? Math.abs(userData.total_spend) : 0;\n\nconst result = {\n  message,\n  balance: parseFloat(balance),\n  total_spent: parseFloat(totalSpent.toFixed(2)),\n};\n\nif (totalHr > 0) {\n  result.usage = {\n    total_per_hour: parseFloat(totalHr.toFixed(4)),\n    total_per_day: parseFloat(totalDay.toFixed(4)),\n    gpu_per_hour: parseFloat(gpuCostHr.toFixed(4)),\n    disk_per_hour: parseFloat(diskCostHr.toFixed(4)),\n    running_instances: running.length,\n  };\n  if (timeRemaining) result.usage.time_remaining = timeRemaining;\n}\n\nreturn [{ json: result }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        600,
+        800,
         -100
       ],
       "name": "Format Balance",
@@ -1095,7 +1124,7 @@
     },
     {
       "parameters": {
-        "content": "## CAAL Registry Tracking\n**Tool Name:** vast-ai\n**Description:** Vast.ai - search GPU offers, rent and manage cloud GPU instances.\n**version:** v1.1.0\n**id:** AqH_6oxoqajm82hhTHdRAg\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/utilities/vast-ai)\n\n### (Do not delete this sticky)",
+        "content": "## CAAL Registry Tracking\n**Tool Name:** vast-ai\n**Description:** Vast.ai - search GPU offers, rent and manage cloud GPU instances.\n**version:** v1.2.0\n**id:** AqH_6oxoqajm82hhTHdRAg\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/utilities/vast-ai)\n\n### (Do not delete this sticky)",
         "height": 260,
         "width": 360
       },
@@ -1320,6 +1349,24 @@
       ]
     },
     "Get Balance": {
+      "main": [
+        [
+          {
+            "node": "Get Usage Instances",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Usage Instances": {
       "main": [
         [
           {
