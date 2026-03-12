@@ -1,0 +1,57 @@
+{
+  "name": "github",
+  "friendlyName": "GitHub",
+  "version": "1.0.0",
+  "description": "GitHub - manage PRs, issues, notifications, and repos via the GitHub API.",
+  "category": "developer",
+  "toolSuite": true,
+  "actions": [
+    "list_prs",
+    "read_pr",
+    "list_issues",
+    "read_issue",
+    "list_notifications",
+    "list_repos",
+    "list_discussions",
+    "read_discussion",
+    "read_comment",
+    "comment_discussion",
+    "reply_comment",
+    "create_issue",
+    "comment",
+    "merge_pr",
+    "close_issue"
+  ],
+  "icon": "github.svg",
+  "voice_triggers": [
+    "What are my open pull requests",
+    "Show me the issues on caal-tools",
+    "Any GitHub notifications",
+    "Create an issue for the bug we found",
+    "Merge that pull request",
+    "What repos do I have"
+  ],
+  "required_services": ["GitHub"],
+  "required_credentials": [
+    {
+      "credential_type": "githubApi",
+      "name": "GITHUB_TOKEN",
+      "description": "GitHub API predefined credential (uses your GitHub personal access token)"
+    }
+  ],
+  "required_variables": [
+    {
+      "name": "GITHUB_DEFAULT_REPO",
+      "description": "Default GitHub repo in owner/repo format",
+      "example": "CoreWorxLab/caal-tools"
+    }
+  ],
+  "author": {
+    "github": "CoreWorxLab"
+  },
+  "tier": "coreworxlab",
+  "tags": ["github", "developer", "pull-requests", "issues", "git", "code-review"],
+  "dependencies": [],
+  "created": "2026-03-11",
+  "updated": "2026-03-11"
+}

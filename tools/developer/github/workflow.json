@@ -1,0 +1,815 @@
+{
+  "name": "github",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "github",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-600, 0],
+      "name": "Webhook",
+      "webhookId": "github",
+      "notes": "GitHub - manage PRs, issues, notifications, and repos.\n\nActions:\n  list_prs - list pull requests for a repo. Optional: repo, state (open/closed/all), limit.\n  read_pr - show details of a specific PR. Requires: pr_number. Optional: repo.\n  list_issues - list issues for a repo. Optional: repo, state (open/closed/all), labels, limit.\n  read_issue - show details of a specific issue. Requires: issue_number. Optional: repo.\n  list_notifications - list your unread GitHub notifications. Optional: limit.\n  list_repos - list your recent repositories. Optional: limit.\n  create_issue - create a new issue. Requires: title. Optional: repo, body, labels.\n  comment - comment on a PR or issue. Requires: issue_number, body. Optional: repo.\n  merge_pr - merge a pull request. Requires: pr_number. Optional: repo, merge_method (merge/squash/rebase).\n  close_issue - close an issue. Requires: issue_number. Optional: repo.\n\nRules:\n- repo defaults to ${GITHUB_DEFAULT_REPO} if not specified.\n- pr_number and issue_number come from list_prs or list_issues. Never fabricate numbers.\n- merge_pr is irreversible. Confirm with user before calling.\n\nChaining:\n- \"Any open PRs?\" -> list_prs\n- \"Show me PR 84\" -> read_pr pr_number 84\n- \"What issues are open?\" -> list_issues\n- \"Create an issue about the login bug\" -> create_issue title \"Login bug\"\n- \"Merge PR 84\" -> merge_pr pr_number 84\n- \"Any notifications?\" -> list_notifications\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: list_prs, read_pr, list_issues, read_issue, list_notifications, list_repos, create_issue, comment, merge_pr, close_issue\",\n    \"required\": true\n  },\n  \"repo\": {\n    \"type\": \"string\",\n    \"description\": \"GitHub repo in owner/repo format. Defaults to configured default repo.\"\n  },\n  \"pr_number\": {\n    \"type\": \"integer\",\n    \"description\": \"Pull request number. For: read_pr, merge_pr\"\n  },\n  \"issue_number\": {\n    \"type\": \"integer\",\n    \"description\": \"Issue number. For: read_issue, close_issue, comment\"\n  },\n  \"state\": {\n    \"type\": \"string\",\n    \"description\": \"Filter by state: open, closed, all. Default: open. For: list_prs, list_issues\"\n  },\n  \"title\": {\n    \"type\": \"string\",\n    \"description\": \"Issue title. For: create_issue\"\n  },\n  \"body\": {\n    \"type\": \"string\",\n    \"description\": \"Body text. For: create_issue, comment\"\n  },\n  \"labels\": {\n    \"type\": \"string\",\n    \"description\": \"Comma-separated labels. For: list_issues, create_issue\"\n  },\n  \"merge_method\": {\n    \"type\": \"string\",\n    \"description\": \"Merge method: merge, squash, rebase. Default: merge. For: merge_pr\"\n  },\n  \"limit\": {\n    \"type\": \"integer\",\n    \"description\": \"Max results. Default 10.\"\n  }\n}",
+      "id": "gh-webhook-0001"
+    },
+    {
+      "parameters": {
+        "jsCode": "let data;\nconst input = $input.item.json;\n\nif (typeof input.body === 'string') {\n  data = JSON.parse(input.body);\n} else if (typeof input.body === 'object') {\n  data = input.body;\n} else {\n  data = input;\n}\n\nconst action = (data.action || '').toLowerCase().trim();\n\nif (!action) {\n  return [{ json: { error: true, message: 'Action is required. Use one of: list_prs, read_pr, list_issues, read_issue, list_notifications, list_repos, list_discussions, read_discussion, read_comment, create_issue, comment, comment_discussion, reply_comment, merge_pr, close_issue.' } }];\n}\n\nconst categoryMap = {\n  list_prs: 'read',\n  read_pr: 'read',\n  list_issues: 'read',\n  read_issue: 'read',\n  list_notifications: 'read',\n  list_repos: 'read',\n  list_discussions: 'read',\n  read_discussion: 'read',\n  read_comment: 'read',\n  create_issue: 'write',\n  comment: 'write',\n  comment_discussion: 'write',\n  reply_comment: 'write',\n  merge_pr: 'manage',\n  close_issue: 'manage'\n};\n\nconst category = categoryMap[action] || '';\n\nif (!category) {\n  return [{ json: { error: true, message: `Unknown action: ${action}. Use one of: list_prs, read_pr, list_issues, read_issue, list_notifications, list_repos, list_discussions, read_discussion, read_comment, create_issue, comment, comment_discussion, reply_comment, merge_pr, close_issue.` } }];\n}\n\nconst repo = data.repo || '${GITHUB_DEFAULT_REPO}';\nconst pr_number = parseInt(data.pr_number) || null;\nconst issue_number = parseInt(data.issue_number) || null;\nconst discussion_number = parseInt(data.discussion_number) || null;\nconst comment_id = data.comment_id || '';\nconst discussion_id = data.discussion_id || '';\nconst state = data.state || 'open';\nconst title = data.title || '';\nconst body = data.body || '';\nconst labels = data.labels || '';\nconst merge_method = data.merge_method || 'merge';\nconst limit = parseInt(data.limit) || 5;\n\nreturn [{\n  json: {\n    action, category, repo, pr_number, issue_number, discussion_number, comment_id, discussion_id,\n    state, title, body, labels, merge_method, limit\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-400, 0],
+      "name": "Parse Parameters",
+      "id": "gh-parse-0002"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "id": "gh-err-parse", "leftValue": "={{ $json.error }}", "rightValue": true, "operator": { "type": "boolean", "operation": "true" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-200, 0],
+      "name": "If Error Parse",
+      "id": "gh-iferr-0003"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.category }}", "rightValue": "read", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "read" },
+            { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.category }}", "rightValue": "write", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "write" },
+            { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.category }}", "rightValue": "manage", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "manage" }
+          ]
+        },
+        "options": { "fallbackOutput": "extra" }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [0, 0],
+      "name": "Category Switch",
+      "id": "gh-catswitch-0004"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "list_prs", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "list_prs" },
+            { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "read_pr", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "read_pr" },
+            { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "list_issues", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "list_issues" },
+            { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "read_issue", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "read_issue" },
+            { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "list_notifications", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "list_notifications" },
+            { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "list_repos", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "list_repos" },
+            { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "list_discussions", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "list_discussions" },
+            { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "read_discussion", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "read_discussion" },
+            { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "read_comment", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "read_comment" }
+          ]
+        },
+        "options": { "fallbackOutput": "extra" }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [200, -200],
+      "name": "Read Switch",
+      "id": "gh-readswitch-0005"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "create_issue", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "create_issue" },
+            { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "comment", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "comment" },
+            { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "comment_discussion", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "comment_discussion" },
+            { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "reply_comment", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "reply_comment" }
+          ]
+        },
+        "options": { "fallbackOutput": "extra" }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [200, 200],
+      "name": "Write Switch",
+      "id": "gh-writeswitch-0006"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "merge_pr", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "merge_pr" },
+            { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "close_issue", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "close_issue" }
+          ]
+        },
+        "options": { "fallbackOutput": "extra" }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [200, 500],
+      "name": "Manage Switch",
+      "id": "gh-manageswitch-0007"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.github.com/repos/{{ $json.repo }}/pulls?state={{ $json.state }}&per_page={{ $json.limit }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Accept", "value": "application/vnd.github+json" }] },
+        "options": { "response": { "response": { "responseFormat": "json" } } }
+      },
+      "onError": "continueErrorOutput",
+      "alwaysOutputData": true,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, -500],
+      "name": "List PRs",
+      "credentials": { "githubApi": { "id": null, "name": "${GITHUB_TOKEN}" } },
+      "id": "gh-listprs-0010"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.all().map(i => i.json);\n\nif (allItems.length === 0 || (allItems.length === 1 && !allItems[0].number)) {\n  return [{ json: { message: 'No pull requests found.', count: 0, pull_requests: [] } }];\n}\n\nconst formatted = allItems.map(pr => ({\n  number: pr.number,\n  title: pr.title,\n  state: pr.state,\n  author: pr.user ? pr.user.login : 'unknown',\n  created: pr.created_at ? pr.created_at.split('T')[0] : '',\n  draft: pr.draft || false,\n  labels: (pr.labels || []).map(l => l.name)\n}));\n\nconst repo = $('Parse Parameters').item.json.repo;\nlet message = `${formatted.length} pull request${formatted.length === 1 ? '' : 's'} on ${repo}. `;\nformatted.forEach(pr => {\n  message += `Number ${pr.number}: ${pr.title} by ${pr.author}${pr.draft ? ' (draft)' : ''}. `;\n});\n\nreturn [{ json: { message: message.trim(), count: formatted.length, pull_requests: formatted } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, -550],
+      "name": "Format List PRs",
+      "id": "gh-fmtlistprs-0011"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.github.com/repos/{{ $json.repo }}/pulls/{{ $json.pr_number }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Accept", "value": "application/vnd.github+json" }] },
+        "options": { "response": { "response": { "responseFormat": "json" } } }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, -350],
+      "name": "Read PR",
+      "credentials": { "githubApi": { "id": null, "name": "${GITHUB_TOKEN}" } },
+      "id": "gh-showpr-0012"
+    },
+    {
+      "parameters": {
+        "jsCode": "const pr = $input.item.json;\n\nconst detail = {\n  number: pr.number,\n  title: pr.title,\n  state: pr.state,\n  author: pr.user ? pr.user.login : 'unknown',\n  created: pr.created_at ? pr.created_at.split('T')[0] : '',\n  merged: pr.merged || false,\n  mergeable: pr.mergeable,\n  draft: pr.draft || false,\n  additions: pr.additions || 0,\n  deletions: pr.deletions || 0,\n  changed_files: pr.changed_files || 0,\n  labels: (pr.labels || []).map(l => l.name),\n  reviewers: (pr.requested_reviewers || []).map(r => r.login),\n  body: pr.body ? pr.body.substring(0, 500) : ''\n};\n\nlet message = `PR ${pr.number}: ${pr.title}. `;\nmessage += `By ${detail.author}, ${detail.state}${detail.draft ? ' (draft)' : ''}. `;\nmessage += `${detail.changed_files} file${detail.changed_files === 1 ? '' : 's'} changed, ${detail.additions} additions, ${detail.deletions} deletions.`;\nif (detail.labels.length > 0) message += ` Labels: ${detail.labels.join(', ')}.`;\nif (detail.reviewers.length > 0) message += ` Reviewers: ${detail.reviewers.join(', ')}.`;\n\nreturn [{ json: { message, pull_request: detail } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, -400],
+      "name": "Format Read PR",
+      "id": "gh-fmtshowpr-0013"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.github.com/repos/{{ $json.repo }}/issues?state={{ $json.state }}&per_page={{ $json.limit }}{{ $json.labels ? '&labels=' + $json.labels : '' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Accept", "value": "application/vnd.github+json" }] },
+        "options": { "response": { "response": { "responseFormat": "json" } } }
+      },
+      "onError": "continueErrorOutput",
+      "alwaysOutputData": true,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, -200],
+      "name": "List Issues",
+      "credentials": { "githubApi": { "id": null, "name": "${GITHUB_TOKEN}" } },
+      "id": "gh-listissues-0014"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.all().map(i => i.json).filter(i => !i.pull_request);\n\nif (allItems.length === 0) {\n  return [{ json: { message: 'No issues found.', count: 0, issues: [] } }];\n}\n\nconst formatted = allItems.map(i => ({\n  number: i.number,\n  title: i.title,\n  state: i.state,\n  author: i.user ? i.user.login : 'unknown',\n  created: i.created_at ? i.created_at.split('T')[0] : '',\n  labels: (i.labels || []).map(l => l.name),\n  comments: i.comments || 0\n}));\n\nconst repo = $('Parse Parameters').item.json.repo;\nlet message = `${formatted.length} issue${formatted.length === 1 ? '' : 's'} on ${repo}. `;\nformatted.forEach(i => {\n  message += `Number ${i.number}: ${i.title} by ${i.author}. `;\n});\n\nreturn [{ json: { message: message.trim(), count: formatted.length, issues: formatted } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, -250],
+      "name": "Format List Issues",
+      "id": "gh-fmtlistissues-0015"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.github.com/repos/{{ $json.repo }}/issues/{{ $json.issue_number }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Accept", "value": "application/vnd.github+json" }] },
+        "options": { "response": { "response": { "responseFormat": "json" } } }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, -50],
+      "name": "Read Issue",
+      "credentials": { "githubApi": { "id": null, "name": "${GITHUB_TOKEN}" } },
+      "id": "gh-showissue-0016"
+    },
+    {
+      "parameters": {
+        "jsCode": "const i = $input.item.json;\n\nconst detail = {\n  number: i.number,\n  title: i.title,\n  state: i.state,\n  author: i.user ? i.user.login : 'unknown',\n  created: i.created_at ? i.created_at.split('T')[0] : '',\n  labels: (i.labels || []).map(l => l.name),\n  comments: i.comments || 0,\n  assignees: (i.assignees || []).map(a => a.login),\n  body: i.body ? i.body.substring(0, 500) : ''\n};\n\nlet message = `Issue ${i.number}: ${i.title}. `;\nmessage += `By ${detail.author}, ${detail.state}. `;\nif (detail.comments > 0) message += `${detail.comments} comment${detail.comments === 1 ? '' : 's'}. `;\nif (detail.labels.length > 0) message += `Labels: ${detail.labels.join(', ')}. `;\nif (detail.assignees.length > 0) message += `Assigned to: ${detail.assignees.join(', ')}. `;\n\nreturn [{ json: { message: message.trim(), issue: detail } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, -100],
+      "name": "Format Read Issue",
+      "id": "gh-fmtshowissue-0017"
+    },
+    {
+      "parameters": {
+        "url": "https://api.github.com/notifications?per_page={{ $json.limit }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Accept", "value": "application/vnd.github+json" }] },
+        "options": { "response": { "response": { "responseFormat": "json" } } }
+      },
+      "onError": "continueErrorOutput",
+      "alwaysOutputData": true,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, 100],
+      "name": "List Notifications",
+      "credentials": { "githubApi": { "id": null, "name": "${GITHUB_TOKEN}" } },
+      "id": "gh-listnotif-0018"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.all().map(i => i.json);\n\nif (allItems.length === 0 || (allItems.length === 1 && !allItems[0].id)) {\n  return [{ json: { message: 'No unread notifications.', count: 0, notifications: [] } }];\n}\n\nconst formatted = allItems.map(n => ({\n  id: n.id,\n  reason: n.reason,\n  title: n.subject ? n.subject.title : 'Unknown',\n  type: n.subject ? n.subject.type : 'Unknown',\n  repo: n.repository ? n.repository.full_name : 'Unknown',\n  updated: n.updated_at ? n.updated_at.split('T')[0] : ''\n}));\n\nlet message = `You have ${formatted.length} unread notification${formatted.length === 1 ? '' : 's'}. `;\nformatted.forEach(n => {\n  message += `${n.type} on ${n.repo}: ${n.title}. `;\n});\n\nreturn [{ json: { message: message.trim(), count: formatted.length, notifications: formatted } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, 50],
+      "name": "Format Notifications",
+      "id": "gh-fmtnotif-0019"
+    },
+    {
+      "parameters": {
+        "url": "https://api.github.com/user/repos?sort=updated&per_page={{ $json.limit }}&type=owner",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Accept", "value": "application/vnd.github+json" }] },
+        "options": { "response": { "response": { "responseFormat": "json" } } }
+      },
+      "onError": "continueErrorOutput",
+      "alwaysOutputData": true,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, 250],
+      "name": "List Repos",
+      "credentials": { "githubApi": { "id": null, "name": "${GITHUB_TOKEN}" } },
+      "id": "gh-listrepos-0020"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.all().map(i => i.json);\n\nif (allItems.length === 0 || (allItems.length === 1 && !allItems[0].full_name)) {\n  return [{ json: { message: 'No repositories found.', count: 0, repos: [] } }];\n}\n\nconst formatted = allItems.map(r => ({\n  name: r.full_name,\n  description: r.description || '',\n  private: r.private,\n  language: r.language || '',\n  stars: r.stargazers_count || 0,\n  open_issues: r.open_issues_count || 0,\n  updated: r.updated_at ? r.updated_at.split('T')[0] : ''\n}));\n\nlet message = `You have ${formatted.length} recent repo${formatted.length === 1 ? '' : 's'}. `;\nformatted.forEach(r => {\n  message += `${r.name}${r.private ? ' (private)' : ''}`;\n  if (r.open_issues > 0) message += `, ${r.open_issues} open issue${r.open_issues === 1 ? '' : 's'}`;\n  message += '. ';\n});\n\nreturn [{ json: { message: message.trim(), count: formatted.length, repos: formatted } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, 200],
+      "name": "Format Repos",
+      "id": "gh-fmtrepos-0021"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.github.com/repos/{{ $json.repo }}/issues",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Accept", "value": "application/vnd.github+json" }] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ title: $json.title, body: $json.body || '', labels: $json.labels ? $json.labels.split(',').map(l => l.trim()) : [] }) }}",
+        "options": { "response": { "response": { "responseFormat": "json" } } }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, 400],
+      "name": "Create Issue",
+      "credentials": { "githubApi": { "id": null, "name": "${GITHUB_TOKEN}" } },
+      "id": "gh-createissue-0022"
+    },
+    {
+      "parameters": {
+        "jsCode": "const i = $input.item.json;\nconst repo = $('Parse Parameters').item.json.repo;\n\nreturn [{ json: { message: `Issue ${i.number} created on ${repo}: ${i.title}.`, issue_number: i.number, url: i.html_url, success: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, 350],
+      "name": "Format Create Issue",
+      "id": "gh-fmtcreateissue-0023"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.github.com/repos/{{ $json.repo }}/issues/{{ $json.issue_number }}/comments",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Accept", "value": "application/vnd.github+json" }] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ body: $json.body }) }}",
+        "options": { "response": { "response": { "responseFormat": "json" } } }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, 550],
+      "name": "Post Comment",
+      "credentials": { "githubApi": { "id": null, "name": "${GITHUB_TOKEN}" } },
+      "id": "gh-comment-0024"
+    },
+    {
+      "parameters": {
+        "jsCode": "const c = $input.item.json;\nconst num = $('Parse Parameters').item.json.issue_number;\nconst repo = $('Parse Parameters').item.json.repo;\n\nreturn [{ json: { message: `Comment posted on ${repo} number ${num}.`, url: c.html_url, success: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, 500],
+      "name": "Format Comment",
+      "id": "gh-fmtcomment-0025"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://api.github.com/repos/{{ $json.repo }}/pulls/{{ $json.pr_number }}/merge",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Accept", "value": "application/vnd.github+json" }] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ merge_method: $json.merge_method || 'merge' }) }}",
+        "options": { "response": { "response": { "responseFormat": "json" } } }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, 700],
+      "name": "Merge PR",
+      "credentials": { "githubApi": { "id": null, "name": "${GITHUB_TOKEN}" } },
+      "id": "gh-mergepr-0026"
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.item.json;\nconst num = $('Parse Parameters').item.json.pr_number;\nconst repo = $('Parse Parameters').item.json.repo;\n\nif (result.merged) {\n  return [{ json: { message: `PR ${num} on ${repo} has been merged.`, success: true } }];\n} else {\n  return [{ json: { message: `Could not merge PR ${num}. ${result.message || ''}`, success: false } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, 650],
+      "name": "Format Merge",
+      "id": "gh-fmtmerge-0027"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.github.com/repos/{{ $json.repo }}/issues/{{ $json.issue_number }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Accept", "value": "application/vnd.github+json" }] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"state\": \"closed\" }",
+        "options": { "response": { "response": { "responseFormat": "json" } } }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, 850],
+      "name": "Close Issue",
+      "credentials": { "githubApi": { "id": null, "name": "${GITHUB_TOKEN}" } },
+      "id": "gh-closeissue-0028"
+    },
+    {
+      "parameters": {
+        "jsCode": "const i = $input.item.json;\nconst repo = $('Parse Parameters').item.json.repo;\n\nreturn [{ json: { message: `Issue ${i.number} on ${repo} has been closed.`, success: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, 800],
+      "name": "Format Close",
+      "id": "gh-fmtclose-0029"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.github.com/graphql",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Accept", "value": "application/vnd.github+json" }] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ query: `{ repository(owner: \"${$json.repo.split('/')[0]}\", name: \"${$json.repo.split('/')[1]}\") { discussions(first: 3, orderBy: {field: UPDATED_AT, direction: DESC}) { nodes { number title author { login } category { name } createdAt comments { totalCount } } } } }` }) }}",
+        "options": { "response": { "response": { "responseFormat": "json" } } }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, 350],
+      "name": "List Discussions",
+      "credentials": { "githubApi": { "id": null, "name": "${GITHUB_TOKEN}" } },
+      "id": "gh-listdisc-0040"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst nodes = data.data && data.data.repository && data.data.repository.discussions ? data.data.repository.discussions.nodes : [];\n\nif (nodes.length === 0) {\n  return [{ json: { message: 'No discussions found.', count: 0, discussions: [] } }];\n}\n\nconst formatted = nodes.map(d => ({\n  number: d.number,\n  title: d.title,\n  author: d.author ? d.author.login : 'unknown',\n  category: d.category ? d.category.name : '',\n  created: d.createdAt ? d.createdAt.split('T')[0] : '',\n  comments: d.comments ? d.comments.totalCount : 0\n}));\n\nconst repo = $('Parse Parameters').item.json.repo;\nlet message = `${formatted.length} recent discussion${formatted.length === 1 ? '' : 's'} on ${repo}. `;\nformatted.forEach(d => {\n  message += `Number ${d.number}: ${d.title} by ${d.author} in ${d.category}. `;\n});\n\nreturn [{ json: { message: message.trim(), count: formatted.length, discussions: formatted } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, 300],
+      "name": "Format List Discussions",
+      "id": "gh-fmtlistdisc-0041"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.github.com/graphql",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Accept", "value": "application/vnd.github+json" }] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ query: `{ repository(owner: \"${$json.repo.split('/')[0]}\", name: \"${$json.repo.split('/')[1]}\") { discussion(number: ${$json.discussion_number}) { id title } } }` }) }}",
+        "options": { "response": { "response": { "responseFormat": "json" } } }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, 650],
+      "name": "Get Discussion ID",
+      "credentials": { "githubApi": { "id": null, "name": "${GITHUB_TOKEN}" } },
+      "id": "gh-getdiscid-0044"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.github.com/graphql",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Accept", "value": "application/vnd.github+json" }] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ query: `mutation { addDiscussionComment(input: { discussionId: \"${$json.data.repository.discussion.id}\", body: \"${$('Parse Parameters').item.json.body.replace(/\\\\/g, '\\\\\\\\').replace(/\"/g, '\\\\\"')}\" }) { comment { id } } }` }) }}",
+        "options": { "response": { "response": { "responseFormat": "json" } } }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [600, 650],
+      "name": "Comment Discussion",
+      "credentials": { "githubApi": { "id": null, "name": "${GITHUB_TOKEN}" } },
+      "id": "gh-replydisc-0045"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst num = $('Parse Parameters').item.json.discussion_number;\nconst repo = $('Parse Parameters').item.json.repo;\nconst title = $('Get Discussion ID').item.json.data.repository.discussion.title;\n\nif (data.errors) {\n  return [{ json: { message: 'Failed to reply to discussion. ' + (data.errors[0] ? data.errors[0].message : ''), error: true } }];\n}\n\nreturn [{ json: { message: `Comment posted on discussion ${num}: ${title}.`, success: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 600],
+      "name": "Format Comment Discussion",
+      "id": "gh-fmtreplydisc-0046"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.github.com/graphql",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Accept", "value": "application/vnd.github+json" }] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ query: `{ repository(owner: \"${$json.repo.split('/')[0]}\", name: \"${$json.repo.split('/')[1]}\") { discussion(number: ${$json.discussion_number}) { id number title body author { login } category { name } createdAt comments(first: 20) { totalCount nodes { id body author { login } createdAt } } } } }` }) }}",
+        "options": { "response": { "response": { "responseFormat": "json" } } }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, 500],
+      "name": "Read Discussion",
+      "credentials": { "githubApi": { "id": null, "name": "${GITHUB_TOKEN}" } },
+      "id": "gh-showdisc-0042"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst d = data.data && data.data.repository ? data.data.repository.discussion : null;\n\nif (!d) {\n  return [{ json: { message: 'Discussion not found.', error: true } }];\n}\n\nconst totalComments = d.comments ? d.comments.totalCount : 0;\nconst commentNodes = d.comments && d.comments.nodes ? d.comments.nodes : [];\n\nconst comments = commentNodes.map(c => ({\n  comment_id: c.id,\n  author: c.author ? c.author.login : 'unknown',\n  body: c.body ? c.body.substring(0, 200) : '',\n  created: c.createdAt ? c.createdAt.split('T')[0] : ''\n}));\n\nconst detail = {\n  discussion_id: d.id,\n  number: d.number,\n  title: d.title,\n  author: d.author ? d.author.login : 'unknown',\n  category: d.category ? d.category.name : '',\n  created: d.createdAt ? d.createdAt.split('T')[0] : '',\n  body: d.body ? d.body.substring(0, 300) : '',\n  comment_count: totalComments,\n  comments: comments\n};\n\nlet message = `Discussion ${d.number}: ${d.title}. Posted by ${detail.author} in ${detail.category}. `;\nif (totalComments > 0) {\n  const authors = [...new Set(comments.map(c => c.author))];\n  message += `${totalComments} comment${totalComments === 1 ? '' : 's'} from ${authors.join(', ')}. `;\n} else {\n  message += 'No comments yet. ';\n}\n\nreturn [{ json: { message: message.trim(), discussion: detail } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, 450],
+      "name": "Format Read Discussion",
+      "id": "gh-fmtshowdisc-0043"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.github.com/graphql",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Accept", "value": "application/vnd.github+json" }] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ query: `{ node(id: \"${$json.comment_id}\") { ... on DiscussionComment { id body author { login } createdAt replies(first: 10) { totalCount nodes { id body author { login } createdAt } } } } }` }) }}",
+        "options": { "response": { "response": { "responseFormat": "json" } } }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, 350],
+      "name": "Read Comment",
+      "credentials": { "githubApi": { "id": null, "name": "${GITHUB_TOKEN}" } },
+      "id": "gh-showcomment-0050"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst c = data.data && data.data.node ? data.data.node : null;\n\nif (!c) {\n  return [{ json: { message: 'Comment not found.', error: true } }];\n}\n\nconst replies = c.replies && c.replies.nodes ? c.replies.nodes : [];\nconst totalReplies = c.replies ? c.replies.totalCount : 0;\n\nconst detail = {\n  comment_id: c.id,\n  author: c.author ? c.author.login : 'unknown',\n  body: c.body || '',\n  created: c.createdAt ? c.createdAt.split('T')[0] : '',\n  reply_count: totalReplies,\n  replies: replies.map(r => ({\n    comment_id: r.id,\n    author: r.author ? r.author.login : 'unknown',\n    body: r.body ? r.body.substring(0, 200) : '',\n    created: r.createdAt ? r.createdAt.split('T')[0] : ''\n  }))\n};\n\nlet message = `${detail.author} says: ${c.body ? c.body.substring(0, 300) : ''}. `;\nif (totalReplies > 0) {\n  const replyAuthors = [...new Set(replies.map(r => r.author ? r.author.login : 'unknown'))];\n  message += `${totalReplies} repl${totalReplies === 1 ? 'y' : 'ies'} from ${replyAuthors.join(', ')}.`;\n}\n\nreturn [{ json: { message: message.trim(), comment: detail } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, 300],
+      "name": "Format Read Comment",
+      "id": "gh-fmtshowcomment-0051"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.github.com/graphql",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Accept", "value": "application/vnd.github+json" }] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ query: `mutation { addDiscussionComment(input: { discussionId: \"${$json.discussion_id}\", replyToId: \"${$json.comment_id}\", body: \"${$json.body.replace(/\\\\/g, '\\\\\\\\').replace(/\"/g, '\\\\\"').replace(/\\n/g, '\\\\n')}\" }) { comment { id } } }` }) }}",
+        "options": { "response": { "response": { "responseFormat": "json" } } }
+      },
+      "onError": "continueErrorOutput",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, 800],
+      "name": "Reply Comment",
+      "credentials": { "githubApi": { "id": null, "name": "${GITHUB_TOKEN}" } },
+      "id": "gh-replycomment-0052"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\n\nif (data.errors) {\n  return [{ json: { message: 'Failed to reply. ' + (data.errors[0] ? data.errors[0].message : ''), error: true } }];\n}\n\nreturn [{ json: { message: 'Reply posted.', success: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, 750],
+      "name": "Format Reply Comment",
+      "id": "gh-fmtreplycomment-0053"
+    },
+    {
+      "parameters": {
+        "jsCode": "const errorData = $input.item.json;\n\nif (errorData.error === true && errorData.message) {\n  return [{ json: { message: errorData.message, error: true } }];\n}\n\nlet errorMsg = errorData.message || errorData.error || 'Unknown error';\n\nif (typeof errorMsg === 'object') {\n  errorMsg = errorMsg.message || JSON.stringify(errorMsg);\n}\n\nif (errorMsg.includes('401') || errorMsg.includes('Bad credentials')) {\n  errorMsg = 'GitHub authentication failed. Please check your personal access token.';\n} else if (errorMsg.includes('403') || errorMsg.includes('rate limit')) {\n  errorMsg = 'GitHub rate limit reached or access denied. Try again later.';\n} else if (errorMsg.includes('404') || errorMsg.includes('Not Found')) {\n  errorMsg = 'Not found. Check the repo name, PR number, or issue number.';\n} else if (errorMsg.includes('422')) {\n  errorMsg = 'Invalid request. Check your parameters.';\n} else if (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ETIMEDOUT')) {\n  errorMsg = 'Cannot connect to GitHub. Check your internet connection.';\n}\n\nreturn [{ json: { message: 'GitHub error: ' + errorMsg, error: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 200],
+      "name": "Format Error",
+      "id": "gh-fmterror-0030"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1200, 200],
+      "name": "Respond to Webhook",
+      "id": "gh-respond-0031"
+    },
+    {
+      "parameters": {
+        "content": "## CAAL Registry Tracking\n**Tool Name:** github\n**Description:** GitHub - manage PRs, issues, notifications, and repos via the GitHub API.\n**version:** v1.0.0\n**id:** (pending)\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/developer/github)\n\n### (Do not delete this sticky)",
+        "height": 260,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [-784, -288],
+      "typeVersion": 1,
+      "id": "gh-sticky-0032",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Parse Parameters", "type": "main", "index": 0 }]]
+    },
+    "Parse Parameters": {
+      "main": [[{ "node": "If Error Parse", "type": "main", "index": 0 }]]
+    },
+    "If Error Parse": {
+      "main": [
+        [{ "node": "Format Error", "type": "main", "index": 0 }],
+        [{ "node": "Category Switch", "type": "main", "index": 0 }]
+      ]
+    },
+    "Category Switch": {
+      "main": [
+        [{ "node": "Read Switch", "type": "main", "index": 0 }],
+        [{ "node": "Write Switch", "type": "main", "index": 0 }],
+        [{ "node": "Manage Switch", "type": "main", "index": 0 }],
+        [{ "node": "Format Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Read Switch": {
+      "main": [
+        [{ "node": "List PRs", "type": "main", "index": 0 }],
+        [{ "node": "Read PR", "type": "main", "index": 0 }],
+        [{ "node": "List Issues", "type": "main", "index": 0 }],
+        [{ "node": "Read Issue", "type": "main", "index": 0 }],
+        [{ "node": "List Notifications", "type": "main", "index": 0 }],
+        [{ "node": "List Repos", "type": "main", "index": 0 }],
+        [{ "node": "List Discussions", "type": "main", "index": 0 }],
+        [{ "node": "Read Discussion", "type": "main", "index": 0 }],
+        [{ "node": "Read Comment", "type": "main", "index": 0 }],
+        [{ "node": "Format Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Read Comment": {
+      "main": [
+        [{ "node": "Format Read Comment", "type": "main", "index": 0 }],
+        [{ "node": "Format Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Read Comment": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    },
+    "List Discussions": {
+      "main": [
+        [{ "node": "Format List Discussions", "type": "main", "index": 0 }],
+        [{ "node": "Format Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format List Discussions": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    },
+    "Read Discussion": {
+      "main": [
+        [{ "node": "Format Read Discussion", "type": "main", "index": 0 }],
+        [{ "node": "Format Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Read Discussion": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    },
+    "Write Switch": {
+      "main": [
+        [{ "node": "Create Issue", "type": "main", "index": 0 }],
+        [{ "node": "Post Comment", "type": "main", "index": 0 }],
+        [{ "node": "Get Discussion ID", "type": "main", "index": 0 }],
+        [{ "node": "Reply Comment", "type": "main", "index": 0 }],
+        [{ "node": "Format Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Reply Comment": {
+      "main": [
+        [{ "node": "Format Reply Comment", "type": "main", "index": 0 }],
+        [{ "node": "Format Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Reply Comment": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    },
+    "Get Discussion ID": {
+      "main": [
+        [{ "node": "Comment Discussion", "type": "main", "index": 0 }],
+        [{ "node": "Format Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Comment Discussion": {
+      "main": [
+        [{ "node": "Format Comment Discussion", "type": "main", "index": 0 }],
+        [{ "node": "Format Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Comment Discussion": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    },
+    "Manage Switch": {
+      "main": [
+        [{ "node": "Merge PR", "type": "main", "index": 0 }],
+        [{ "node": "Close Issue", "type": "main", "index": 0 }],
+        [{ "node": "Format Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "List PRs": {
+      "main": [
+        [{ "node": "Format List PRs", "type": "main", "index": 0 }],
+        [{ "node": "Format Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format List PRs": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    },
+    "Read PR": {
+      "main": [
+        [{ "node": "Format Read PR", "type": "main", "index": 0 }],
+        [{ "node": "Format Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Read PR": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    },
+    "List Issues": {
+      "main": [
+        [{ "node": "Format List Issues", "type": "main", "index": 0 }],
+        [{ "node": "Format Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format List Issues": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    },
+    "Read Issue": {
+      "main": [
+        [{ "node": "Format Read Issue", "type": "main", "index": 0 }],
+        [{ "node": "Format Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Read Issue": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    },
+    "List Notifications": {
+      "main": [
+        [{ "node": "Format Notifications", "type": "main", "index": 0 }],
+        [{ "node": "Format Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Notifications": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    },
+    "List Repos": {
+      "main": [
+        [{ "node": "Format Repos", "type": "main", "index": 0 }],
+        [{ "node": "Format Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Repos": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    },
+    "Create Issue": {
+      "main": [
+        [{ "node": "Format Create Issue", "type": "main", "index": 0 }],
+        [{ "node": "Format Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Create Issue": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    },
+    "Post Comment": {
+      "main": [
+        [{ "node": "Format Comment", "type": "main", "index": 0 }],
+        [{ "node": "Format Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Comment": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    },
+    "Merge PR": {
+      "main": [
+        [{ "node": "Format Merge", "type": "main", "index": 0 }],
+        [{ "node": "Format Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Merge": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    },
+    "Close Issue": {
+      "main": [
+        [{ "node": "Format Close", "type": "main", "index": 0 }],
+        [{ "node": "Format Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Close": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    },
+    "Format Error": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
