@@ -467,7 +467,7 @@
         "headerParameters": { "parameters": [{ "name": "Accept", "value": "application/vnd.github+json" }] },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ query: `mutation { addDiscussionComment(input: { discussionId: \"${$json.data.repository.discussion.id}\", body: \"${$('Parse Parameters').item.json.body.replace(/\\\\/g, '\\\\\\\\').replace(/\"/g, '\\\\\"')}\" }) { comment { id } } }` }) }}",
+        "jsonBody": "={{ JSON.stringify({ query: `mutation { addDiscussionComment(input: { discussionId: \"${$json.data.repository.discussion.id}\", body: \"${$('Parse Parameters').item.json.body.replace(/\\\\/g, '\\\\\\\\').replace(/\"/g, '\\\\\"').replace(/\\n/g, '\\\\n')}\" }) { comment { id } } }` }) }}",
         "options": { "response": { "response": { "responseFormat": "json" } } }
       },
       "onError": "continueErrorOutput",
