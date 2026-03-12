@@ -31,7 +31,9 @@
     "Merge that pull request",
     "What repos do I have"
   ],
-  "required_services": ["GitHub"],
+  "required_services": [
+    "GitHub"
+  ],
   "required_credentials": [
     {
       "credential_type": "githubApi",
@@ -50,8 +52,16 @@
     "github": "CoreWorxLab"
   },
   "tier": "coreworxlab",
-  "tags": ["github", "developer", "pull-requests", "issues", "git", "code-review"],
+  "tags": [
+    "github",
+    "developer",
+    "pull-requests",
+    "issues",
+    "git",
+    "code-review"
+  ],
   "dependencies": [],
   "created": "2026-03-11",
-  "updated": "2026-03-11"
+  "updated": "2026-03-11",
+  "id": "TaRXFRyr3P82smBAkHurXg"
 }

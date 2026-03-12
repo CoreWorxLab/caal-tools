@@ -1,4 +1,38 @@
 {
+  "GitHub": [
+    {
+      "id": "TaRXFRyr3P82smBAkHurXg",
+      "name": "github",
+      "friendlyName": "GitHub",
+      "version": "1.0.0",
+      "description": "GitHub - manage PRs, issues, notifications, and repos via the GitHub API.",
+      "category": "developer",
+      "path": "tools/developer/github",
+      "icon": "github.svg",
+      "voice_triggers": [
+        "What are my open pull requests",
+        "Show me the issues on caal-tools",
+        "Any GitHub notifications",
+        "Create an issue for the bug we found",
+        "Merge that pull request",
+        "What repos do I have"
+      ],
+      "required_services": [
+        "GitHub"
+      ],
+      "tier": "coreworxlab",
+      "author": "CoreWorxLab",
+      "tags": [
+        "github",
+        "developer",
+        "pull-requests",
+        "issues",
+        "git",
+        "code-review"
+      ],
+      "updated": "2026-03-11"
+    }
+  ],
   "pihole": [
     {
       "id": "yjV5RcXtSwGBMdzcHwF3FQ",
