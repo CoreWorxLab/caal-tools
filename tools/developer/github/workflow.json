@@ -13,12 +13,12 @@
       "position": [-600, 0],
       "name": "Webhook",
       "webhookId": "github",
-      "notes": "GitHub - manage PRs, issues, notifications, and repos.\n\nActions:\n  list_prs - list pull requests for a repo. Optional: repo, state (open/closed/all), limit.\n  read_pr - show details of a specific PR. Requires: pr_number. Optional: repo.\n  list_issues - list issues for a repo. Optional: repo, state (open/closed/all), labels, limit.\n  read_issue - show details of a specific issue. Requires: issue_number. Optional: repo.\n  list_notifications - list your unread GitHub notifications. Optional: limit.\n  list_repos - list your recent repositories. Optional: limit.\n  create_issue - create a new issue. Requires: title. Optional: repo, body, labels.\n  comment - comment on a PR or issue. Requires: issue_number, body. Optional: repo.\n  merge_pr - merge a pull request. Requires: pr_number. Optional: repo, merge_method (merge/squash/rebase).\n  close_issue - close an issue. Requires: issue_number. Optional: repo.\n\nRules:\n- repo defaults to ${GITHUB_DEFAULT_REPO} if not specified.\n- pr_number and issue_number come from list_prs or list_issues. Never fabricate numbers.\n- merge_pr is irreversible. Confirm with user before calling.\n\nChaining:\n- \"Any open PRs?\" -> list_prs\n- \"Show me PR 84\" -> read_pr pr_number 84\n- \"What issues are open?\" -> list_issues\n- \"Create an issue about the login bug\" -> create_issue title \"Login bug\"\n- \"Merge PR 84\" -> merge_pr pr_number 84\n- \"Any notifications?\" -> list_notifications\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: list_prs, read_pr, list_issues, read_issue, list_notifications, list_repos, create_issue, comment, merge_pr, close_issue\",\n    \"required\": true\n  },\n  \"repo\": {\n    \"type\": \"string\",\n    \"description\": \"GitHub repo in owner/repo format. Defaults to configured default repo.\"\n  },\n  \"pr_number\": {\n    \"type\": \"integer\",\n    \"description\": \"Pull request number. For: read_pr, merge_pr\"\n  },\n  \"issue_number\": {\n    \"type\": \"integer\",\n    \"description\": \"Issue number. For: read_issue, close_issue, comment\"\n  },\n  \"state\": {\n    \"type\": \"string\",\n    \"description\": \"Filter by state: open, closed, all. Default: open. For: list_prs, list_issues\"\n  },\n  \"title\": {\n    \"type\": \"string\",\n    \"description\": \"Issue title. For: create_issue\"\n  },\n  \"body\": {\n    \"type\": \"string\",\n    \"description\": \"Body text. For: create_issue, comment\"\n  },\n  \"labels\": {\n    \"type\": \"string\",\n    \"description\": \"Comma-separated labels. For: list_issues, create_issue\"\n  },\n  \"merge_method\": {\n    \"type\": \"string\",\n    \"description\": \"Merge method: merge, squash, rebase. Default: merge. For: merge_pr\"\n  },\n  \"limit\": {\n    \"type\": \"integer\",\n    \"description\": \"Max results. Default 10.\"\n  }\n}",
+      "notes": "GitHub - manage PRs, issues, discussions, notifications, and repos.\n\nActions:\n  list_prs - list pull requests for a repo. Optional: repo, state (open/closed/all), limit.\n  read_pr - show details of a specific PR. Requires: pr_number. Optional: repo.\n  read_pr_comments - read conversation comments on a PR. Requires: pr_number. Optional: repo, limit.\n  list_issues - list issues for a repo. Optional: repo, state (open/closed/all), labels, limit.\n  read_issue - show details of a specific issue. Requires: issue_number. Optional: repo.\n  list_notifications - list your unread GitHub notifications. Optional: limit.\n  list_repos - list your recent repositories. Optional: limit.\n  list_discussions - list the 3 most recent discussions. Optional: repo.\n  read_discussion - read a discussion's post and list commenters. Requires: discussion_number. Optional: repo.\n  read_discussion_comment - read a discussion comment in full with replies. Requires: comment_id.\n  create_issue - create a new issue. Requires: title. Optional: repo, body, labels.\n  comment - comment on a PR or issue. Requires: issue_number, body. Optional: repo.\n  comment_discussion - post a top-level comment on a discussion. Requires: discussion_number, body. Optional: repo.\n  reply_discussion_comment - reply to a specific discussion comment. Requires: discussion_id, comment_id, body.\n  merge_pr - merge a pull request. Requires: pr_number. Optional: repo, merge_method (merge/squash/rebase).\n  close_issue - close an issue. Requires: issue_number. Optional: repo.\n\nRules:\n- repo defaults to ${GITHUB_DEFAULT_REPO} if not specified.\n- pr_number and issue_number come from list_prs or list_issues. Never fabricate numbers.\n- discussion_number comes from list_discussions. comment_id and discussion_id come from read_discussion.\n- merge_pr is irreversible. Confirm with user before calling.\n\nChaining:\n- \"Any open PRs?\" -> list_prs\n- \"Show me PR 84\" -> read_pr pr_number 84\n- \"Read the comments on PR 84\" -> read_pr_comments pr_number 84\n- \"What issues are open?\" -> list_issues\n- \"Create an issue about the login bug\" -> create_issue title \"Login bug\"\n- \"Merge PR 84\" -> merge_pr pr_number 84\n- \"Any notifications?\" -> list_notifications\n- \"Check the latest discussions\" -> list_discussions\n- \"Read discussion 89\" -> read_discussion discussion_number 89\n- \"Read nerdbeast's comment\" -> read_discussion_comment comment_id DC_xxx\n- \"Reply to that comment\" -> reply_discussion_comment discussion_id D_xxx comment_id DC_xxx body \"...\"\n\n---schema\n{\n  \"action\": {\n    \"type\": \"string\",\n    \"description\": \"One of: list_prs, read_pr, read_pr_comments, list_issues, read_issue, list_notifications, list_repos, list_discussions, read_discussion, read_discussion_comment, create_issue, comment, comment_discussion, reply_discussion_comment, merge_pr, close_issue\",\n    \"required\": true\n  },\n  \"repo\": {\n    \"type\": \"string\",\n    \"description\": \"GitHub repo in owner/repo format. Defaults to configured default repo.\"\n  },\n  \"pr_number\": {\n    \"type\": \"integer\",\n    \"description\": \"Pull request number. For: read_pr, read_pr_comments, merge_pr\"\n  },\n  \"issue_number\": {\n    \"type\": \"integer\",\n    \"description\": \"Issue number. For: read_issue, close_issue, comment\"\n  },\n  \"discussion_number\": {\n    \"type\": \"integer\",\n    \"description\": \"Discussion number. For: read_discussion, comment_discussion\"\n  },\n  \"comment_id\": {\n    \"type\": \"string\",\n    \"description\": \"Comment node ID. For: read_discussion_comment, reply_discussion_comment\"\n  },\n  \"discussion_id\": {\n    \"type\": \"string\",\n    \"description\": \"Discussion node ID. For: reply_discussion_comment\"\n  },\n  \"state\": {\n    \"type\": \"string\",\n    \"description\": \"Filter by state: open, closed, all. Default: open. For: list_prs, list_issues\"\n  },\n  \"title\": {\n    \"type\": \"string\",\n    \"description\": \"Issue title. For: create_issue\"\n  },\n  \"body\": {\n    \"type\": \"string\",\n    \"description\": \"Body text. For: create_issue, comment, comment_discussion, reply_discussion_comment\"\n  },\n  \"labels\": {\n    \"type\": \"string\",\n    \"description\": \"Comma-separated labels. For: list_issues, create_issue\"\n  },\n  \"merge_method\": {\n    \"type\": \"string\",\n    \"description\": \"Merge method: merge, squash, rebase. Default: merge. For: merge_pr\"\n  },\n  \"limit\": {\n    \"type\": \"integer\",\n    \"description\": \"Max results. Default 5.\"\n  }\n}",
       "id": "gh-webhook-0001"
     },
     {
       "parameters": {
-        "jsCode": "let data;\nconst input = $input.item.json;\n\nif (typeof input.body === 'string') {\n  data = JSON.parse(input.body);\n} else if (typeof input.body === 'object') {\n  data = input.body;\n} else {\n  data = input;\n}\n\nconst action = (data.action || '').toLowerCase().trim();\n\nif (!action) {\n  return [{ json: { error: true, message: 'Action is required. Use one of: list_prs, read_pr, list_issues, read_issue, list_notifications, list_repos, list_discussions, read_discussion, read_comment, create_issue, comment, comment_discussion, reply_comment, merge_pr, close_issue.' } }];\n}\n\nconst categoryMap = {\n  list_prs: 'read',\n  read_pr: 'read',\n  list_issues: 'read',\n  read_issue: 'read',\n  list_notifications: 'read',\n  list_repos: 'read',\n  list_discussions: 'read',\n  read_discussion: 'read',\n  read_comment: 'read',\n  create_issue: 'write',\n  comment: 'write',\n  comment_discussion: 'write',\n  reply_comment: 'write',\n  merge_pr: 'manage',\n  close_issue: 'manage'\n};\n\nconst category = categoryMap[action] || '';\n\nif (!category) {\n  return [{ json: { error: true, message: `Unknown action: ${action}. Use one of: list_prs, read_pr, list_issues, read_issue, list_notifications, list_repos, list_discussions, read_discussion, read_comment, create_issue, comment, comment_discussion, reply_comment, merge_pr, close_issue.` } }];\n}\n\nconst repo = data.repo || '${GITHUB_DEFAULT_REPO}';\nconst pr_number = parseInt(data.pr_number) || null;\nconst issue_number = parseInt(data.issue_number) || null;\nconst discussion_number = parseInt(data.discussion_number) || null;\nconst comment_id = data.comment_id || '';\nconst discussion_id = data.discussion_id || '';\nconst state = data.state || 'open';\nconst title = data.title || '';\nconst body = data.body || '';\nconst labels = data.labels || '';\nconst merge_method = data.merge_method || 'merge';\nconst limit = parseInt(data.limit) || 5;\n\nreturn [{\n  json: {\n    action, category, repo, pr_number, issue_number, discussion_number, comment_id, discussion_id,\n    state, title, body, labels, merge_method, limit\n  }\n}];"
+        "jsCode": "let data;\nconst input = $input.item.json;\n\nif (typeof input.body === 'string') {\n  data = JSON.parse(input.body);\n} else if (typeof input.body === 'object') {\n  data = input.body;\n} else {\n  data = input;\n}\n\nconst action = (data.action || '').toLowerCase().trim();\n\nif (!action) {\n  return [{ json: { error: true, message: 'Action is required. Use one of: list_prs, read_pr, read_pr_comments, list_issues, read_issue, list_notifications, list_repos, list_discussions, read_discussion, read_discussion_comment, create_issue, comment, comment_discussion, reply_discussion_comment, merge_pr, close_issue.' } }];\n}\n\nconst categoryMap = {\n  list_prs: 'read',\n  read_pr: 'read',\n  read_pr_comments: 'read',\n  list_issues: 'read',\n  read_issue: 'read',\n  list_notifications: 'read',\n  list_repos: 'read',\n  list_discussions: 'read',\n  read_discussion: 'read',\n  read_discussion_comment: 'read',\n  create_issue: 'write',\n  comment: 'write',\n  comment_discussion: 'write',\n  reply_discussion_comment: 'write',\n  merge_pr: 'manage',\n  close_issue: 'manage'\n};\n\nconst category = categoryMap[action] || '';\n\nif (!category) {\n  return [{ json: { error: true, message: `Unknown action: ${action}. Use one of: list_prs, read_pr, read_pr_comments, list_issues, read_issue, list_notifications, list_repos, list_discussions, read_discussion, read_discussion_comment, create_issue, comment, comment_discussion, reply_discussion_comment, merge_pr, close_issue.` } }];\n}\n\nconst repo = data.repo || '${GITHUB_DEFAULT_REPO}';\nconst pr_number = parseInt(data.pr_number) || null;\nconst issue_number = parseInt(data.issue_number) || null;\nconst discussion_number = parseInt(data.discussion_number) || null;\nconst comment_id = data.comment_id || '';\nconst discussion_id = data.discussion_id || '';\nconst state = data.state || 'open';\nconst title = data.title || '';\nconst body = data.body || '';\nconst labels = data.labels || '';\nconst merge_method = data.merge_method || 'merge';\nconst limit = parseInt(data.limit) || 5;\n\nreturn [{\n  json: {\n    action, category, repo, pr_number, issue_number, discussion_number, comment_id, discussion_id,\n    state, title, body, labels, merge_method, limit\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -64,13 +64,14 @@
           "values": [
             { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "list_prs", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "list_prs" },
             { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "read_pr", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "read_pr" },
+            { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "read_pr_comments", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "read_pr_comments" },
             { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "list_issues", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "list_issues" },
             { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "read_issue", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "read_issue" },
             { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "list_notifications", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "list_notifications" },
             { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "list_repos", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "list_repos" },
             { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "list_discussions", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "list_discussions" },
             { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "read_discussion", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "read_discussion" },
-            { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "read_comment", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "read_comment" }
+            { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "read_discussion_comment", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "read_discussion_comment" }
           ]
         },
         "options": { "fallbackOutput": "extra" }
@@ -88,7 +89,7 @@
             { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "create_issue", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "create_issue" },
             { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "comment", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "comment" },
             { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "comment_discussion", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "comment_discussion" },
-            { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "reply_comment", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "reply_comment" }
+            { "conditions": { "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "reply_discussion_comment", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "reply_discussion_comment" }
           ]
         },
         "options": { "fallbackOutput": "extra" }
@@ -169,6 +170,34 @@
       "position": [600, -400],
       "name": "Format Read PR",
       "id": "gh-fmtshowpr-0013"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.github.com/repos/{{ $json.repo }}/issues/{{ $json.pr_number }}/comments?per_page={{ $json.limit }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Accept", "value": "application/vnd.github+json" }] },
+        "options": { "response": { "response": { "responseFormat": "json" } } }
+      },
+      "onError": "continueErrorOutput",
+      "alwaysOutputData": true,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, -450],
+      "name": "Read PR Comments",
+      "credentials": { "githubApi": { "id": null, "name": "${GITHUB_TOKEN}" } },
+      "id": "gh-readprcomments-0060"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.all().map(i => i.json);\nconst prNum = $('Parse Parameters').item.json.pr_number;\nconst repo = $('Parse Parameters').item.json.repo;\n\nif (allItems.length === 0 || (allItems.length === 1 && !allItems[0].id)) {\n  return [{ json: { message: `No comments on PR ${prNum}.`, count: 0, comments: [] } }];\n}\n\nconst formatted = allItems.map(c => ({\n  id: c.id,\n  author: c.user ? c.user.login : 'unknown',\n  body: c.body || '',\n  created: c.created_at ? c.created_at.split('T')[0] : '',\n  association: c.author_association || ''\n}));\n\nlet message = `${formatted.length} comment${formatted.length === 1 ? '' : 's'} on PR ${prNum}. `;\nformatted.forEach(c => {\n  const preview = c.body.length > 200 ? c.body.substring(0, 200) + '...' : c.body;\n  message += `${c.author} says: ${preview} `;\n});\n\nreturn [{ json: { message: message.trim(), count: formatted.length, comments: formatted } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, -500],
+      "name": "Format PR Comments",
+      "id": "gh-fmtprcomments-0061"
     },
     {
       "parameters": {
@@ -567,7 +596,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [400, 800],
-      "name": "Reply Comment",
+      "name": "Reply Discussion Comment",
       "credentials": { "githubApi": { "id": null, "name": "${GITHUB_TOKEN}" } },
       "id": "gh-replycomment-0052"
     },
@@ -578,7 +607,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [600, 750],
-      "name": "Format Reply Comment",
+      "name": "Format Reply Discussion Comment",
       "id": "gh-fmtreplycomment-0053"
     },
     {
@@ -601,7 +630,7 @@
     },
     {
       "parameters": {
-        "content": "## CAAL Registry Tracking\n**Tool Name:** github\n**Description:** GitHub - manage PRs, issues, notifications, and repos via the GitHub API.\n**version:** v1.0.0\n**id:** (pending)\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/developer/github)\n\n### (Do not delete this sticky)",
+        "content": "## CAAL Registry Tracking\n**Tool Name:** github\n**Description:** GitHub - manage PRs, issues, notifications, and repos via the GitHub API.\n**version:** v1.1.0\n**id:** (pending)\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/developer/github)\n\n### (Do not delete this sticky)",
         "height": 260,
         "width": 360
       },
@@ -637,6 +666,7 @@
       "main": [
         [{ "node": "List PRs", "type": "main", "index": 0 }],
         [{ "node": "Read PR", "type": "main", "index": 0 }],
+        [{ "node": "Read PR Comments", "type": "main", "index": 0 }],
         [{ "node": "List Issues", "type": "main", "index": 0 }],
         [{ "node": "Read Issue", "type": "main", "index": 0 }],
         [{ "node": "List Notifications", "type": "main", "index": 0 }],
@@ -646,6 +676,15 @@
         [{ "node": "Read Comment", "type": "main", "index": 0 }],
         [{ "node": "Format Error", "type": "main", "index": 0 }]
       ]
+    },
+    "Read PR Comments": {
+      "main": [
+        [{ "node": "Format PR Comments", "type": "main", "index": 0 }],
+        [{ "node": "Format Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format PR Comments": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
     },
     "Read Comment": {
       "main": [
@@ -679,17 +718,17 @@
         [{ "node": "Create Issue", "type": "main", "index": 0 }],
         [{ "node": "Post Comment", "type": "main", "index": 0 }],
         [{ "node": "Get Discussion ID", "type": "main", "index": 0 }],
-        [{ "node": "Reply Comment", "type": "main", "index": 0 }],
+        [{ "node": "Reply Discussion Comment", "type": "main", "index": 0 }],
         [{ "node": "Format Error", "type": "main", "index": 0 }]
       ]
     },
-    "Reply Comment": {
+    "Reply Discussion Comment": {
       "main": [
-        [{ "node": "Format Reply Comment", "type": "main", "index": 0 }],
+        [{ "node": "Format Reply Discussion Comment", "type": "main", "index": 0 }],
         [{ "node": "Format Error", "type": "main", "index": 0 }]
       ]
     },
-    "Format Reply Comment": {
+    "Format Reply Discussion Comment": {
       "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
     },
     "Get Discussion ID": {

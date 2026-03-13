@@ -5,6 +5,7 @@ Manage pull requests, issues, discussions, notifications, and repositories via t
 ## Voice Triggers
 
 - "What are my open pull requests"
+- "Read the comments on PR 84"
 - "Read me the issues on caal-tools"
 - "Any GitHub notifications"
 - "Check the latest discussions"
@@ -52,6 +53,12 @@ Read details of a specific pull request.
 - `pr_number` (required) — the PR number
 - `repo` (optional)
 
+### read_pr_comments
+Read conversation comments on a pull request.
+- `pr_number` (required) — the PR number
+- `repo` (optional)
+- `limit` (optional) — max results. Default: 5
+
 ### list_issues
 List issues for a repository.
 - `repo` (optional)
@@ -81,7 +88,7 @@ Read a discussion's post and list all commenters with their comment IDs.
 - `discussion_number` (required) — the discussion number
 - `repo` (optional)
 
-### read_comment
+### read_discussion_comment
 Read a specific discussion comment in full, including any threaded replies.
 - `comment_id` (required) — the comment's node ID (from read_discussion data)
 
@@ -104,7 +111,7 @@ Post a top-level comment on a discussion.
 - `body` (required) — comment text
 - `repo` (optional)
 
-### reply_comment
+### reply_discussion_comment
 Post a threaded reply to a specific discussion comment.
 - `discussion_id` (required) — the discussion's node ID (from read_discussion data)
 - `comment_id` (required) — the comment's node ID (from read_discussion data)
