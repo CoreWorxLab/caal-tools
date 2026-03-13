@@ -565,7 +565,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [400, 350],
-      "name": "Read Comment",
+      "name": "Read Discussion Comment",
       "credentials": { "githubApi": { "id": null, "name": "${GITHUB_TOKEN}" } },
       "id": "gh-showcomment-0050"
     },
@@ -576,7 +576,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [600, 300],
-      "name": "Format Read Comment",
+      "name": "Format Read Discussion Comment",
       "id": "gh-fmtshowcomment-0051"
     },
     {
@@ -630,7 +630,7 @@
     },
     {
       "parameters": {
-        "content": "## CAAL Registry Tracking\n**Tool Name:** github\n**Description:** GitHub - manage PRs, issues, notifications, and repos via the GitHub API.\n**version:** v1.1.0\n**id:** (pending)\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/developer/github)\n\n### (Do not delete this sticky)",
+        "content": "## CAAL Registry Tracking\n**Tool Name:** github\n**Description:** GitHub - manage PRs, issues, discussions, notifications, and repos via the GitHub API.\n**version:** v1.1.0\n**id:** (pending)\n**link:** [Registry](https://github.com/CoreWorxLab/caal-tools/tree/main/tools/developer/github)\n\n### (Do not delete this sticky)",
         "height": 260,
         "width": 360
       },
@@ -673,7 +673,7 @@
         [{ "node": "List Repos", "type": "main", "index": 0 }],
         [{ "node": "List Discussions", "type": "main", "index": 0 }],
         [{ "node": "Read Discussion", "type": "main", "index": 0 }],
-        [{ "node": "Read Comment", "type": "main", "index": 0 }],
+        [{ "node": "Read Discussion Comment", "type": "main", "index": 0 }],
         [{ "node": "Format Error", "type": "main", "index": 0 }]
       ]
     },
@@ -686,13 +686,13 @@
     "Format PR Comments": {
       "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
     },
-    "Read Comment": {
+    "Read Discussion Comment": {
       "main": [
-        [{ "node": "Format Read Comment", "type": "main", "index": 0 }],
+        [{ "node": "Format Read Discussion Comment", "type": "main", "index": 0 }],
         [{ "node": "Format Error", "type": "main", "index": 0 }]
       ]
     },
-    "Format Read Comment": {
+    "Format Read Discussion Comment": {
       "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
     },
     "List Discussions": {
