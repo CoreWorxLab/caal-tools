@@ -1,22 +1,23 @@
 {
   "name": "github",
   "friendlyName": "GitHub",
-  "version": "1.0.0",
-  "description": "GitHub - manage PRs, issues, notifications, and repos via the GitHub API.",
+  "version": "1.1.0",
+  "description": "GitHub - manage PRs, issues, discussions, notifications, and repos via the GitHub API.",
   "category": "developer",
   "toolSuite": true,
   "actions": [
     "list_prs",
     "read_pr",
+    "read_pr_comments",
     "list_issues",
     "read_issue",
     "list_notifications",
     "list_repos",
     "list_discussions",
     "read_discussion",
-    "read_comment",
+    "read_discussion_comment",
     "comment_discussion",
-    "reply_comment",
+    "reply_discussion_comment",
     "create_issue",
     "comment",
     "merge_pr",
@@ -25,8 +26,10 @@
   "icon": "github.svg",
   "voice_triggers": [
     "What are my open pull requests",
+    "Read the comments on PR 84",
     "Show me the issues on caal-tools",
     "Any GitHub notifications",
+    "Check the latest discussions",
     "Create an issue for the bug we found",
     "Merge that pull request",
     "What repos do I have"
@@ -62,6 +65,6 @@
   ],
   "dependencies": [],
   "created": "2026-03-11",
-  "updated": "2026-03-11",
+  "updated": "2026-03-13",
   "id": "TaRXFRyr3P82smBAkHurXg"
 }
